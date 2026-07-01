@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { onRequestGet } from './location'
+import { logger } from '../../src/lib/logger'
 
 const env = {
   SUPABASE_URL: 'https://example.supabase.co',
@@ -57,5 +58,20 @@ describe('GET /api/location', () => {
     })
     const res = await onRequestGet({ env, request: req('https://x/api/location?q=Nowhereville') } as never)
     expect(res.status).toBe(429)
+  })
+
+  it('returns 500 with a clean error body and logs when the Supabase lookup fails', async () => {
+    const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {})
+    vi.stubGlobal('fetch', (url: string) => {
+      if (url.includes('/rest/v1/locations')) {
+        return Promise.resolve({ ok: false, status: 500, json: async () => ({}) })
+      }
+      throw new Error(`unexpected fetch to ${url}`)
+    })
+    const res = await onRequestGet({ env, request: req('https://x/api/location?q=Dublin') } as never)
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(body.error).toBeDefined()
+    expect(errorSpy).toHaveBeenCalled()
   })
 })

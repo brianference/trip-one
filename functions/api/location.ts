@@ -44,47 +44,52 @@ export async function onRequestGet({
   const parsed = locationQuerySchema.safeParse(q)
   if (!parsed.success) return json({ error: 'invalid query' }, 400)
 
-  const slug = normalizeLocationSlug(parsed.data)
-  const cached = await getLocationBySlug(env, slug)
-  if (cached) {
-    return json(
-      {
-        slug: cached.slug,
-        lat: cached.lat,
-        lng: cached.lng,
-        displayName: cached.display_name,
-        thingsToDo: cached.things_to_do ?? [],
-      },
-      200,
-    )
+  try {
+    const slug = normalizeLocationSlug(parsed.data)
+    const cached = await getLocationBySlug(env, slug)
+    if (cached) {
+      return json(
+        {
+          slug: cached.slug,
+          lat: cached.lat,
+          lng: cached.lng,
+          displayName: cached.display_name,
+          thingsToDo: cached.things_to_do ?? [],
+        },
+        200,
+      )
+    }
+
+    const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown'
+    const ipHash = await hashIp(ip, env.RATE_LIMIT_SALT)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+    const recentCount = await countRecentRequests(env, ipHash, oneHourAgo)
+    if (!isUnderRateLimit(recentCount, RATE_LIMIT_PER_HOUR)) {
+      return json({ error: 'rate limit exceeded, try again later' }, 429)
+    }
+    await insertRequestLog(env, ipHash, 'location')
+
+    const geo = await geocode(parsed.data)
+    if (!geo) return json({ error: 'location not found' }, 404)
+
+    const [tripadvisorResults, placesResults] = await Promise.all([
+      searchThingsToDo(slug, geo.lat, geo.lng, env.TRIPADVISOR_API_KEY),
+      searchPlaces(geo.lat, geo.lng, env.GOOGLE_PLACES_API_KEY),
+    ])
+    const thingsToDo = mergeThingsToDo(tripadvisorResults, placesResults)
+
+    await upsertLocation(env, {
+      slug,
+      lat: geo.lat,
+      lng: geo.lng,
+      display_name: geo.displayName,
+      things_to_do: thingsToDo,
+    })
+    logger.info('generated new location', { slug })
+
+    return json({ slug, lat: geo.lat, lng: geo.lng, displayName: geo.displayName, thingsToDo }, 200)
+  } catch (err) {
+    logger.error('location lookup failed', err)
+    return json({ error: 'internal error' }, 500)
   }
-
-  const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown'
-  const ipHash = await hashIp(ip, env.RATE_LIMIT_SALT)
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
-  const recentCount = await countRecentRequests(env, ipHash, oneHourAgo)
-  if (!isUnderRateLimit(recentCount, RATE_LIMIT_PER_HOUR)) {
-    return json({ error: 'rate limit exceeded, try again later' }, 429)
-  }
-  await insertRequestLog(env, ipHash, 'location')
-
-  const geo = await geocode(parsed.data)
-  if (!geo) return json({ error: 'location not found' }, 404)
-
-  const [tripadvisorResults, placesResults] = await Promise.all([
-    searchThingsToDo(slug, geo.lat, geo.lng, env.TRIPADVISOR_API_KEY),
-    searchPlaces(geo.lat, geo.lng, env.GOOGLE_PLACES_API_KEY),
-  ])
-  const thingsToDo = mergeThingsToDo(tripadvisorResults, placesResults)
-
-  await upsertLocation(env, {
-    slug,
-    lat: geo.lat,
-    lng: geo.lng,
-    display_name: geo.displayName,
-    things_to_do: thingsToDo,
-  })
-  logger.info('generated new location', { slug })
-
-  return json({ slug, lat: geo.lat, lng: geo.lng, displayName: geo.displayName, thingsToDo }, 200)
 }
