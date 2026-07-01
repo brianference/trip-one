@@ -17,7 +17,13 @@ export function MapView({ lat, lng, label }: Props) {
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map)
-    L.marker([lat, lng]).addTo(map).bindPopup(label)
+
+    // Create a DOM element with textContent to prevent XSS attacks
+    // Leaflet's bindPopup renders HTML by default, so we use a text node instead
+    const popupEl = document.createElement('div')
+    popupEl.textContent = label
+    L.marker([lat, lng]).addTo(map).bindPopup(popupEl)
+
     return () => map.remove()
   }, [lat, lng, label])
 
