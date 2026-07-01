@@ -24,7 +24,9 @@ export function MapView({ lat, lng, label }: Props) {
     popupEl.textContent = label
     L.marker([lat, lng]).addTo(map).bindPopup(popupEl)
 
-    return () => map.remove()
+    return () => {
+      map.remove()
+    }
   }, [lat, lng, label])
 
   return <div ref={containerRef} aria-label={`Map of ${label}`} style={{ height: '300px', width: '100%' }} />

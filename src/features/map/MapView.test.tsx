@@ -5,7 +5,10 @@ import L from 'leaflet'
 
 vi.mock('leaflet', () => {
   const createMapMock = () => {
-    const mapMock = { remove: vi.fn() }
+    const mapMock: { remove: ReturnType<typeof vi.fn>; setView: ReturnType<typeof vi.fn> } = {
+      remove: vi.fn(),
+      setView: vi.fn(),
+    }
     mapMock.setView = vi.fn(() => mapMock)
     return mapMock
   }
