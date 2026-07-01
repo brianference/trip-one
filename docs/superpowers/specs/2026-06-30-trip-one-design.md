@@ -206,6 +206,26 @@ real Tripadvisor/Places data instead of hand-curated JSON).
   mobile width; check browser console is clean; confirm the two GitHub Actions
   crons run green after first deploy.
 
+## Post-implementation QA phase (run after build + deploy, on explicit go-ahead)
+
+Once trip-one is built and verified deployed, a 6-agent review team runs
+(user triggers it explicitly — not automatic):
+
+1. **System Architect** — reviews the spec, actual architecture, and code
+   against the coding best-practices additions above; flags drift.
+2. **UX Designer** — reviews usability and mobile experience across all 5
+   themes.
+3. **Customer Simulator A** — simulates 2-3 real user journeys entering new
+   locations (e.g. a US state, a small international city).
+4. **Customer Simulator B** — simulates the remaining 2-3 journeys (e.g. a
+   major city, an ambiguous/misspelled input, revisiting a demo trip) — 5
+   simulated customer journeys total across A + B.
+5. **Bug/Learnings Documenter & Code Reviewer** — compiles findings from 1-4,
+   reviews the code, and applies fixes/improvements.
+6. **Best-Practices Author** — synthesizes everything into a master coding
+   best-practices document and a reusable Skill, saved to both the project
+   and Claude Code memory.
+
 ## Open assumptions (flagged, not blocking)
 
 - Repo name/path: `trip-one` at `C:/Users/brian/workspace/projects/trip-one`.
