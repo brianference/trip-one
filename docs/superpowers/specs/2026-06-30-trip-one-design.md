@@ -47,11 +47,27 @@ src/
     api/                typed clients for /api/* Worker endpoints
     supabase/           typed Supabase client (anon key only, read-scoped)
     validation/         Zod schemas for all user input
+  store/                Zustand store (trip + itinerary state, shared across themes)
   hooks/
   data/
     demo-yellowstone.ts generalized, anonymized demo seed
     demo-tokyo.ts        generalized, anonymized demo seed
+supabase/
+  migrations/           tracked, versioned .sql schema files (source of truth
+                        for locations/trips/request_log — used to rebuild the
+                        project from scratch if it's ever reset)
 ```
+
+### State management
+A small Zustand store (`src/store/`) holds the active trip and itinerary state
+shared across whichever of the 5 themes is mounted, avoiding prop-drilling as
+theme components multiply. Each theme reads from the same store; no
+theme-local duplicate state for trip data.
+
+### Error handling
+A React Error Boundary wraps each top-level view (location overview,
+itinerary, map, things-to-do) so a fault in one theme's rendering of a view
+shows a scoped fallback instead of crashing the whole app.
 
 ### Backend — Cloudflare Pages Functions
 All calls to keyed/paid APIs (Tripadvisor, Google Places) go through Cloudflare
@@ -68,11 +84,22 @@ Pages Functions (`functions/api/*`). The frontend never holds these keys.
 - `POST /api/trips` / `GET /api/trips/:id` / `PATCH /api/trips/:id` — thin
   CRUD over the `trips` table via the Supabase service-role key (server-side
   only, never exposed to the client).
+- `GET /api/health` — checks Supabase connectivity (a trivial read) and
+  returns 200/503. Doubles as the target the daily keep-alive cron pings, so
+  there's one code path for both "is it up" and "keep it from pausing"
+  instead of two.
 
 Weather (Open-Meteo) and map tiles (Leaflet + OpenStreetMap) are free and
 keyless — the frontend calls Open-Meteo directly; no proxy needed.
 
+A `public/_headers` file sets security headers for Cloudflare Pages (CSP,
+`X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`)
+— static config, no runtime cost.
+
 ### Data model (Supabase — new, dedicated project)
+Schema is tracked as plain versioned SQL in `supabase/migrations/*.sql` (not
+an ORM) — checked into the repo as the source of truth for rebuilding the
+project if it's ever reset.
 
 - `locations` — `slug` (PK), `lat`, `lng`, `display_name`, `weather_baseline`
   (jsonb), `things_to_do` (jsonb, cached Tripadvisor + Places results),
@@ -99,15 +126,23 @@ Supabase free-tier projects auto-pause after ~7 days with no activity, which
 would silently break the cache and trips backend.
 
 - **Keep-alive workflow** (`.github/workflows/supabase-keepalive.yml`): daily
-  GitHub Actions cron runs a trivial query (e.g. `select 1 from locations
-  limit 1`) against the project using a read-only key from GitHub secrets.
+  GitHub Actions cron hits the deployed `GET /api/health` endpoint (same check
+  used for uptime verification), which performs a trivial Supabase read —
+  reusing one code path instead of maintaining a separate raw query.
 - **Backup workflow** (`.github/workflows/supabase-backup.yml`): weekly GitHub
   Actions cron exports `locations`, `trips`, and `request_log` to a
   timestamped JSON file under `backups/`, committed to the repo, using the
   Supabase service-role key from GitHub secrets. Keeps the last 8 weekly
   backups (~2 months); older ones are pruned to avoid unbounded repo growth.
+- **Schema recovery:** if the Supabase project is ever paused past recovery,
+  reset, or needs recreating, `supabase/migrations/*.sql` rebuilds the exact
+  schema and the most recent `backups/*.json` restores the data — no
+  reconstruction from memory.
 - Both workflows follow the existing secrets rule: keys live only in GitHub
   repo secrets, never printed, logged, or committed in plaintext.
+- **Dependabot** (`.github/dependabot.yml`) is enabled for npm dependency
+  updates — free, automated vulnerability alerts, no ongoing maintenance
+  beyond reviewing its PRs.
 
 ## Design system — 5 selectable themes
 
