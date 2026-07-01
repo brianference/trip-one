@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { getLocationBySlug, upsertLocation, countRecentRequests } from './supabaseAdmin'
+import { getLocationBySlug, upsertLocation, countRecentRequests, createTrip } from './supabaseAdmin'
 
 const env = {
   SUPABASE_URL: 'https://example.supabase.co',
@@ -50,5 +50,38 @@ describe('supabaseAdmin', () => {
     )
     const count = await countRecentRequests(env, 'somehash', new Date().toISOString())
     expect(count).toBe(7)
+  })
+
+  it('countRecentRequests throws on a non-ok response instead of failing open', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+        headers: new Headers(),
+        json: async () => ({}),
+      }),
+    )
+    await expect(
+      countRecentRequests(env, 'somehash', new Date().toISOString()),
+    ).rejects.toThrow(/503/)
+  })
+
+  it('getLocationBySlug throws on a non-ok response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({}) }),
+    )
+    await expect(getLocationBySlug(env, 'dublin-ireland')).rejects.toThrow(/500/)
+  })
+
+  it('createTrip throws on a non-ok response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 400, json: async () => ({}) }),
+    )
+    await expect(
+      createTrip(env, { location_slug: 'dublin-ireland', itinerary: [], design_style: 'classic' }),
+    ).rejects.toThrow(/400/)
   })
 })

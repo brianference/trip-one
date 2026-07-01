@@ -31,21 +31,33 @@ function headers(env: Env, extra: Record<string, string> = {}) {
   }
 }
 
+/**
+ * Throws a clear error when a Supabase/PostgREST response is not ok, so that
+ * a failed request never gets silently interpreted as an empty/default result.
+ */
+async function assertOk(res: Response, context: string): Promise<void> {
+  if (!res.ok) {
+    throw new Error(`Supabase request failed (${context}): ${res.status}`)
+  }
+}
+
 export async function getLocationBySlug(env: Env, slug: string): Promise<LocationRow | null> {
   const res = await fetch(
     `${env.SUPABASE_URL}/rest/v1/locations?slug=eq.${encodeURIComponent(slug)}&select=*`,
     { headers: headers(env) },
   )
+  await assertOk(res, 'getLocationBySlug')
   const rows = (await res.json()) as LocationRow[]
   return rows[0] ?? null
 }
 
 export async function upsertLocation(env: Env, row: LocationRow): Promise<void> {
-  await fetch(`${env.SUPABASE_URL}/rest/v1/locations`, {
+  const res = await fetch(`${env.SUPABASE_URL}/rest/v1/locations`, {
     method: 'POST',
     headers: headers(env, { Prefer: 'resolution=merge-duplicates' }),
     body: JSON.stringify(row),
   })
+  await assertOk(res, 'upsertLocation')
 }
 
 export async function countRecentRequests(
@@ -57,16 +69,20 @@ export async function countRecentRequests(
     `${env.SUPABASE_URL}/rest/v1/request_log?ip_hash=eq.${encodeURIComponent(ipHash)}&created_at=gte.${encodeURIComponent(sinceIso)}&select=id`,
     { headers: headers(env, { Prefer: 'count=exact' }) },
   )
+  // Must throw (fail closed) rather than default to 0 (fail open) -- the
+  // rate limiter relies on this count to decide whether to block requests.
+  await assertOk(res, 'countRecentRequests')
   const range = res.headers.get('content-range') ?? '*/0'
   return Number(range.split('/')[1] ?? 0)
 }
 
 export async function insertRequestLog(env: Env, ipHash: string, endpoint: string): Promise<void> {
-  await fetch(`${env.SUPABASE_URL}/rest/v1/request_log`, {
+  const res = await fetch(`${env.SUPABASE_URL}/rest/v1/request_log`, {
     method: 'POST',
     headers: headers(env),
     body: JSON.stringify({ ip_hash: ipHash, endpoint }),
   })
+  await assertOk(res, 'insertRequestLog')
 }
 
 export async function createTrip(
@@ -78,6 +94,7 @@ export async function createTrip(
     headers: headers(env, { Prefer: 'return=representation' }),
     body: JSON.stringify(row),
   })
+  await assertOk(res, 'createTrip')
   const rows = (await res.json()) as TripRow[]
   return rows[0]
 }
@@ -86,6 +103,7 @@ export async function getTrip(env: Env, id: string): Promise<TripRow | null> {
   const res = await fetch(`${env.SUPABASE_URL}/rest/v1/trips?id=eq.${id}&select=*`, {
     headers: headers(env),
   })
+  await assertOk(res, 'getTrip')
   const rows = (await res.json()) as TripRow[]
   return rows[0] ?? null
 }
@@ -100,6 +118,7 @@ export async function updateTrip(
     headers: headers(env, { Prefer: 'return=representation' }),
     body: JSON.stringify(patch),
   })
+  await assertOk(res, 'updateTrip')
   const rows = (await res.json()) as TripRow[]
   return rows[0]
 }
