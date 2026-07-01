@@ -1,0 +1,25 @@
+.chronicle-timeline ol {
+  border-left: 3px solid #2d2d2d;
+  margin-left: 12px;
+  padding-left: 16px;
+}
+.chronicle-entry {
+  position: relative;
+  padding: 8px 0;
+}
+.chronicle-entry span[data-testid^='timeline-dot'] {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+.chronicle-chapter h1 {
+  font-style: italic;
+}
+@media (max-width: 480px) {
+  .chronicle-timeline ol {
+    margin-left: 6px;
+    padding-left: 10px;
+  }
+}
