@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { fetchLocation, createTrip } from '../../lib/api/client'
 import { useTripStore } from '../../store/tripStore'
 import { logger } from '../../lib/logger'
+import { DEMO_TRIP_IDS } from '../../lib/api/demoIds'
 
 export function SearchScreen() {
   const [query, setQuery] = useState('')
@@ -29,18 +30,25 @@ export function SearchScreen() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bento-search">
-      <label htmlFor="location-query">Where to?</label>
-      <input
-        id="location-query"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="US state, city, or country"
-      />
-      <button type="submit" disabled={busy}>
-        {busy ? 'Loading…' : 'Go'}
-      </button>
-      {error && <p role="alert">{error}</p>}
-    </form>
+    <>
+      <form onSubmit={handleSubmit} className="bento-search">
+        <label htmlFor="location-query">Where to?</label>
+        <input
+          id="location-query"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="US state, city, or country"
+        />
+        <button type="submit" disabled={busy}>
+          {busy ? 'Loading…' : 'Go'}
+        </button>
+        {error && <p role="alert">{error}</p>}
+      </form>
+      <nav aria-label="Explore a demo">
+        <p>Or explore a demo:</p>
+        <Link to={`/trip/${DEMO_TRIP_IDS.yellowstone}`}>Yellowstone</Link>
+        <Link to={`/trip/${DEMO_TRIP_IDS.tokyo}`}>Tokyo</Link>
+      </nav>
+    </>
   )
 }

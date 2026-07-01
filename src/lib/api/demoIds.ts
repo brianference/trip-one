@@ -1,0 +1,4 @@
+export const DEMO_TRIP_IDS = {
+  yellowstone: '00000000-0000-4000-8000-000000000001',
+  tokyo: '00000000-0000-4000-8000-000000000002',
+} as const

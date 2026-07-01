@@ -74,3 +74,14 @@ export async function updateTrip(
   if (!res.ok) throw new Error(body.error ?? 'failed to update trip')
   return fromRow(body)
 }
+
+/**
+ * Fork a trip by copying its location and itinerary into a brand-new trip.
+ * Used whenever a user edits a read-only demo trip, so the shared demo row
+ * is never mutated.
+ */
+export async function forkTrip(sourceTripId: string): Promise<Trip> {
+  const source = await getTrip(sourceTripId)
+  const forked = await createTrip(source.locationSlug)
+  return updateTrip(forked.id, { itinerary: source.itinerary, designStyle: source.designStyle })
+}
