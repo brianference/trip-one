@@ -1,0 +1,24 @@
+:root {
+  --lg-primary-blue: #0a84ff;
+  --lg-glass-blur: 24px;
+  --lg-glass-opacity: 0.55;
+}
+
+body.theme-liquid-glass {
+  background: radial-gradient(circle at 30% 20%, rgba(10, 132, 255, 0.2) 0%, transparent 60%),
+    linear-gradient(160deg, #e8f1ff 0%, #ffffff 55%, #f0f4ff 100%);
+}
+
+.lg-glass-card {
+  backdrop-filter: blur(var(--lg-glass-blur)) saturate(160%);
+  background: rgba(255, 255, 255, var(--lg-glass-opacity));
+  border-radius: 20px;
+  border: 1px solid rgba(10, 132, 255, 0.15);
+  padding: 16px;
+  margin: 12px;
+}
+
+.lg-tap-target {
+  min-height: 44px;
+  min-width: 44px;
+}
