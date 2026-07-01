@@ -17,11 +17,14 @@ jobs:
           node-version: 20
       - run: npm install @supabase/supabase-js
       - run: mkdir -p backups
+      - name: Compute timestamp
+        id: ts
+        run: echo "value=$(date -u +%Y%m%dT%H%M%SZ)" >> "$GITHUB_OUTPUT"
       - name: Run backup script
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          BACKUP_TIMESTAMP: ${{ github.run_id }}
+          BACKUP_TIMESTAMP: ${{ steps.ts.outputs.value }}
         run: node .github/scripts/backup-supabase.mjs
       - name: Commit backup
         run: |
