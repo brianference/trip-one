@@ -1,0 +1,127 @@
+/* Bento theme: dense 2-column tile grid */
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 16px;
+}
+
+.bento-tile {
+  background: #f4f1e8;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.bento-tile--map {
+  grid-column: 1 / -1;
+}
+
+.bento-tile h1 {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+  text-transform: capitalize;
+}
+
+.bento-tile nav a {
+  color: #0a4b8a;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.bento-tile nav a:hover,
+.bento-tile nav a:focus-visible {
+  text-decoration: underline;
+}
+
+.bento-search {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 420px;
+  padding: 24px;
+  margin: 0 auto;
+}
+
+.bento-search label {
+  font-weight: 600;
+}
+
+.bento-search input {
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.bento-search button {
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #0a4b8a;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bento-search button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.bento-itinerary {
+  padding: 16px;
+}
+
+.bento-itinerary form {
+  display: grid;
+  grid-template-columns: 1fr 2fr auto;
+  gap: 8px;
+  align-items: end;
+  margin-bottom: 16px;
+}
+
+.bento-itinerary ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.bento-itinerary li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f4f1e8;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.bento-things-to-do {
+  list-style: none;
+  margin: 0;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.bento-things-to-do li {
+  background: #f4f1e8;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (max-width: 480px) {
+  .bento-grid,
+  .bento-things-to-do {
+    grid-template-columns: 1fr;
+  }
+  .bento-itinerary form {
+    grid-template-columns: 1fr;
+  }
+}

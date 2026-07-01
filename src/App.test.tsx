@@ -3,8 +3,8 @@ import { render, screen } from '@testing-library/react'
 import App from './App'
 
 describe('App', () => {
-  it('renders the app shell', () => {
+  it('renders the search screen at the root route', () => {
     render(<App />)
-    expect(screen.getByText(/trip-one/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/where to/i)).toBeInTheDocument()
   })
 })
