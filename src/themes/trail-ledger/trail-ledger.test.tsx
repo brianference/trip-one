@@ -3,9 +3,11 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { OverviewScreen } from './OverviewScreen'
 import { ItineraryScreen } from './ItineraryScreen'
+import { ThingsToDoScreen } from './ThingsToDoScreen'
 import { useTripStore } from '../../store/tripStore'
 import * as client from '../../lib/api/client'
 import * as forecastHook from '../../features/weather/useForecast'
+import * as loggerModule from '../../lib/logger'
 
 describe('Trail Ledger theme', () => {
   beforeEach(() => {
@@ -65,5 +67,33 @@ describe('Trail Ledger theme', () => {
 
     const rows = screen.getAllByRole('row')
     expect(rows.length).toBeGreaterThan(1)
+  })
+
+  /**
+   * Test that ThingsToDoScreen lists items in a table.
+   */
+  it('ThingsToDoScreen lists items in a table', async () => {
+    vi.spyOn(client, 'fetchLocation').mockResolvedValue({
+      slug: 'reykjavik-iceland',
+      lat: 64.128,
+      lng: -21.9426,
+      displayName: 'Reykjavik, Iceland',
+      thingsToDo: [{ name: 'Blue Lagoon', category: 'geothermal', source: 'tripadvisor' }],
+    })
+    render(<ThingsToDoScreen locationSlug="reykjavik-iceland" />)
+    await waitFor(() => expect(screen.getByText('Blue Lagoon')).toBeInTheDocument())
+    expect(screen.getByText('geothermal')).toBeInTheDocument()
+  })
+
+  /**
+   * Test that ThingsToDoScreen handles fetch errors without crashing and logs the error.
+   */
+  it('ThingsToDoScreen handles fetch errors without crashing', async () => {
+    const loggerSpy = vi.spyOn(loggerModule.logger, 'error')
+    vi.spyOn(client, 'fetchLocation').mockRejectedValue(new Error('network error'))
+    render(<ThingsToDoScreen locationSlug="reykjavik-iceland" />)
+    await waitFor(() => expect(loggerSpy).toHaveBeenCalledWith('failed to load things to do', expect.any(Error)))
+    // Verify no crash or unhandled rejection
+    expect(screen.queryByRole('table')).toBeInTheDocument()
   })
 })
