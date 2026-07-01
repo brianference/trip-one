@@ -46,7 +46,7 @@ function seasonalFallback(): Forecast {
 
 export function useForecast(lat: number, lng: number) {
   const [data, setData] = useState<Forecast | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [error] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
