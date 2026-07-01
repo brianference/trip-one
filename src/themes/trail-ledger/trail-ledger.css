@@ -1,0 +1,23 @@
+.tl-ledger table,
+.tl-suggestions {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: ui-monospace, monospace;
+  font-size: 14px;
+}
+
+.tl-ledger td,
+.tl-ledger th,
+.tl-suggestions td,
+.tl-suggestions th {
+  border-bottom: 1px solid #e5e5e5;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+@media (max-width: 480px) {
+  .tl-ledger table,
+  .tl-suggestions {
+    font-size: 12px;
+  }
+}
