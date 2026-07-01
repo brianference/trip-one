@@ -25,4 +25,45 @@ describe('useForecast', () => {
     expect(result.current.data?.isFallback).toBe(true)
     expect(result.current.error).toBeNull()
   })
+
+  it('falls back to a seasonal estimate when the response is not ok', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 429,
+        json: async () => ({ reason: 'rate limited' }),
+      }),
+    )
+    const { result } = renderHook(() => useForecast(53.35, -6.26))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.data?.isFallback).toBe(true)
+    expect(result.current.error).toBeNull()
+  })
+
+  it('resolves previously-unmapped WMO codes to real labels', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ current: { temperature_2m: 10, weather_code: 45 } }),
+      }),
+    )
+    const { result } = renderHook(() => useForecast(53.35, -6.26))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.data).toEqual({ temperatureC: 10, condition: 'Fog', isFallback: false })
+  })
+
+  it('resolves rain-shower WMO codes to real labels', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ current: { temperature_2m: 16, weather_code: 80 } }),
+      }),
+    )
+    const { result } = renderHook(() => useForecast(53.35, -6.26))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.data).toEqual({ temperatureC: 16, condition: 'Rain showers', isFallback: false })
+  })
 })

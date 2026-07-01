@@ -12,9 +12,30 @@ const WMO_CONDITIONS: Record<number, string> = {
   1: 'Mostly clear',
   2: 'Partly cloudy',
   3: 'Overcast',
+  45: 'Fog',
+  48: 'Rime fog',
+  51: 'Light drizzle',
+  53: 'Moderate drizzle',
+  55: 'Dense drizzle',
+  56: 'Light freezing drizzle',
+  57: 'Dense freezing drizzle',
   61: 'Rain',
+  63: 'Moderate rain',
+  65: 'Heavy rain',
+  66: 'Light freezing rain',
+  67: 'Heavy freezing rain',
   71: 'Snow',
+  73: 'Moderate snow',
+  75: 'Heavy snow',
+  77: 'Snow grains',
+  80: 'Rain showers',
+  81: 'Moderate rain showers',
+  82: 'Violent rain showers',
+  85: 'Snow showers',
+  86: 'Heavy snow showers',
   95: 'Thunderstorm',
+  96: 'Thunderstorm with hail',
+  99: 'Thunderstorm with heavy hail',
 }
 
 function seasonalFallback(): Forecast {
@@ -32,7 +53,10 @@ export function useForecast(lat: number, lng: number) {
     let cancelled = false
     setLoading(true)
     fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`Open-Meteo request failed: ${res.status}`)
+        return res.json()
+      })
       .then((body) => {
         if (cancelled) return
         setData({
