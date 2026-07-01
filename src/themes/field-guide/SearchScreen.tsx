@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { fetchLocation, createTrip } from '../../lib/api/client'
 import { useTripStore } from '../../store/tripStore'
 import { logger } from '../../lib/logger'
+import { DEMO_TRIP_IDS } from '../../lib/api/demoIds'
 
 /**
  * Search screen for Field Guide theme — allows users to search for a location to start a trip.
@@ -32,13 +33,20 @@ export function SearchScreen() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="field-guide-search">
-      <label htmlFor="fg-location-query">Where to?</label>
-      <input id="fg-location-query" value={query} onChange={(e) => setQuery(e.target.value)} />
-      <button type="submit" disabled={busy}>
-        {busy ? 'Loading…' : 'Go'}
-      </button>
-      {error && <p role="alert">{error}</p>}
-    </form>
+    <>
+      <form onSubmit={handleSubmit} className="field-guide-search">
+        <label htmlFor="fg-location-query">Where to?</label>
+        <input id="fg-location-query" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <button type="submit" disabled={busy}>
+          {busy ? 'Loading…' : 'Go'}
+        </button>
+        {error && <p role="alert">{error}</p>}
+      </form>
+      <nav aria-label="Explore a demo">
+        <p>Or explore a demo:</p>
+        <Link to={`/trip/${DEMO_TRIP_IDS.yellowstone}`}>Yellowstone</Link>
+        <Link to={`/trip/${DEMO_TRIP_IDS.tokyo}`}>Tokyo</Link>
+      </nav>
+    </>
   )
 }
