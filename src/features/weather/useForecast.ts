@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { logger } from '../../lib/logger'
 
 export interface Forecast {
-  temperatureC: number
+  temperatureF: number
   condition: string
   isFallback: boolean
 }
@@ -41,7 +41,7 @@ const WMO_CONDITIONS: Record<number, string> = {
 function seasonalFallback(): Forecast {
   const month = new Date().getMonth()
   const isSummer = month >= 4 && month <= 8
-  return { temperatureC: isSummer ? 22 : 8, condition: isSummer ? 'Mild (estimate)' : 'Cool (estimate)', isFallback: true }
+  return { temperatureF: isSummer ? 72 : 46, condition: isSummer ? 'Mild (estimate)' : 'Cool (estimate)', isFallback: true }
 }
 
 export function useForecast(lat: number, lng: number) {
@@ -52,7 +52,9 @@ export function useForecast(lat: number, lng: number) {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code`)
+    fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code&temperature_unit=fahrenheit`,
+    )
       .then((res) => {
         if (!res.ok) throw new Error(`Open-Meteo request failed: ${res.status}`)
         return res.json()
@@ -60,7 +62,7 @@ export function useForecast(lat: number, lng: number) {
       .then((body) => {
         if (cancelled) return
         setData({
-          temperatureC: body.current.temperature_2m,
+          temperatureF: body.current.temperature_2m,
           condition: WMO_CONDITIONS[body.current.weather_code] ?? 'Unknown',
           isFallback: false,
         })
