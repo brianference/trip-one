@@ -9,6 +9,26 @@ import { useTripStore } from '../../store/tripStore'
 import * as client from '../../lib/api/client'
 import * as forecastHook from '../../features/weather/useForecast'
 
+vi.mock('leaflet', () => {
+  const createMapMock = () => {
+    const mapMock: { remove: ReturnType<typeof vi.fn>; setView: ReturnType<typeof vi.fn> } = {
+      remove: vi.fn(),
+      setView: vi.fn(),
+    }
+    mapMock.setView = vi.fn(() => mapMock)
+    return mapMock
+  }
+
+  return {
+    default: {
+      map: vi.fn(createMapMock),
+      tileLayer: vi.fn(() => ({ addTo: vi.fn() })),
+      divIcon: vi.fn(() => ({})),
+      marker: vi.fn(() => ({ addTo: vi.fn().mockReturnThis(), bindPopup: vi.fn().mockReturnThis() })),
+    },
+  }
+})
+
 describe('Chronicle theme', () => {
   it('SearchScreen creates a trip and navigates', async () => {
     vi.spyOn(client, 'fetchLocation').mockResolvedValue({
@@ -38,7 +58,7 @@ describe('Chronicle theme', () => {
       displayName: 'Kyoto, Japan',
       thingsToDo: [],
     })
-    vi.spyOn(forecastHook, 'useForecast').mockReturnValue({ data: { temperatureC: 18, condition: 'Clear', isFallback: false }, error: null, loading: false })
+    vi.spyOn(forecastHook, 'useForecast').mockReturnValue({ data: { temperatureF: 64, condition: 'Clear', isFallback: false }, error: null, loading: false })
     render(
       <MemoryRouter initialEntries={['/trip/t2']}>
         <Routes>
@@ -46,7 +66,7 @@ describe('Chronicle theme', () => {
         </Routes>
       </MemoryRouter>,
     )
-    await waitFor(() => expect(screen.getByRole('heading')).toHaveTextContent(/kyoto-japan/i))
+    await waitFor(() => expect(screen.getByRole('heading')).toHaveTextContent(/Kyoto, Japan/i))
   })
 
   it('ItineraryScreen renders items as timeline entries with a type dot', () => {

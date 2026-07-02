@@ -23,6 +23,7 @@ vi.mock('leaflet', () => {
     default: {
       map: vi.fn(createMapMock),
       tileLayer: vi.fn(() => ({ addTo: vi.fn() })),
+      divIcon: vi.fn(() => ({})),
       marker: vi.fn(() => ({ addTo: vi.fn().mockReturnThis(), bindPopup: vi.fn().mockReturnThis() })),
     },
   }
@@ -57,7 +58,7 @@ describe('Field Guide theme', () => {
       displayName: 'Yellowstone',
       thingsToDo: [],
     })
-    vi.spyOn(forecastHook, 'useForecast').mockReturnValue({ data: { temperatureC: 10, condition: 'Clear', isFallback: false }, error: null, loading: false })
+    vi.spyOn(forecastHook, 'useForecast').mockReturnValue({ data: { temperatureF: 50, condition: 'Clear', isFallback: false }, error: null, loading: false })
     render(
       <MemoryRouter initialEntries={['/trip/t3']}>
         <Routes>
@@ -65,7 +66,7 @@ describe('Field Guide theme', () => {
         </Routes>
       </MemoryRouter>,
     )
-    await waitFor(() => expect(screen.getByTestId('field-guide-overlay-card')).toHaveTextContent(/yellowstone-demo/i))
+    await waitFor(() => expect(screen.getByTestId('field-guide-overlay-card')).toHaveTextContent(/Yellowstone/i))
   })
 
   it('ItineraryScreen renders items as postcard entries', () => {

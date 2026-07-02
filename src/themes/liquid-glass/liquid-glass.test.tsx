@@ -9,6 +9,26 @@ import { useTripStore } from '../../store/tripStore'
 import * as client from '../../lib/api/client'
 import * as forecastHook from '../../features/weather/useForecast'
 
+vi.mock('leaflet', () => {
+  const createMapMock = () => {
+    const mapMock: { remove: ReturnType<typeof vi.fn>; setView: ReturnType<typeof vi.fn> } = {
+      remove: vi.fn(),
+      setView: vi.fn(),
+    }
+    mapMock.setView = vi.fn(() => mapMock)
+    return mapMock
+  }
+
+  return {
+    default: {
+      map: vi.fn(createMapMock),
+      tileLayer: vi.fn(() => ({ addTo: vi.fn() })),
+      divIcon: vi.fn(() => ({})),
+      marker: vi.fn(() => ({ addTo: vi.fn().mockReturnThis(), bindPopup: vi.fn().mockReturnThis() })),
+    },
+  }
+})
+
 describe('Liquid Glass theme', () => {
   it('SearchScreen creates a trip and navigates', async () => {
     vi.spyOn(client, 'fetchLocation').mockResolvedValue({
@@ -45,7 +65,7 @@ describe('Liquid Glass theme', () => {
       displayName: 'Lisbon, Portugal',
       thingsToDo: [],
     })
-    vi.spyOn(forecastHook, 'useForecast').mockReturnValue({ data: { temperatureC: 22, condition: 'Sunny', isFallback: false }, error: null, loading: false })
+    vi.spyOn(forecastHook, 'useForecast').mockReturnValue({ data: { temperatureF: 72, condition: 'Sunny', isFallback: false }, error: null, loading: false })
     render(
       <MemoryRouter initialEntries={['/trip/t4']}>
         <Routes>
@@ -53,7 +73,7 @@ describe('Liquid Glass theme', () => {
         </Routes>
       </MemoryRouter>,
     )
-    await waitFor(() => expect(screen.getByRole('heading')).toHaveTextContent(/lisbon-portugal/i))
+    await waitFor(() => expect(screen.getByRole('heading')).toHaveTextContent(/Lisbon, Portugal/i))
     expect(screen.getByText('Sunny')).toBeInTheDocument()
   })
 

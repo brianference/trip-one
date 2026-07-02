@@ -22,3 +22,9 @@ body.theme-liquid-glass {
   min-height: 44px;
   min-width: 44px;
 }
+
+.lg-map-card {
+  margin: 12px 0 0;
+  padding: 8px;
+  overflow: hidden;
+}

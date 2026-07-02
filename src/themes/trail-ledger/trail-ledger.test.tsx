@@ -9,6 +9,26 @@ import * as client from '../../lib/api/client'
 import * as forecastHook from '../../features/weather/useForecast'
 import * as loggerModule from '../../lib/logger'
 
+vi.mock('leaflet', () => {
+  const createMapMock = () => {
+    const mapMock: { remove: ReturnType<typeof vi.fn>; setView: ReturnType<typeof vi.fn> } = {
+      remove: vi.fn(),
+      setView: vi.fn(),
+    }
+    mapMock.setView = vi.fn(() => mapMock)
+    return mapMock
+  }
+
+  return {
+    default: {
+      map: vi.fn(createMapMock),
+      tileLayer: vi.fn(() => ({ addTo: vi.fn() })),
+      divIcon: vi.fn(() => ({})),
+      marker: vi.fn(() => ({ addTo: vi.fn().mockReturnThis(), bindPopup: vi.fn().mockReturnThis() })),
+    },
+  }
+})
+
 describe('Trail Ledger theme', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -36,7 +56,7 @@ describe('Trail Ledger theme', () => {
       thingsToDo: [],
     })
     vi.spyOn(forecastHook, 'useForecast').mockReturnValue({
-      data: { temperatureC: 4, condition: 'Overcast', isFallback: false },
+      data: { temperatureF: 39, condition: 'Overcast', isFallback: false },
       error: null,
       loading: false,
     })
@@ -50,6 +70,7 @@ describe('Trail Ledger theme', () => {
     )
 
     await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
+    expect(screen.getByText('Reykjavik, Iceland')).toBeInTheDocument()
   })
 
   /**

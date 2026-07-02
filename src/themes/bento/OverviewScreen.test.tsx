@@ -19,6 +19,7 @@ vi.mock('leaflet', () => {
     default: {
       map: vi.fn(createMapMock),
       tileLayer: vi.fn(() => ({ addTo: vi.fn() })),
+      divIcon: vi.fn(() => ({})),
       marker: vi.fn(() => ({ addTo: vi.fn().mockReturnThis(), bindPopup: vi.fn().mockReturnThis() })),
     },
   }
@@ -40,7 +41,7 @@ describe('OverviewScreen', () => {
       thingsToDo: [],
     })
     vi.spyOn(forecastHook, 'useForecast').mockReturnValue({
-      data: { temperatureC: 14, condition: 'Overcast', isFallback: false },
+      data: { temperatureF: 57, condition: 'Overcast', isFallback: false },
       error: null,
       loading: false,
     })
@@ -51,7 +52,7 @@ describe('OverviewScreen', () => {
         </Routes>
       </MemoryRouter>,
     )
-    await waitFor(() => expect(screen.getByText(/dublin-ireland/i)).toBeInTheDocument())
-    expect(screen.getByText(/14/)).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText(/Dublin, Ireland/i)).toBeInTheDocument())
+    expect(screen.getByText(/57/)).toBeInTheDocument()
   })
 })

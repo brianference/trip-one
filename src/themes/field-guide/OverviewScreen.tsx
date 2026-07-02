@@ -11,12 +11,13 @@ import { logger } from '../../lib/logger'
  */
 function Hero({ trip, location }: { trip: Trip; location: LocationResult | null }) {
   const { data: forecast } = useForecast(location?.lat ?? 0, location?.lng ?? 0)
+  const displayName = location?.displayName ?? trip.locationSlug
   return (
     <div className="field-guide-hero">
-      <MapView lat={location?.lat ?? 0} lng={location?.lng ?? 0} label={trip.locationSlug} />
+      <MapView lat={location?.lat ?? 0} lng={location?.lng ?? 0} label={displayName} />
       <div className="field-guide-overlay-card" data-testid="field-guide-overlay-card">
-        <h1>{trip.locationSlug}</h1>
-        {forecast && <p>{forecast.temperatureC}°C — {forecast.condition}</p>}
+        <h1>{displayName}</h1>
+        {forecast && <p>{forecast.temperatureF}°F — {forecast.condition}</p>}
       </div>
     </div>
   )

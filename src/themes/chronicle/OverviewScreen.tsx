@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { getTrip, fetchLocation, type Trip, type LocationResult } from '../../lib/api/client'
 import { useForecast } from '../../features/weather/useForecast'
+import { MapView } from '../../features/map/MapView'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
 import { logger } from '../../lib/logger'
 
@@ -10,10 +11,12 @@ import { logger } from '../../lib/logger'
  */
 function Chapter({ trip, location }: { trip: Trip; location: LocationResult | null }) {
   const { data: forecast } = useForecast(location?.lat ?? 0, location?.lng ?? 0)
+  const displayName = location?.displayName ?? trip.locationSlug
   return (
     <article className="chronicle-chapter">
-      <h1>Day one: {trip.locationSlug}</h1>
-      {forecast && <p>{forecast.temperatureC}°C — {forecast.condition}</p>}
+      <h1>Day one: {displayName}</h1>
+      {forecast && <p>{forecast.temperatureF}°F — {forecast.condition}</p>}
+      {location && <MapView lat={location.lat} lng={location.lng} label={displayName} />}
     </article>
   )
 }

@@ -11,7 +11,7 @@ function OverviewContent({ tripId, trip, location }: { tripId: string; trip: Tri
   return (
     <div className="bento-grid">
       <div className="bento-tile">
-        <h1>{trip.locationSlug}</h1>
+        <h1>{location?.displayName ?? trip.locationSlug}</h1>
         <nav>
           <Link to={`/trip/${tripId}/itinerary`}>Itinerary</Link>
           {' · '}
@@ -20,7 +20,7 @@ function OverviewContent({ tripId, trip, location }: { tripId: string; trip: Tri
       </div>
       {forecast && (
         <div className="bento-tile">
-          <p className="bento-weather-value">{forecast.temperatureC}°C</p>
+          <p className="bento-weather-value">{forecast.temperatureF}°F</p>
           <p className="bento-weather-condition">{forecast.condition}</p>
         </div>
       )}

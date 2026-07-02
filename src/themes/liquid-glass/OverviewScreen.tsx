@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { getTrip, fetchLocation, type Trip, type LocationResult } from '../../lib/api/client'
 import { useForecast } from '../../features/weather/useForecast'
+import { MapView } from '../../features/map/MapView'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
 import { logger } from '../../lib/logger'
 
@@ -10,15 +11,21 @@ import { logger } from '../../lib/logger'
  */
 function GlassOverview({ trip, location }: { trip: Trip; location: LocationResult | null }) {
   const { data: forecast } = useForecast(location?.lat ?? 0, location?.lng ?? 0)
+  const displayName = location?.displayName ?? trip.locationSlug
   return (
     <div className="lg-glass-card">
-      <h1>{trip.locationSlug}</h1>
+      <h1>{displayName}</h1>
       {forecast && (
         <p>
-          <span>{forecast.temperatureC}°C</span>
+          <span>{forecast.temperatureF}°F</span>
           <span> — </span>
           <span>{forecast.condition}</span>
         </p>
+      )}
+      {location && (
+        <div className="lg-glass-card lg-map-card">
+          <MapView lat={location.lat} lng={location.lng} label={displayName} />
+        </div>
       )}
     </div>
   )

@@ -2,29 +2,34 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { getTrip, fetchLocation, type Trip, type LocationResult } from '../../lib/api/client'
 import { useForecast } from '../../features/weather/useForecast'
+import { MapView } from '../../features/map/MapView'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
 import { logger } from '../../lib/logger'
 
 /**
- * Ledger table component — displays trip info as a two-column table.
+ * Ledger table component — displays trip info as a two-column table, with the map below.
  */
 function LedgerTable({ trip, location }: { trip: Trip; location: LocationResult | null }) {
   const { data: forecast } = useForecast(location?.lat ?? 0, location?.lng ?? 0)
+  const displayName = location?.displayName ?? trip.locationSlug
   return (
-    <table>
-      <tbody>
-        <tr>
-          <th>Location</th>
-          <td>{trip.locationSlug}</td>
-        </tr>
-        {forecast && (
+    <div className="tl-ledger">
+      <table>
+        <tbody>
           <tr>
-            <th>Weather</th>
-            <td>{forecast.temperatureC}°C — {forecast.condition}</td>
+            <th>Location</th>
+            <td>{displayName}</td>
           </tr>
-        )}
-      </tbody>
-    </table>
+          {forecast && (
+            <tr>
+              <th>Weather</th>
+              <td>{forecast.temperatureF}°F — {forecast.condition}</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+      {location && <MapView lat={location.lat} lng={location.lng} label={displayName} />}
+    </div>
   )
 }
 

@@ -19,6 +19,7 @@ vi.mock('leaflet', () => {
     default: {
       map: vi.fn(createMapMock),
       tileLayer: vi.fn(() => ({ addTo: vi.fn() })),
+      divIcon: vi.fn(() => ({})),
       marker: vi.fn(() => ({ addTo: vi.fn().mockReturnThis(), bindPopup: vi.fn().mockReturnThis() })),
     },
   }
@@ -83,14 +84,14 @@ describe('App', () => {
       thingsToDo: [],
     })
     vi.spyOn(forecastHook, 'useForecast').mockReturnValue({
-      data: { temperatureC: 14, condition: 'Overcast', isFallback: false },
+      data: { temperatureF: 57, condition: 'Overcast', isFallback: false },
       error: null,
       loading: false,
     })
     navigateTo('/trip/t1')
     render(<App />)
     expect(screen.getByLabelText(/design/i)).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByRole('cell', { name: 'dublin-ireland' })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('cell', { name: 'Dublin, Ireland' })).toBeInTheDocument())
   })
 
   it('switching the ThemeSwitcher swaps the rendered Overview screen for a sibling theme', async () => {
@@ -115,7 +116,7 @@ describe('App', () => {
       designStyle: 'chronicle',
     })
     vi.spyOn(forecastHook, 'useForecast').mockReturnValue({
-      data: { temperatureC: 14, condition: 'Overcast', isFallback: false },
+      data: { temperatureF: 57, condition: 'Overcast', isFallback: false },
       error: null,
       loading: false,
     })
