@@ -17,6 +17,7 @@ vi.mock('leaflet', () => {
     default: {
       map: vi.fn(createMapMock),
       tileLayer: vi.fn(() => ({ addTo: vi.fn() })),
+      divIcon: vi.fn(() => ({ __mockDivIcon: true })),
       marker: vi.fn(() => ({ addTo: vi.fn().mockReturnThis(), bindPopup: vi.fn().mockReturnThis() })),
     },
   }
@@ -54,5 +55,21 @@ describe('MapView', () => {
     // Verify the element's textContent (not innerHTML) is the label
     // textContent ensures the malicious content is rendered as text, not HTML
     expect(popupArg.textContent).toBe(testLabel)
+  })
+
+  it('uses a custom divIcon instead of Leaflet default marker images (avoids broken image requests)', () => {
+    render(<MapView lat={53.35} lng={-6.26} label="Dublin, Ireland" />)
+
+    const leafletMocked = vi.mocked(L)
+
+    // A divIcon must be built (no dependency on Leaflet's bundled marker-icon.png/
+    // marker-shadow.png assets, which 404 under this app's SPA routing).
+    expect(leafletMocked.divIcon).toHaveBeenCalledTimes(1)
+    const divIconCall = leafletMocked.divIcon.mock.calls[0][0]
+    expect(divIconCall?.html).toBeTruthy()
+
+    // The marker must be constructed with that custom icon, not Leaflet's default.
+    const divIconResult = leafletMocked.divIcon.mock.results[0].value
+    expect(leafletMocked.marker).toHaveBeenCalledWith([53.35, -6.26], { icon: divIconResult })
   })
 })
