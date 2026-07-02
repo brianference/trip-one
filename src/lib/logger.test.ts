@@ -5,7 +5,7 @@ describe('logger', () => {
   afterEach(() => vi.restoreAllMocks())
 
   it('info writes a structured line to stdout', () => {
-    const spy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {})
     logger.info('hello', { foo: 'bar' })
     expect(spy).toHaveBeenCalledTimes(1)
     const line = JSON.parse((spy.mock.calls[0][0] as string).trim())
@@ -13,7 +13,7 @@ describe('logger', () => {
   })
 
   it('error includes the error message', () => {
-    const spy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     logger.error('failed', new Error('boom'))
     const line = JSON.parse((spy.mock.calls[0][0] as string).trim())
     expect(line).toMatchObject({ level: 'error', msg: 'failed', error: 'boom' })

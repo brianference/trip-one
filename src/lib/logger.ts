@@ -2,8 +2,8 @@ type Level = 'info' | 'warn' | 'error'
 
 function write(level: Level, msg: string, meta: Record<string, unknown> = {}) {
   const line = JSON.stringify({ level, msg, ts: new Date().toISOString(), ...meta })
-  const stream = level === 'error' ? process.stderr : process.stdout
-  stream.write(line + '\n')
+  const sink = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log
+  sink(line)
 }
 
 export const logger = {
