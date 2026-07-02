@@ -10,13 +10,13 @@ describe('tripadvisor searchThingsToDo', () => {
       vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({
-          data: [{ name: 'Trinity College', category: { name: 'attraction' }, rating: '4.6' }],
+          data: [{ name: 'Trinity College' }],
         }),
       }),
     )
     const results = await searchThingsToDo('dublin-ireland', 53.35, -6.26, 'test-key')
     expect(results).toEqual([
-      { name: 'Trinity College', category: 'attraction', source: 'tripadvisor', rating: 4.6 },
+      { name: 'Trinity College', category: 'attraction', source: 'tripadvisor', rating: undefined },
     ])
   })
 

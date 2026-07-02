@@ -18,7 +18,7 @@ export async function searchThingsToDo(
   apiKey: string,
 ): Promise<ThingToDo[]> {
   try {
-    const url = `https://api.content.tripadvisor.com/api/v1/location/search?key=${apiKey}&latLong=${lat}%2C${lng}&category=attractions`
+    const url = `https://api.content.tripadvisor.com/api/v1/location/nearby_search?key=${apiKey}&latLong=${lat}%2C${lng}&category=attractions`
     const res = await fetch(url, { headers: { Accept: 'application/json' } })
     if (!res.ok) {
       logger.warn('tripadvisor search non-ok response', { slug, status: res.status })
