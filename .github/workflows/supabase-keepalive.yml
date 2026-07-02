@@ -1,0 +1,19 @@
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: '0 14 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /api/health
+        run: |
+          status=$(curl -s -o /dev/null -w "%{http_code}" https://trip-one.pages.dev/api/health)
+          echo "Health check returned $status"
+          if [ "$status" != "200" ]; then
+            echo "::error::Health check failed with status $status"
+            exit 1
+          fi
