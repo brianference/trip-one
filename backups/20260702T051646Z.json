@@ -1,0 +1,620 @@
+{
+  "locations": [
+    {
+      "slug": "yellowstone-demo",
+      "lat": 44.6,
+      "lng": -110.5,
+      "display_name": "Yellowstone National Park, Wyoming",
+      "weather_baseline": null,
+      "things_to_do": [],
+      "last_refreshed": "2026-07-01T08:08:24.835746+00:00"
+    },
+    {
+      "slug": "tokyo-demo",
+      "lat": 35.6812,
+      "lng": 139.7671,
+      "display_name": "Tokyo, Japan",
+      "weather_baseline": null,
+      "things_to_do": [],
+      "last_refreshed": "2026-07-01T08:08:25.170614+00:00"
+    },
+    {
+      "slug": "dublin-ireland",
+      "lat": 53.3493795,
+      "lng": -6.2605593,
+      "display_name": "Dublin, County Dublin, Leinster, Éire / Ireland",
+      "weather_baseline": null,
+      "things_to_do": [
+        {
+          "name": "Trinity College Dublin",
+          "rating": 4.6,
+          "source": "places",
+          "address": "College Green, Dublin 2",
+          "category": "university"
+        },
+        {
+          "name": "Seán Heuston Bridge",
+          "rating": 4.3,
+          "source": "places",
+          "address": "17 R109, Dublin",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Anna Livia",
+          "rating": 4.4,
+          "source": "places",
+          "address": "Wolfe Tone Quay, Arran Quay, Dublin",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Guinness Storehouse",
+          "rating": 4.4,
+          "source": "places",
+          "address": "St. James's Gate, Dublin 8",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Poolbeg Lighthouse",
+          "rating": 4.7,
+          "source": "places",
+          "address": "South Wall, Poolbeg, Dublin",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Dublin Castle",
+          "rating": 4.3,
+          "source": "places",
+          "address": "Dame Street, Dublin 2",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Dublin Zoo",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Phoenix park, Dublin",
+          "category": "zoo"
+        },
+        {
+          "name": "The Custom House",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Dublin 1",
+          "category": "local_government_office"
+        },
+        {
+          "name": "Aviva Stadium",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Lansdowne Road, Dublin 4",
+          "category": "stadium"
+        },
+        {
+          "name": "Jameson Distillery Bow St.",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Bow Street, Smithfield, Dublin 7",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Christ Church Cathedral",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Christchurch Place, Dublin",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Croke Park",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Jones' Road, Drumcondra, Dublin 3",
+          "category": "stadium"
+        },
+        {
+          "name": "Kilmainham Gaol",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Inchicore Road, Kilmainham, Dublin 8",
+          "category": "museum"
+        },
+        {
+          "name": "The Church Café Bar",
+          "rating": 4.4,
+          "source": "places",
+          "address": "Jervis Street, North City, Dublin 1",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "National Museum of Ireland, Kildare Street",
+          "rating": 4.6,
+          "source": "places",
+          "address": "35A Kildare Street, Dublin 2",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "St Stephen's Green",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Saint Stephen's Green, Dublin 2",
+          "category": "park"
+        },
+        {
+          "name": "Phoenix Park",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Dublin 8",
+          "category": "park"
+        },
+        {
+          "name": "Parliament House",
+          "rating": 4.2,
+          "source": "places",
+          "address": "College Green, Dublin",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "National Gallery of Ireland",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Merrion Square West, Dublin 2",
+          "category": "art_gallery"
+        },
+        {
+          "name": "An Post, General Post Office",
+          "rating": 4.2,
+          "source": "places",
+          "address": "O'Connell Street Lower, North City, Dublin 1",
+          "category": "post_office"
+        }
+      ],
+      "last_refreshed": "2026-07-02T05:06:39.542647+00:00"
+    },
+    {
+      "slug": "cork-ireland",
+      "lat": 51.8985136,
+      "lng": -8.4726423,
+      "display_name": "Cork, County Cork, Munster, Éire / Ireland",
+      "weather_baseline": null,
+      "things_to_do": [
+        {
+          "name": "The Metropole Hotel",
+          "rating": 4.3,
+          "source": "places",
+          "address": "MacCurtain Street, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Cork Opera House",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Cork Opera House, Emmett Place, Centre, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Saint Fin Barre's Cathedral",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Bishop Street, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Triskel Arts Centre",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Triskel Arts Centre, Tobin Street, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "The Old Town Whiskey Bar at Bodega",
+          "rating": 4.4,
+          "source": "places",
+          "address": "44-45 Corn Market Street, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Blackrock Castle Observatory",
+          "rating": 4.4,
+          "source": "places",
+          "address": "Castle Road, Blackrock, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Cork City Gaol",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Convent Avenue, Sunday's Well, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Blarney Castle & Gardens",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Blarney",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Arts at Civic Trust House",
+          "rating": 5,
+          "source": "places",
+          "address": "50 Pope's Quay, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Cork Ghost Tour",
+          "rating": 5,
+          "source": "places",
+          "address": "Emmett Place, Centre, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Victoria Casino",
+          "rating": 4.5,
+          "source": "places",
+          "address": "5 Saint Patrick's Quay, Cork",
+          "category": "casino"
+        },
+        {
+          "name": "Macau Sporting Club",
+          "rating": 4.2,
+          "source": "places",
+          "address": "16 Saint Patrick's Street, Centre, Cork",
+          "category": "casino"
+        },
+        {
+          "name": "Mother Jones Flea Market",
+          "rating": 4.4,
+          "source": "places",
+          "address": "City, 2 York Street, Centre",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Elizabeth Fort",
+          "rating": 4.4,
+          "source": "places",
+          "address": "Barrack Street, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Tramore Valley Park",
+          "rating": 4.6,
+          "source": "places",
+          "address": "South City Link Road, Cork",
+          "category": "park"
+        },
+        {
+          "name": "Planet Entertainment Centre Cork",
+          "rating": 4.2,
+          "source": "places",
+          "address": "Old Mallow Road, Blackpool, Cork",
+          "category": "bowling_alley"
+        },
+        {
+          "name": "Ballintemple Graveyard",
+          "rating": 3.7,
+          "source": "places",
+          "address": "Ballintemple, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Ballybrack Woods",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Ardarrig, Cork",
+          "category": "park"
+        },
+        {
+          "name": "Curraheen Park Greyhound Stadium",
+          "rating": 4.4,
+          "source": "places",
+          "address": "Park Greyhound Stadium, Curraheen Road, Curraheen, Cork",
+          "category": "stadium"
+        },
+        {
+          "name": "St Anne's Church Shandon Bells & Tower",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Church Street, Shandon, Cork",
+          "category": "tourist_attraction"
+        }
+      ],
+      "last_refreshed": "2026-07-02T05:07:31.759615+00:00"
+    },
+    {
+      "slug": "galway-ireland",
+      "lat": 53.2744122,
+      "lng": -9.0490601,
+      "display_name": "Cathair na Gaillimhe, County Galway, Connacht, Éire / Ireland",
+      "weather_baseline": null,
+      "things_to_do": [
+        {
+          "name": "Jet Lag Jack Tours",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Tour & Taste Galway",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Richardson's Bar",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Experience Galway",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Crowe Tours",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Lally Tours",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Marteen Lane | Tourist Guide",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Bank of Ireland",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Great Escape Rooms Galway Prospect Hill",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Galway Ceili Club",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "The Ardilaun Hotel",
+          "rating": 4.3,
+          "source": "places",
+          "address": "The Ardilaun Hotel, Taylor's Hill Road, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Galway Cathedral",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Gaol Road, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Eyre Square",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Eyre Square, Galway",
+          "category": "park"
+        },
+        {
+          "name": "St Augustine's Catholic Parish",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Middle Street, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Statue of Oscar Wilde and Eduard Vilde",
+          "rating": 4.4,
+          "source": "places",
+          "address": "43 William Street, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Liam O'Maoiliosa Statue",
+          "rating": 4,
+          "source": "places",
+          "address": "Galway City",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Great Escape Rooms Galway",
+          "rating": 4.8,
+          "source": "places",
+          "address": "The Great Escape Rooms, 27 Abbeygate Street Upper, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Hall of the Red Earl",
+          "rating": 4.3,
+          "source": "places",
+          "address": "Druid Lane, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "The Latin Quarter",
+          "rating": 4.6,
+          "source": "places",
+          "address": "22 High Street, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Port of Galway",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Harbour Office, New Docks, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "James Mitchell Geology Museum",
+          "rating": 4.1,
+          "source": "places",
+          "address": "Quadrangle, 19 University Road, Galway",
+          "category": "museum"
+        },
+        {
+          "name": "Wild Atlantic Workshop & Katie's Claddagh Cottage",
+          "rating": 4.2,
+          "source": "places",
+          "address": "Fairhill Road Upper, The Claddagh, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Terryland Castle",
+          "rating": 3.7,
+          "source": "places",
+          "address": "Terryland, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Celia Griffin Memorial Park",
+          "rating": 4.4,
+          "source": "places",
+          "address": "Grattan Road",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Terryland Forest Park",
+          "rating": 4,
+          "source": "places",
+          "address": "Newcastle Road, Galway",
+          "category": "park"
+        },
+        {
+          "name": "Merlin Castle",
+          "rating": 4.3,
+          "source": "places",
+          "address": "Merlin Woods, Merlin Park,, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Merlin Park Woods",
+          "rating": 4.5,
+          "source": "places",
+          "address": "City Park, Merlin Woods, Doughiska Road, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Cappagh Park",
+          "rating": 4.6,
+          "source": "places",
+          "address": "7V77+WQ5, Cappagh Road, Galway",
+          "category": "park"
+        },
+        {
+          "name": "Galway City Museum",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Spanish Parade, Galway",
+          "category": "museum"
+        }
+      ],
+      "last_refreshed": "2026-07-02T05:11:26.715357+00:00"
+    }
+  ],
+  "trips": [
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "location_slug": "yellowstone-demo",
+      "itinerary": [
+        {
+          "text": "Breakfast near West Yellowstone",
+          "time": "08:00",
+          "type": "fixed"
+        },
+        {
+          "q": "Old Faithful, Yellowstone National Park",
+          "text": "Drive to Old Faithful",
+          "time": "09:30",
+          "type": "travel"
+        },
+        {
+          "q": "Old Faithful, Yellowstone National Park",
+          "text": "Watch Old Faithful erupt",
+          "time": "10:30",
+          "type": "fixed"
+        },
+        {
+          "text": "Lunch at Old Faithful Inn",
+          "time": "12:00",
+          "type": "option"
+        },
+        {
+          "q": "Hayden Valley, Yellowstone",
+          "text": "Hayden Valley wildlife viewing",
+          "time": "14:00",
+          "type": "option"
+        },
+        {
+          "q": "Grand Prismatic Spring",
+          "text": "Sunset at Grand Prismatic overlook",
+          "time": "17:00",
+          "type": "option"
+        }
+      ],
+      "design_style": "bento",
+      "created_at": "2026-07-01T08:08:25.067213+00:00"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "location_slug": "tokyo-demo",
+      "itinerary": [
+        {
+          "text": "Breakfast near Shinjuku",
+          "time": "08:00",
+          "type": "fixed"
+        },
+        {
+          "q": "Shibuya Crossing, Tokyo",
+          "text": "Shibuya Crossing",
+          "time": "10:00",
+          "type": "fixed"
+        },
+        {
+          "text": "Ramen lunch in Shibuya",
+          "time": "12:00",
+          "type": "option"
+        },
+        {
+          "q": "Meiji Jingu, Tokyo",
+          "text": "Meiji Jingu Shrine",
+          "time": "14:00",
+          "type": "option"
+        },
+        {
+          "q": "Samurai Museum Shinjuku",
+          "text": "Samurai Museum",
+          "time": "16:00",
+          "type": "option"
+        },
+        {
+          "text": "Dinner in Shinjuku",
+          "time": "19:00",
+          "type": "fixed"
+        }
+      ],
+      "design_style": "bento",
+      "created_at": "2026-07-01T08:08:25.260379+00:00"
+    }
+  ],
+  "request_log": [
+    {
+      "id": 1,
+      "ip_hash": "d90b60291184eaa3aa553cf34d0d12e539d630ae6981e5e610713dabee9397c4",
+      "endpoint": "location",
+      "created_at": "2026-07-02T05:06:37.830609+00:00"
+    },
+    {
+      "id": 2,
+      "ip_hash": "d90b60291184eaa3aa553cf34d0d12e539d630ae6981e5e610713dabee9397c4",
+      "endpoint": "location",
+      "created_at": "2026-07-02T05:07:30.441805+00:00"
+    },
+    {
+      "id": 3,
+      "ip_hash": "d90b60291184eaa3aa553cf34d0d12e539d630ae6981e5e610713dabee9397c4",
+      "endpoint": "location",
+      "created_at": "2026-07-02T05:11:25.53617+00:00"
+    }
+  ]
+}
