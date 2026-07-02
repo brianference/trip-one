@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { fetchLocation, createTrip } from '../../lib/api/client'
+import { fetchLocation, createTrip, updateTrip } from '../../lib/api/client'
 import { useTripStore } from '../../store/tripStore'
 import { logger } from '../../lib/logger'
 import { DEMO_TRIP_IDS } from '../../lib/api/demoIds'
+import { buildStarterItinerary } from '../../lib/itinerary/buildStarterItinerary'
 
 /**
  * Search screen for Field Guide theme — allows users to search for a location to start a trip.
@@ -22,8 +23,11 @@ export function SearchScreen() {
     try {
       const location = await fetchLocation(query)
       const trip = await createTrip(location.slug)
-      setTrip(trip.id, trip.locationSlug, trip.itinerary, trip.designStyle)
-      navigate(`/trip/${trip.id}`)
+      const starterItinerary = buildStarterItinerary(location.thingsToDo)
+      const updatedTrip =
+        starterItinerary.length > 0 ? await updateTrip(trip.id, { itinerary: starterItinerary }) : trip
+      setTrip(updatedTrip.id, updatedTrip.locationSlug, updatedTrip.itinerary, updatedTrip.designStyle)
+      navigate(`/trip/${updatedTrip.id}`)
     } catch (err) {
       logger.error('field-guide search failed', err)
       setError(err instanceof Error ? err.message : 'something went wrong')

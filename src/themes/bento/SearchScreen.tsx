@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { fetchLocation, createTrip, fetchAutocomplete, type AutocompleteSuggestion } from '../../lib/api/client'
+import { fetchLocation, createTrip, updateTrip, fetchAutocomplete, type AutocompleteSuggestion } from '../../lib/api/client'
 import { useTripStore } from '../../store/tripStore'
 import { logger } from '../../lib/logger'
 import { DEMO_TRIP_IDS } from '../../lib/api/demoIds'
+import { buildStarterItinerary } from '../../lib/itinerary/buildStarterItinerary'
 
 const AUTOCOMPLETE_DEBOUNCE_MS = 300
 const AUTOCOMPLETE_MIN_LENGTH = 2
@@ -171,8 +172,11 @@ export function SearchScreen() {
     try {
       const location = await fetchLocation(locationQuery)
       const trip = await createTrip(location.slug)
-      setTrip(trip.id, trip.locationSlug, trip.itinerary, trip.designStyle)
-      navigate(`/trip/${trip.id}`)
+      const starterItinerary = buildStarterItinerary(location.thingsToDo)
+      const updatedTrip =
+        starterItinerary.length > 0 ? await updateTrip(trip.id, { itinerary: starterItinerary }) : trip
+      setTrip(updatedTrip.id, updatedTrip.locationSlug, updatedTrip.itinerary, updatedTrip.designStyle)
+      navigate(`/trip/${updatedTrip.id}`)
     } catch (err) {
       logger.error('failed to create trip from search', err)
       setError(err instanceof Error ? err.message : 'something went wrong')
