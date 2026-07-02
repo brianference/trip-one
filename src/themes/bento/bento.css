@@ -1,16 +1,662 @@
-/* Bento theme: dense 2-column tile grid */
+/* =============================================================================
+   Trip One — Bento theme
+   National-parks expedition editorial: deep forest canvas, sulfur-gold
+   accents, thermal-teal secondary. Every element is a slotted tile with a
+   hairline sulfur border. Fraunces (display) + Inter (UI).
 
+   All custom properties and classes are namespaced with `bento-` so this
+   stylesheet — which is imported globally alongside the other four themes —
+   never leaks into Chronicle / Field Guide / Liquid Glass / Trail Ledger.
+   ========================================================================== */
+
+:root {
+  /* ---- Surfaces (dark, default) ---- */
+  --bento-bg-canvas: #0b2119;
+  --bento-bg-surface: #12352a;
+  --bento-bg-surface-2: #1a4536;
+  --bento-bg-surface-3: #23574a;
+
+  /* ---- Borders ---- */
+  --bento-border-hairline: rgba(232, 184, 74, 0.12);
+  --bento-border-subtle: rgba(232, 184, 74, 0.2);
+  --bento-border-strong: rgba(232, 184, 74, 0.44);
+
+  /* ---- Accents ---- */
+  --bento-sulfur: #e8b84a;
+  --bento-sulfur-hover: #f0c55e;
+  --bento-sulfur-press: #c89a2e;
+  --bento-thermal: #2fa396;
+  --bento-thermal-glow: #3ebdae;
+
+  /* ---- Text ---- */
+  --bento-text-primary: #f5f1e8;
+  --bento-text-secondary: #c4c1b4;
+  --bento-text-tertiary: #8b9489;
+  --bento-text-on-sulfur: #0b2119;
+
+  /* ---- Semantic ---- */
+  --bento-success: #6bb77b;
+  --bento-warning: #e8b84a;
+  --bento-danger: #d9635a;
+
+  /* ---- Typography ---- */
+  --bento-font-display: 'Fraunces', 'Georgia', serif;
+  --bento-font-ui: 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
+
+  /* ---- Spacing (4px base) ---- */
+  --bento-space-xs: 4px;
+  --bento-space-sm: 8px;
+  --bento-space-md: 16px;
+  --bento-space-lg: 24px;
+  --bento-space-xl: 32px;
+  --bento-space-2xl: 48px;
+  --bento-space-3xl: 64px;
+  --bento-space-4xl: 96px;
+
+  /* ---- Radius ---- */
+  --bento-radius-sm: 6px;
+  --bento-radius-md: 12px;
+  --bento-radius-lg: 20px;
+  --bento-radius-xl: 28px;
+  --bento-radius-pill: 999px;
+
+  /* ---- Shadow ---- */
+  --bento-shadow-tile: inset 0 1px 0 rgba(245, 241, 232, 0.04), 0 1px 0 rgba(0, 0, 0, 0.4),
+    0 12px 24px -12px rgba(0, 0, 0, 0.6);
+  --bento-shadow-focus: 0 0 0 2px var(--bento-bg-canvas), 0 0 0 4px var(--bento-sulfur),
+    0 12px 32px -8px rgba(232, 184, 74, 0.28);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bento-bg-canvas: #f5f1e8;
+    --bento-bg-surface: #ffffff;
+    --bento-bg-surface-2: #fbf7ec;
+    --bento-bg-surface-3: #f0e9d6;
+
+    --bento-border-hairline: rgba(14, 42, 31, 0.08);
+    --bento-border-subtle: rgba(14, 42, 31, 0.16);
+    --bento-border-strong: rgba(14, 42, 31, 0.32);
+
+    --bento-sulfur: #b8912e;
+    --bento-sulfur-hover: #a17f26;
+    --bento-sulfur-press: #8a6d1f;
+    --bento-thermal: #1d8a7d;
+
+    --bento-text-primary: #0b2119;
+    --bento-text-secondary: #3e5248;
+    --bento-text-tertiary: #6b7570;
+    --bento-text-on-sulfur: #ffffff;
+
+    --bento-shadow-tile: 0 1px 2px rgba(14, 42, 31, 0.06), 0 8px 24px -12px rgba(14, 42, 31, 0.14);
+  }
+}
+
+/* ---------- Base surfaces ---------- */
+.bento-page,
+.bento-app-screen {
+  font-family: var(--bento-font-ui);
+  background: var(--bento-bg-canvas);
+  color: var(--bento-text-primary);
+  min-height: 100vh;
+  line-height: 1.55;
+}
+
+.bento-app-screen {
+  padding: var(--bento-space-lg) var(--bento-space-md) var(--bento-space-3xl);
+}
+
+.bento-page :focus-visible,
+.bento-app-screen :focus-visible {
+  outline: none;
+  box-shadow: var(--bento-shadow-focus);
+  border-radius: inherit;
+}
+
+.bento-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.bento-eyebrow {
+  font-family: var(--bento-font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bento-sulfur);
+  margin: 0;
+}
+
+/* ---------- Buttons ---------- */
+.bento-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--bento-space-sm);
+  height: 48px;
+  padding: 0 var(--bento-space-lg);
+  border-radius: var(--bento-radius-pill);
+  border: none;
+  font-family: var(--bento-font-ui);
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  background: var(--bento-sulfur);
+  color: var(--bento-text-on-sulfur);
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.bento-btn:hover {
+  background: var(--bento-sulfur-hover);
+}
+
+.bento-btn:active {
+  background: var(--bento-sulfur-press);
+}
+
+.bento-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (min-width: 768px) {
+  .bento-btn {
+    height: 56px;
+  }
+}
+
+/* ---------- Hero ---------- */
+.bento-hero {
+  position: relative;
+  min-height: 85vh;
+  padding: var(--bento-space-2xl) var(--bento-space-md) var(--bento-space-2xl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: radial-gradient(ellipse 80% 60% at 50% 20%, rgba(47, 163, 150, 0.14), transparent 60%);
+}
+
+.bento-hero-inner {
+  max-width: 720px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.bento-hero h1 {
+  font-family: var(--bento-font-display);
+  font-weight: 600;
+  font-size: clamp(40px, 9vw, 88px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  max-width: 14ch;
+  margin: var(--bento-space-lg) 0 0;
+  color: var(--bento-text-primary);
+}
+
+.bento-hero-sub {
+  font-family: var(--bento-font-ui);
+  font-weight: 400;
+  font-size: 18px;
+  line-height: 1.55;
+  max-width: 42ch;
+  color: var(--bento-text-secondary);
+  margin: var(--bento-space-lg) 0 0;
+}
+
+.bento-trust-line {
+  font-family: var(--bento-font-ui);
+  font-size: 14px;
+  color: var(--bento-text-tertiary);
+  margin: var(--bento-space-md) 0 0;
+}
+
+.bento-hero-rule {
+  width: 40%;
+  max-width: 320px;
+  height: 1px;
+  border: 0;
+  background: var(--bento-border-hairline);
+  margin: var(--bento-space-2xl) auto 0;
+}
+
+@media (min-width: 768px) {
+  .bento-hero {
+    padding: 96px var(--bento-space-lg) var(--bento-space-2xl);
+  }
+}
+
+/* ---------- Search bar ---------- */
+.bento-search-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  margin: var(--bento-space-xl) auto 0;
+}
+
+.bento-search-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--bento-space-sm);
+  height: 64px;
+  background: var(--bento-bg-surface-2);
+  border: 1px solid var(--bento-border-hairline);
+  border-radius: var(--bento-radius-pill);
+  padding: 0 8px 0 var(--bento-space-lg);
+  box-shadow: var(--bento-shadow-tile);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.bento-search-bar:hover {
+  border-color: var(--bento-border-subtle);
+}
+
+.bento-search-bar:focus-within {
+  border-color: var(--bento-border-strong);
+  box-shadow: var(--bento-shadow-focus);
+}
+
+.bento-search-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  stroke: var(--bento-text-tertiary);
+}
+
+.bento-search-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  background: transparent;
+  font-family: var(--bento-font-ui);
+  font-weight: 500;
+  font-size: 18px;
+  color: var(--bento-text-primary);
+  caret-color: var(--bento-sulfur);
+}
+
+.bento-search-input::placeholder {
+  color: var(--bento-text-tertiary);
+}
+
+.bento-search-input:focus {
+  outline: none;
+}
+
+.bento-search-submit {
+  flex: none;
+  height: 48px;
+  padding: 0 var(--bento-space-lg);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bento-go-arrow {
+  display: inline-block;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-width 0.15s ease, opacity 0.15s ease;
+}
+
+.bento-search-submit:hover .bento-go-arrow,
+.bento-search-submit:focus-visible .bento-go-arrow {
+  max-width: 20px;
+  opacity: 1;
+}
+
+.bento-search-error {
+  margin: var(--bento-space-sm) var(--bento-space-md) 0;
+  color: var(--bento-danger);
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  .bento-search-bar {
+    height: 72px;
+  }
+
+  .bento-search-input {
+    font-size: 20px;
+  }
+
+  .bento-search-submit {
+    height: 56px;
+  }
+}
+
+/* ---------- Autocomplete dropdown ---------- */
+.bento-suggestions {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  list-style: none;
+  margin: 0;
+  padding: var(--bento-space-sm) 0;
+  background: var(--bento-bg-surface-2);
+  border: 1px solid var(--bento-border-hairline);
+  border-radius: var(--bento-radius-lg);
+  box-shadow: var(--bento-shadow-tile), 0 20px 40px -16px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  z-index: 20;
+  animation: bento-suggestions-in 180ms ease;
+}
+
+@keyframes bento-suggestions-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bento-suggestion {
+  margin: 0;
+}
+
+.bento-suggestion-btn {
+  width: 100%;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: var(--bento-space-md);
+  padding: 0 var(--bento-space-lg);
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--bento-font-ui);
+}
+
+.bento-suggestion-btn:hover,
+.bento-suggestion-btn:focus-visible {
+  background: var(--bento-bg-surface-3);
+  box-shadow: inset 3px 0 0 var(--bento-sulfur);
+}
+
+.bento-suggestion-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  stroke: var(--bento-thermal);
+}
+
+.bento-suggestion-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--bento-text-primary);
+}
+
+/* ---------- Feature-highlight section ---------- */
+.bento-features,
+.bento-demos {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: var(--bento-space-3xl) var(--bento-space-md) 0;
+  text-align: center;
+}
+
+.bento-features h2,
+.bento-demos h2 {
+  font-family: var(--bento-font-display);
+  font-weight: 600;
+  font-size: clamp(28px, 4vw, 40px);
+  margin: var(--bento-space-sm) 0 0;
+  color: var(--bento-text-primary);
+}
+
+.bento-section-sub {
+  font-family: var(--bento-font-ui);
+  font-size: 16px;
+  color: var(--bento-text-secondary);
+  max-width: 48ch;
+  margin: var(--bento-space-sm) auto 0;
+}
+
+.bento-feature-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--bento-space-md);
+  margin-top: var(--bento-space-xl);
+  text-align: left;
+}
+
+.bento-feature-tile {
+  background: var(--bento-bg-surface);
+  border: 1px solid var(--bento-border-hairline);
+  border-radius: var(--bento-radius-lg);
+  padding: var(--bento-space-lg);
+  box-shadow: var(--bento-shadow-tile);
+}
+
+.bento-feature-icon {
+  display: block;
+  width: 28px;
+  height: 28px;
+  margin-bottom: var(--bento-space-md);
+}
+
+.bento-feature-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke-width: 1.75;
+}
+
+.bento-feature-icon--sulfur svg {
+  stroke: var(--bento-sulfur);
+}
+
+.bento-feature-icon--thermal svg {
+  stroke: var(--bento-thermal);
+}
+
+.bento-feature-tile h3 {
+  font-family: var(--bento-font-ui);
+  font-weight: 600;
+  font-size: 16px;
+  margin: 0 0 var(--bento-space-xs);
+  color: var(--bento-text-primary);
+}
+
+.bento-feature-tile p {
+  font-family: var(--bento-font-ui);
+  font-weight: 400;
+  font-size: 14px;
+  color: var(--bento-text-secondary);
+  margin: 0;
+}
+
+@media (min-width: 768px) {
+  .bento-feature-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ---------- Demo showcase section ---------- */
+.bento-demo-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bento-space-lg);
+  margin-top: var(--bento-space-xl);
+  text-align: left;
+}
+
+.bento-demo-card {
+  display: block;
+  background: var(--bento-bg-surface);
+  border: 1px solid var(--bento-border-hairline);
+  border-radius: var(--bento-radius-xl);
+  padding: var(--bento-space-md);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: var(--bento-shadow-tile);
+}
+
+.bento-demo-card:hover,
+.bento-demo-card:focus-visible {
+  border-color: var(--bento-border-subtle);
+}
+
+.bento-demo-image {
+  aspect-ratio: 4 / 3;
+  border-radius: var(--bento-radius-md);
+  background: linear-gradient(135deg, #12352a 0%, #2fa396 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bento-demo-image svg {
+  width: 25%;
+  height: 25%;
+  stroke: var(--bento-text-primary);
+  opacity: 0.3;
+}
+
+.bento-demo-body {
+  padding: var(--bento-space-md) var(--bento-space-sm) var(--bento-space-xs);
+}
+
+.bento-demo-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bento-thermal);
+}
+
+.bento-demo-card h3 {
+  font-family: var(--bento-font-display);
+  font-weight: 600;
+  font-size: 24px;
+  margin: var(--bento-space-xs) 0;
+  color: var(--bento-text-primary);
+}
+
+.bento-demo-card p {
+  font-family: var(--bento-font-ui);
+  font-size: 15px;
+  color: var(--bento-text-secondary);
+  margin: 0 0 var(--bento-space-md);
+}
+
+.bento-demo-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--bento-font-ui);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--bento-sulfur);
+}
+
+.bento-demo-cta-arrow {
+  transition: transform 0.15s ease;
+}
+
+.bento-demo-card:hover .bento-demo-cta-arrow,
+.bento-demo-card:focus-visible .bento-demo-cta-arrow {
+  transform: translateX(4px);
+}
+
+@media (min-width: 768px) {
+  .bento-demo-grid {
+    flex-direction: row;
+  }
+
+  .bento-demo-grid > * {
+    flex: 1;
+  }
+}
+
+/* ---------- Footer ---------- */
+.bento-footer {
+  max-width: 1040px;
+  margin: var(--bento-space-3xl) auto 0;
+  padding: var(--bento-space-lg) var(--bento-space-md) var(--bento-space-2xl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--bento-space-xs);
+  text-align: center;
+}
+
+.bento-footer-wordmark {
+  font-family: var(--bento-font-display);
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--bento-text-primary);
+}
+
+.bento-footer-tagline {
+  font-family: var(--bento-font-ui);
+  font-size: 13px;
+  color: var(--bento-text-tertiary);
+}
+
+.bento-footer-links {
+  display: flex;
+  gap: var(--bento-space-md);
+  margin-top: var(--bento-space-sm);
+}
+
+.bento-footer-links a {
+  font-family: var(--bento-font-ui);
+  font-size: 13px;
+  color: var(--bento-text-tertiary);
+  text-decoration: none;
+}
+
+.bento-footer-links a:hover,
+.bento-footer-links a:focus-visible {
+  color: var(--bento-sulfur);
+}
+
+@media (min-width: 768px) {
+  .bento-footer {
+    flex-direction: row;
+    justify-content: space-between;
+    text-align: left;
+  }
+
+  .bento-footer-links {
+    margin-top: 0;
+  }
+}
+
+/* ---------- Overview: bento tile grid ---------- */
 .bento-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding: 16px;
+  gap: var(--bento-space-md);
+  max-width: 1040px;
+  margin: 0 auto;
 }
 
 .bento-tile {
-  background: #f4f1e8;
-  border-radius: 12px;
-  padding: 16px;
+  background: var(--bento-bg-surface);
+  border: 1px solid var(--bento-border-hairline);
+  border-radius: var(--bento-radius-lg);
+  padding: var(--bento-space-lg);
+  box-shadow: var(--bento-shadow-tile);
 }
 
 .bento-tile--map {
@@ -18,13 +664,24 @@
 }
 
 .bento-tile h1 {
-  margin: 0 0 8px;
-  font-size: 1.25rem;
+  font-family: var(--bento-font-display);
+  font-weight: 600;
+  font-size: 24px;
   text-transform: capitalize;
+  margin: 0 0 var(--bento-space-sm);
+  color: var(--bento-text-primary);
+}
+
+.bento-tile nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bento-space-sm) var(--bento-space-md);
+  font-family: var(--bento-font-ui);
+  font-size: 14px;
 }
 
 .bento-tile nav a {
-  color: #0a4b8a;
+  color: var(--bento-thermal);
   text-decoration: none;
   font-weight: 600;
 }
@@ -34,122 +691,272 @@
   text-decoration: underline;
 }
 
-.bento-search {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-width: 420px;
-  padding: 24px;
+.bento-weather-value {
+  font-family: var(--bento-font-display);
+  font-weight: 600;
+  font-size: 32px;
+  color: var(--bento-text-primary);
+  margin: 0;
+}
+
+.bento-weather-condition {
+  font-family: var(--bento-font-ui);
+  font-size: 14px;
+  color: var(--bento-text-secondary);
+  margin: var(--bento-space-xs) 0 0;
+}
+
+.bento-tile--map .leaflet-host,
+.bento-tile--map > div {
+  border-radius: var(--bento-radius-md);
+  overflow: hidden;
+}
+
+/* ---------- Itinerary ---------- */
+.bento-itinerary {
+  max-width: 720px;
   margin: 0 auto;
 }
 
-.bento-search label {
-  font-weight: 600;
-}
-
-.bento-search input {
-  padding: 10px 12px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 1rem;
-}
-
-.bento-search button {
-  padding: 10px 12px;
-  border: none;
-  border-radius: 8px;
-  background: #0a4b8a;
-  color: #fff;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.bento-search button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.bento-search-suggestions {
-  list-style: none;
-  margin: -8px auto 0;
-  padding: 4px;
-  max-width: 420px;
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-}
-
-.bento-search-suggestions li button {
-  display: block;
-  width: 100%;
-  padding: 8px 10px;
-  border: none;
-  background: none;
-  text-align: left;
-  font-size: 0.95rem;
-  cursor: pointer;
-  border-radius: 6px;
-}
-
-.bento-search-suggestions li button:hover,
-.bento-search-suggestions li button:focus-visible {
-  background: #f4f1e8;
-}
-
-.bento-itinerary {
-  padding: 16px;
-}
-
-.bento-itinerary form {
+.bento-itinerary-form {
   display: grid;
   grid-template-columns: 1fr 2fr auto;
-  gap: 8px;
+  gap: var(--bento-space-sm);
   align-items: end;
-  margin-bottom: 16px;
+  margin-bottom: var(--bento-space-lg);
+  background: var(--bento-bg-surface);
+  border: 1px solid var(--bento-border-hairline);
+  border-radius: var(--bento-radius-lg);
+  padding: var(--bento-space-md);
+  box-shadow: var(--bento-shadow-tile);
 }
 
-.bento-itinerary ul {
+.bento-itinerary-form label {
+  display: block;
+  font-family: var(--bento-font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bento-text-tertiary);
+  margin-bottom: var(--bento-space-xs);
+}
+
+.bento-itinerary-form input {
+  width: 100%;
+  height: 40px;
+  padding: 0 var(--bento-space-sm);
+  border: 1px solid var(--bento-border-hairline);
+  border-radius: var(--bento-radius-sm);
+  background: var(--bento-bg-surface-2);
+  color: var(--bento-text-primary);
+  font-family: var(--bento-font-ui);
+  font-size: 14px;
+}
+
+.bento-itinerary-form input:focus {
+  outline: none;
+  border-color: var(--bento-border-strong);
+}
+
+.bento-timeline {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  gap: 8px;
+  position: relative;
 }
 
-.bento-itinerary li {
+.bento-timeline::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: var(--bento-border-hairline);
+}
+
+.bento-timeline-item {
+  position: relative;
+  padding: var(--bento-space-sm) var(--bento-space-md) var(--bento-space-sm) 28px;
+  margin-bottom: var(--bento-space-sm);
+  background: var(--bento-bg-surface);
+  border: 1px solid var(--bento-border-hairline);
+  border-radius: var(--bento-radius-md);
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  background: #f4f1e8;
-  border-radius: 10px;
-  padding: 10px 12px;
+  justify-content: space-between;
+  gap: var(--bento-space-md);
 }
 
+.bento-timeline-dot {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--bento-bg-canvas);
+}
+
+.bento-timeline-dot--fixed {
+  background: var(--bento-sulfur);
+}
+
+.bento-timeline-dot--travel {
+  background: var(--bento-text-tertiary);
+}
+
+.bento-timeline-dot--option {
+  background: var(--bento-thermal);
+}
+
+.bento-timeline-text {
+  font-family: var(--bento-font-ui);
+  font-size: 14px;
+  color: var(--bento-text-primary);
+}
+
+.bento-timeline-time {
+  font-family: var(--bento-font-display);
+  font-weight: 600;
+  color: var(--bento-sulfur);
+  margin-right: var(--bento-space-sm);
+}
+
+.bento-timeline-remove {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--bento-border-hairline);
+  background: var(--bento-bg-surface-2);
+  color: var(--bento-text-secondary);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.bento-timeline-remove:hover,
+.bento-timeline-remove:focus-visible {
+  color: var(--bento-danger);
+  border-color: var(--bento-danger);
+}
+
+/* ---------- Things to do ---------- */
 .bento-things-to-do {
   list-style: none;
   margin: 0;
-  padding: 16px;
+  padding: 0;
+  max-width: 1040px;
+  margin-inline: auto;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: var(--bento-space-md);
 }
 
 .bento-things-to-do li {
-  background: #f4f1e8;
-  border-radius: 12px;
-  padding: 16px;
+  background: var(--bento-bg-surface);
+  border: 1px solid var(--bento-border-hairline);
+  border-radius: var(--bento-radius-lg);
+  padding: var(--bento-space-lg);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--bento-space-sm);
+  box-shadow: var(--bento-shadow-tile);
 }
 
+.bento-thing-name {
+  font-family: var(--bento-font-display);
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--bento-text-primary);
+}
+
+.bento-thing-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--bento-font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: var(--bento-radius-pill);
+  color: var(--bento-thermal);
+  border: 1px solid var(--bento-border-subtle);
+  background: rgba(47, 163, 150, 0.1);
+}
+
+.bento-thing-add {
+  align-self: flex-start;
+  height: 36px;
+  padding: 0 var(--bento-space-md);
+  font-size: 13px;
+}
+
+@media (min-width: 768px) {
+  .bento-things-to-do {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ---------- ThemeSwitcher / ErrorBoundary polish under Bento ----------
+   These shared components live outside this theme's own component files, so
+   we don't restyle them directly — we only make sure they read cleanly when
+   they happen to render alongside a Bento screen. */
+body:has(.bento-grid) select {
+  font-family: var(--bento-font-ui);
+  font-size: 14px;
+  color: var(--bento-text-primary);
+  background: var(--bento-bg-surface-2);
+  border: 1px solid var(--bento-border-hairline);
+  border-radius: var(--bento-radius-pill);
+  padding: 6px 14px;
+}
+
+body:has(.bento-grid) label {
+  font-family: var(--bento-font-ui);
+  font-size: 13px;
+  color: var(--bento-text-secondary);
+}
+
+.bento-app-screen [role='alert'] {
+  background: var(--bento-bg-surface);
+  border: 1px solid var(--bento-danger);
+  border-radius: var(--bento-radius-md);
+  padding: var(--bento-space-md);
+  color: var(--bento-text-primary);
+  font-family: var(--bento-font-ui);
+  margin-bottom: var(--bento-space-md);
+}
+
+/* ---------- Responsive: small screens ---------- */
 @media (max-width: 480px) {
   .bento-grid,
+  .bento-feature-grid,
   .bento-things-to-do {
     grid-template-columns: 1fr;
   }
-  .bento-itinerary form {
+
+  .bento-itinerary-form {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .bento-suggestions {
+    animation: none;
+  }
+
+  .bento-go-arrow,
+  .bento-demo-cta-arrow,
+  .bento-search-bar,
+  .bento-demo-card {
+    transition-duration: 0.01ms;
   }
 }
