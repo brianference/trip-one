@@ -20,9 +20,8 @@ function OverviewContent({ tripId, trip, location }: { tripId: string; trip: Tri
       </div>
       {forecast && (
         <div className="bento-tile">
-          <p>
-            {forecast.temperatureC}°C — {forecast.condition}
-          </p>
+          <p className="bento-weather-value">{forecast.temperatureC}°C</p>
+          <p className="bento-weather-condition">{forecast.condition}</p>
         </div>
       )}
       {location && (
@@ -58,11 +57,13 @@ export function OverviewScreen() {
     }
   }, [id])
 
-  if (!trip || !id) return <p>Loading…</p>
+  if (!trip || !id) return <p className="bento-app-screen">Loading…</p>
 
   return (
-    <ErrorBoundary label="Overview">
-      <OverviewContent tripId={id} trip={trip} location={location} />
-    </ErrorBoundary>
+    <div className="bento-app-screen">
+      <ErrorBoundary label="Overview">
+        <OverviewContent tripId={id} trip={trip} location={location} />
+      </ErrorBoundary>
+    </div>
   )
 }

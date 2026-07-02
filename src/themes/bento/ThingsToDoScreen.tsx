@@ -22,18 +22,22 @@ export function ThingsToDoScreen({ locationSlug }: { locationSlug: string }) {
   }, [locationSlug])
 
   return (
-    <ul className="bento-things-to-do">
-      {items.map((item) => (
-        <li key={item.name}>
-          <span>{item.name}</span> ({item.category})
-          <button
-            type="button"
-            onClick={() => addItem({ time: '', text: item.name, type: 'option', q: item.name })}
-          >
-            Add to itinerary
-          </button>
-        </li>
-      ))}
-    </ul>
+    <div className="bento-app-screen">
+      <ul className="bento-things-to-do">
+        {items.map((item) => (
+          <li key={item.name}>
+            <span className="bento-thing-badge">{item.category}</span>
+            <span className="bento-thing-name">{item.name}</span>
+            <button
+              type="button"
+              className="bento-btn bento-thing-add"
+              onClick={() => addItem({ time: '', text: item.name, type: 'option', q: item.name })}
+            >
+              Add to itinerary
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }

@@ -17,19 +17,29 @@ export function ItineraryScreen() {
   }
 
   return (
-    <div className="bento-itinerary">
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="stop-time">Time</label>
-        <input id="stop-time" value={time} onChange={(e) => setTime(e.target.value)} />
-        <label htmlFor="stop-text">What</label>
-        <input id="stop-text" value={text} onChange={(e) => setText(e.target.value)} />
-        <button type="submit">Add stop</button>
+    <div className="bento-app-screen bento-itinerary">
+      <form onSubmit={handleSubmit} className="bento-itinerary-form">
+        <div>
+          <label htmlFor="stop-time">Time</label>
+          <input id="stop-time" value={time} onChange={(e) => setTime(e.target.value)} />
+        </div>
+        <div>
+          <label htmlFor="stop-text">What</label>
+          <input id="stop-text" value={text} onChange={(e) => setText(e.target.value)} />
+        </div>
+        <button type="submit" className="bento-btn">
+          Add stop
+        </button>
       </form>
-      <ul>
+      <ul className="bento-timeline">
         {itinerary.map((item, i) => (
-          <li key={`${item.time}-${item.text}-${i}`}>
-            {item.time} — {item.text}
-            <button type="button" onClick={() => removeItem(i)} aria-label={`Remove ${item.text}`}>
+          <li key={`${item.time}-${item.text}-${i}`} className="bento-timeline-item">
+            <span className={`bento-timeline-dot bento-timeline-dot--${item.type}`} aria-hidden="true" />
+            <span className="bento-timeline-text">
+              {item.time && <span className="bento-timeline-time">{item.time}</span>}
+              {item.text}
+            </span>
+            <button type="button" className="bento-timeline-remove" onClick={() => removeItem(i)} aria-label={`Remove ${item.text}`}>
               ×
             </button>
           </li>
