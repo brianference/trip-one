@@ -1,5 +1,6 @@
 import type { ItineraryItem } from '../validation/schemas'
 import type { DesignStyle } from '../../store/tripStore'
+import { logger } from '../logger'
 
 export interface ThingToDo {
   name: string
@@ -38,6 +39,31 @@ export async function fetchLocation(query: string): Promise<LocationResult> {
   const body = await res.json()
   if (!res.ok) throw new Error(body.error ?? 'failed to fetch location')
   return body
+}
+
+export interface AutocompleteSuggestion {
+  displayName: string
+  lat: number
+  lng: number
+}
+
+/**
+ * Fetch partial-text location suggestions for autocomplete. Fails soft: on any
+ * error (network failure, non-ok response), returns an empty array instead of
+ * throwing, since autocomplete is a non-essential enhancement over the "Go" flow.
+ * @param query - Partial free-text location, e.g. "dublin"
+ * @returns Matching suggestions (may be empty)
+ */
+export async function fetchAutocomplete(query: string): Promise<AutocompleteSuggestion[]> {
+  try {
+    const res = await fetch(`/api/autocomplete?q=${encodeURIComponent(query)}`)
+    if (!res.ok) return []
+    const body = await res.json()
+    return body.suggestions ?? []
+  } catch (err) {
+    logger.error('fetchAutocomplete failed', err)
+    return []
+  }
 }
 
 export async function createTrip(locationSlug: string): Promise<Trip> {

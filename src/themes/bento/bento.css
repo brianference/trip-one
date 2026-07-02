@@ -69,6 +69,34 @@
   cursor: not-allowed;
 }
 
+.bento-search-suggestions {
+  list-style: none;
+  margin: -8px auto 0;
+  padding: 4px;
+  max-width: 420px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.bento-search-suggestions li button {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.bento-search-suggestions li button:hover,
+.bento-search-suggestions li button:focus-visible {
+  background: #f4f1e8;
+}
+
 .bento-itinerary {
   padding: 16px;
 }

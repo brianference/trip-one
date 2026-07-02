@@ -2,6 +2,8 @@ import { z } from 'zod'
 
 export const locationQuerySchema = z.string().trim().min(1).max(200)
 
+export const autocompleteQuerySchema = z.string().trim().min(2).max(200)
+
 export const itineraryItemSchema = z.object({
   time: z.string(),
   text: z.string().min(1).max(300),

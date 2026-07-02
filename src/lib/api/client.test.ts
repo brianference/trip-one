@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { fetchLocation, createTrip, getTrip, updateTrip, forkTrip } from './client'
+import { fetchLocation, createTrip, getTrip, updateTrip, forkTrip, fetchAutocomplete } from './client'
 
 describe('api client', () => {
   afterEach(() => vi.restoreAllMocks())
@@ -84,5 +84,32 @@ describe('api client', () => {
     // itinerary/design were copied over via a PATCH, not baked into the POST
     expect(fetchMock).toHaveBeenCalledTimes(3)
     expect(fetchMock.mock.calls[2][1]?.method).toBe('PATCH')
+  })
+
+  it('fetchAutocomplete calls /api/autocomplete with the query and returns the suggestions', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        suggestions: [
+          { displayName: 'Dublin, Ireland', lat: 53.35, lng: -6.26 },
+          { displayName: 'Dublin, Ohio, USA', lat: 40.1, lng: -83.11 },
+        ],
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const result = await fetchAutocomplete('dublin')
+    expect(fetchMock).toHaveBeenCalledWith('/api/autocomplete?q=dublin')
+    expect(result).toHaveLength(2)
+    expect(result[0].displayName).toBe('Dublin, Ireland')
+  })
+
+  it('fetchAutocomplete returns an empty array (not a throw) on a non-ok response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => ({ error: 'invalid query' }) }))
+    expect(await fetchAutocomplete('d')).toEqual([])
+  })
+
+  it('fetchAutocomplete returns an empty array (not a throw) on a network failure', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')))
+    expect(await fetchAutocomplete('dublin')).toEqual([])
   })
 })

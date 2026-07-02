@@ -17,3 +17,16 @@ export async function geocode(query: string): Promise<GeocodeResult | null> {
   if (!first) return null
   return { lat: Number(first.lat), lng: Number(first.lon), displayName: first.display_name }
 }
+
+/**
+ * Look up up to 5 autocomplete suggestions for a partial location query via
+ * the Nominatim (OpenStreetMap) search API.
+ * @param query - Partial free-text location, e.g. "dublin"
+ * @returns Matching results (may be empty)
+ */
+export async function autocompleteSearch(query: string): Promise<GeocodeResult[]> {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=1&q=${encodeURIComponent(query)}`
+  const res = await fetch(url, { headers: { 'User-Agent': 'trip-one (https://github.com)' } })
+  const rows = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>
+  return rows.map((row) => ({ lat: Number(row.lat), lng: Number(row.lon), displayName: row.display_name }))
+}
