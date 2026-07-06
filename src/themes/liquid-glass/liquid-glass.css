@@ -1,30 +1,470 @@
+/* =============================================================================
+   Trip One — Liquid Glass theme
+   iOS 26 "Liquid Glass" — deep blue accent over a frosted wallpaper. Every
+   surface is a translucent, blurred card with a thin blue-tinted border and
+   a soft inner highlight, like native iOS sheets and widgets. SF-Pro-style
+   system font stack with Inter as the cross-platform fallback.
+
+   All custom properties and classes are namespaced with `lg-` so this
+   stylesheet — which is imported globally alongside the other four themes —
+   never leaks into Bento / Chronicle / Field Guide / Trail Ledger.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
+  /* ---- Accent ---- */
   --lg-primary-blue: #0a84ff;
+  --lg-primary-dark: #0051cc;
+  --lg-primary-accent: #5ba3ff;
+
+  /* ---- Glass ---- */
   --lg-glass-blur: 24px;
+  --lg-glass-saturation: 160%;
   --lg-glass-opacity: 0.55;
+  --lg-glass-radius: 20px;
+  --lg-glass-border: rgba(10, 132, 255, 0.15);
+  --lg-glass-inner-highlight: rgba(255, 255, 255, 0.55);
+  --lg-glass-bg: rgba(255, 255, 255, var(--lg-glass-opacity));
+  --lg-glass-bg-strong: rgba(255, 255, 255, 0.72);
+
+  /* ---- Wallpaper ---- */
+  --lg-wallpaper-grad: radial-gradient(circle at 30% 20%, rgba(10, 132, 255, 0.2) 0%, transparent 60%),
+    radial-gradient(circle at 80% 80%, rgba(91, 163, 255, 0.16) 0%, transparent 55%),
+    linear-gradient(160deg, #e8f1ff 0%, #ffffff 55%, #f0f4ff 100%);
+
+  /* ---- Text (iOS label colors) ---- */
+  --lg-text-primary: #0f1a2b;
+  --lg-text-secondary: rgba(15, 26, 43, 0.62);
+  --lg-text-tertiary: rgba(15, 26, 43, 0.38);
+  --lg-text-on-accent: #ffffff;
+
+  /* ---- Semantic ---- */
+  --lg-success: #34c759;
+  --lg-warning: #ff9500;
+  --lg-danger: #ff3b30;
+
+  /* ---- Typography ---- */
+  --lg-font-ui: -apple-system, 'SF Pro Display', 'Inter', system-ui, sans-serif;
+
+  /* ---- Spacing (4px base) ---- */
+  --lg-space-xs: 4px;
+  --lg-space-sm: 8px;
+  --lg-space-md: 16px;
+  --lg-space-lg: 24px;
+  --lg-space-xl: 32px;
+  --lg-space-2xl: 48px;
+
+  /* ---- Radius ---- */
+  --lg-radius-sm: 10px;
+  --lg-radius-md: 14px;
+  --lg-radius-lg: var(--lg-glass-radius);
+  --lg-radius-pill: 999px;
+
+  /* ---- Shadow ---- */
+  --lg-shadow-card: 0 8px 32px -8px rgba(10, 132, 255, 0.22), inset 0 1px 0 var(--lg-glass-inner-highlight);
+  --lg-shadow-focus: 0 0 0 3px rgba(10, 132, 255, 0.35);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --lg-glass-bg: rgba(28, 32, 44, 0.55);
+    --lg-glass-bg-strong: rgba(28, 32, 44, 0.72);
+    --lg-glass-border: rgba(91, 163, 255, 0.22);
+    --lg-glass-inner-highlight: rgba(255, 255, 255, 0.08);
+    --lg-wallpaper-grad: radial-gradient(circle at 30% 20%, rgba(10, 132, 255, 0.28) 0%, transparent 60%),
+      radial-gradient(circle at 80% 80%, rgba(91, 163, 255, 0.2) 0%, transparent 55%),
+      linear-gradient(160deg, #0a0f1c 0%, #10182b 55%, #0c1424 100%);
+    --lg-text-primary: #f2f6ff;
+    --lg-text-secondary: rgba(242, 246, 255, 0.64);
+    --lg-text-tertiary: rgba(242, 246, 255, 0.4);
+    --lg-shadow-card: 0 8px 32px -8px rgba(0, 0, 0, 0.5), inset 0 1px 0 var(--lg-glass-inner-highlight);
+  }
+}
+
+/* ---------- Base surfaces ---------- */
+.lg-app-screen {
+  font-family: var(--lg-font-ui);
+  background: var(--lg-wallpaper-grad);
+  color: var(--lg-text-primary);
+  min-height: 100vh;
+  line-height: 1.5;
+  padding: var(--lg-space-lg) var(--lg-space-md) var(--lg-space-2xl);
+}
+
+.lg-app-screen :focus-visible {
+  outline: none;
+  box-shadow: var(--lg-shadow-focus);
+  border-radius: inherit;
+}
+
+.lg-loading {
+  font-family: var(--lg-font-ui);
+  color: var(--lg-text-secondary);
+  padding: var(--lg-space-lg) 0;
 }
 
 body.theme-liquid-glass {
-  background: radial-gradient(circle at 30% 20%, rgba(10, 132, 255, 0.2) 0%, transparent 60%),
-    linear-gradient(160deg, #e8f1ff 0%, #ffffff 55%, #f0f4ff 100%);
+  background: var(--lg-wallpaper-grad);
 }
 
+/* ---------- Glass card ---------- */
 .lg-glass-card {
-  backdrop-filter: blur(var(--lg-glass-blur)) saturate(160%);
-  background: rgba(255, 255, 255, var(--lg-glass-opacity));
-  border-radius: 20px;
-  border: 1px solid rgba(10, 132, 255, 0.15);
-  padding: 16px;
-  margin: 12px;
+  backdrop-filter: blur(var(--lg-glass-blur)) saturate(var(--lg-glass-saturation));
+  -webkit-backdrop-filter: blur(var(--lg-glass-blur)) saturate(var(--lg-glass-saturation));
+  background: var(--lg-glass-bg);
+  border-radius: var(--lg-glass-radius);
+  border: 1px solid var(--lg-glass-border);
+  box-shadow: var(--lg-shadow-card);
+  padding: var(--lg-space-lg);
+  margin: 0 auto var(--lg-space-md);
+  max-width: 640px;
 }
 
-.lg-tap-target {
-  min-height: 44px;
-  min-width: 44px;
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .lg-glass-card {
+    background: var(--lg-glass-bg-strong);
+  }
 }
 
 .lg-map-card {
-  margin: 12px 0 0;
   padding: 8px;
   overflow: hidden;
+}
+
+.lg-map-card > div {
+  border-radius: calc(var(--lg-glass-radius) - 8px);
+  overflow: hidden;
+}
+
+/* ---------- Tap targets ---------- */
+.lg-tap-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------- Typography ---------- */
+.lg-title {
+  font-family: var(--lg-font-ui);
+  font-weight: 700;
+  font-size: clamp(24px, 4vw, 30px);
+  letter-spacing: -0.01em;
+  text-transform: capitalize;
+  color: var(--lg-text-primary);
+  margin: 0 0 var(--lg-space-md);
+}
+
+/* ---------- Segmented nav ---------- */
+.lg-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lg-space-sm);
+  margin-bottom: var(--lg-space-md);
+}
+
+.lg-nav-link {
+  padding: 0 var(--lg-space-md);
+  border-radius: var(--lg-radius-pill);
+  background: rgba(10, 132, 255, 0.1);
+  border: 1px solid var(--lg-glass-border);
+  color: var(--lg-primary-blue);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.lg-nav-link:hover,
+.lg-nav-link:focus-visible {
+  background: rgba(10, 132, 255, 0.2);
+}
+
+.lg-nav-link:active {
+  transform: scale(0.97);
+}
+
+/* ---------- Weather ---------- */
+.lg-weather-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--lg-space-sm);
+  margin: var(--lg-space-md) 0 0;
+}
+
+.lg-weather-value {
+  font-family: var(--lg-font-ui);
+  font-weight: 700;
+  font-size: 32px;
+  color: var(--lg-primary-blue);
+}
+
+.lg-weather-condition {
+  font-size: 15px;
+  color: var(--lg-text-secondary);
+}
+
+/* ---------- Buttons ---------- */
+.lg-btn {
+  border: none;
+  border-radius: var(--lg-radius-pill);
+  font-family: var(--lg-font-ui);
+  font-weight: 600;
+  font-size: 15px;
+  padding: 0 var(--lg-space-lg);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+}
+
+.lg-btn:active {
+  transform: scale(0.97);
+}
+
+.lg-btn-primary {
+  background: linear-gradient(180deg, var(--lg-primary-blue) 0%, var(--lg-primary-dark) 100%);
+  color: var(--lg-text-on-accent);
+  box-shadow: 0 4px 14px -4px rgba(10, 132, 255, 0.55);
+}
+
+.lg-btn-primary:hover {
+  background: linear-gradient(180deg, var(--lg-primary-accent) 0%, var(--lg-primary-blue) 100%);
+}
+
+.lg-btn-secondary {
+  background: rgba(10, 132, 255, 0.12);
+  border: 1px solid var(--lg-glass-border);
+  color: var(--lg-primary-blue);
+}
+
+.lg-btn-secondary:hover,
+.lg-btn-secondary:focus-visible {
+  background: rgba(10, 132, 255, 0.2);
+}
+
+/* ---------- Itinerary form ---------- */
+.lg-itinerary-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--lg-space-sm);
+  margin-bottom: var(--lg-space-lg);
+}
+
+.lg-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lg-space-xs);
+  width: 100px;
+}
+
+.lg-field-grow {
+  flex: 1;
+  width: auto;
+  min-width: 140px;
+}
+
+.lg-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--lg-text-tertiary);
+}
+
+.lg-input {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-sm);
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--lg-text-primary);
+  font-family: var(--lg-font-ui);
+  font-size: 15px;
+  padding: 0 var(--lg-space-sm);
+  width: 100%;
+}
+
+.lg-input:focus {
+  outline: none;
+  border-color: var(--lg-primary-blue);
+  box-shadow: var(--lg-shadow-focus);
+}
+
+/* ---------- Timeline (itinerary items) ---------- */
+.lg-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--lg-space-sm);
+}
+
+.lg-timeline-item {
+  display: flex;
+  align-items: center;
+  gap: var(--lg-space-md);
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-md);
+  padding: var(--lg-space-sm) var(--lg-space-md);
+}
+
+.lg-timeline-time {
+  font-weight: 700;
+  color: var(--lg-primary-blue);
+  flex: none;
+  min-width: 48px;
+}
+
+.lg-timeline-text {
+  flex: 1;
+  color: var(--lg-text-primary);
+  font-size: 15px;
+}
+
+.lg-remove-btn {
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid var(--lg-glass-border);
+  background: rgba(255, 59, 48, 0.08);
+  color: var(--lg-danger);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lg-remove-btn:hover,
+.lg-remove-btn:focus-visible {
+  background: rgba(255, 59, 48, 0.18);
+}
+
+/* ---------- Things to do ---------- */
+.lg-things-list {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--lg-space-sm);
+}
+
+.lg-thing-card {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--lg-space-sm) var(--lg-space-md);
+  margin-bottom: 0;
+}
+
+.lg-thing-name {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--lg-text-primary);
+  flex: 1;
+  min-width: 120px;
+}
+
+.lg-thing-badge {
+  font-size: 13px;
+  color: var(--lg-text-secondary);
+}
+
+.lg-thing-add {
+  flex: none;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 var(--lg-space-md);
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  .lg-things-list {
+    max-width: 720px;
+  }
+}
+
+/* ---------- Local info ---------- */
+.lg-rate-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--lg-space-sm);
+  margin: var(--lg-space-sm) 0 var(--lg-space-lg);
+  font-size: 17px;
+}
+
+.lg-rate-value {
+  font-weight: 700;
+  color: var(--lg-text-primary);
+}
+
+.lg-rate-currency {
+  color: var(--lg-text-secondary);
+}
+
+.lg-rate-unavailable {
+  color: var(--lg-text-secondary);
+  margin: var(--lg-space-sm) 0 var(--lg-space-lg);
+}
+
+.lg-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lg-space-sm);
+}
+
+/* ---------- Shared components rendered inside a Liquid Glass screen ----------
+   ThemeSwitcher/ErrorBoundary live outside this theme's own files, so they
+   aren't restyled directly — this only makes them read cleanly when they
+   happen to render alongside a Liquid Glass screen. */
+.lg-app-screen select {
+  font-family: var(--lg-font-ui);
+  font-size: 14px;
+  color: var(--lg-text-primary);
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-pill);
+  padding: 6px 14px;
+  min-height: 44px;
+}
+
+.lg-app-screen label {
+  font-family: var(--lg-font-ui);
+  font-size: 13px;
+  color: var(--lg-text-secondary);
+}
+
+.lg-app-screen [role='alert'] {
+  background: var(--lg-glass-bg);
+  border: 1px solid var(--lg-danger);
+  border-radius: var(--lg-radius-md);
+  padding: var(--lg-space-md);
+  color: var(--lg-text-primary);
+  font-family: var(--lg-font-ui);
+  margin-bottom: var(--lg-space-md);
+  max-width: 640px;
+  margin-inline: auto;
+}
+
+/* ---------- Responsive ---------- */
+@media (min-width: 768px) {
+  .lg-app-screen {
+    padding: var(--lg-space-xl) var(--lg-space-lg) var(--lg-space-2xl);
+  }
+}
+
+@media (max-width: 480px) {
+  .lg-field {
+    width: 90px;
+  }
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .lg-nav-link,
+  .lg-btn {
+    transition-duration: 0.01ms;
+  }
 }

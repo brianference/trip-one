@@ -14,25 +14,22 @@ function GlassOverview({ trip, location }: { trip: Trip; location: LocationResul
   const displayName = location?.displayName ?? trip.locationSlug
   return (
     <div className="lg-glass-card">
-      <h1>{displayName}</h1>
-      <nav>
-        <Link className="lg-tap-target" to={`/trip/${trip.id}/itinerary`}>
+      <h1 className="lg-title">{displayName}</h1>
+      <nav className="lg-nav">
+        <Link className="lg-tap-target lg-nav-link" to={`/trip/${trip.id}/itinerary`}>
           Itinerary
         </Link>
-        {' · '}
-        <Link className="lg-tap-target" to={`/trip/${trip.id}/things-to-do`}>
+        <Link className="lg-tap-target lg-nav-link" to={`/trip/${trip.id}/things-to-do`}>
           Things to do
         </Link>
-        {' · '}
-        <Link className="lg-tap-target" to={`/trip/${trip.id}/local-info`}>
+        <Link className="lg-tap-target lg-nav-link" to={`/trip/${trip.id}/local-info`}>
           Local info
         </Link>
       </nav>
       {forecast && (
-        <p>
-          <span>{forecast.temperatureF}°F</span>
-          <span> — </span>
-          <span>{forecast.condition}</span>
+        <p className="lg-weather-row">
+          <span className="lg-weather-value">{forecast.temperatureF}°F</span>
+          <span className="lg-weather-condition">{forecast.condition}</span>
         </p>
       )}
       {location && (
@@ -71,11 +68,18 @@ export function OverviewScreen() {
     }
   }, [id])
 
-  if (!trip) return <p>Loading…</p>
+  if (!trip)
+    return (
+      <div className="lg-app-screen">
+        <p className="lg-loading">Loading…</p>
+      </div>
+    )
 
   return (
-    <ErrorBoundary label="Overview">
-      <GlassOverview trip={trip} location={location} />
-    </ErrorBoundary>
+    <div className="lg-app-screen">
+      <ErrorBoundary label="Overview">
+        <GlassOverview trip={trip} location={location} />
+      </ErrorBoundary>
+    </div>
   )
 }

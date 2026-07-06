@@ -23,31 +23,48 @@ export function ItineraryScreen() {
   }
 
   return (
-    <div className="lg-glass-card">
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="lg-stop-time">Time</label>
-        <input id="lg-stop-time" value={time} onChange={(e) => setTime(e.target.value)} className="lg-tap-target" />
-        <label htmlFor="lg-stop-text">What</label>
-        <input id="lg-stop-text" value={text} onChange={(e) => setText(e.target.value)} className="lg-tap-target" />
-        <button type="submit" className="lg-tap-target">Add stop</button>
-      </form>
-      <ul>
-        {itinerary.map((item, i) => (
-          <li key={`${item.time}-${item.text}-${i}`}>
-            <span>{item.time}</span>
-            <span> — </span>
-            <span>{item.text}</span>
-            <button
-              type="button"
-              onClick={() => removeItem(i)}
-              aria-label={`Remove ${item.text}`}
-              className="lg-tap-target"
-            >
-              ×
-            </button>
-          </li>
-        ))}
-      </ul>
+    <div className="lg-app-screen">
+      <div className="lg-glass-card">
+        <form onSubmit={handleSubmit} className="lg-itinerary-form">
+          <div className="lg-field">
+            <label htmlFor="lg-stop-time" className="lg-label">Time</label>
+            <input
+              id="lg-stop-time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              className="lg-tap-target lg-input"
+            />
+          </div>
+          <div className="lg-field lg-field-grow">
+            <label htmlFor="lg-stop-text" className="lg-label">What</label>
+            <input
+              id="lg-stop-text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              className="lg-tap-target lg-input"
+            />
+          </div>
+          <button type="submit" className="lg-tap-target lg-btn lg-btn-primary">
+            Add stop
+          </button>
+        </form>
+        <ul className="lg-timeline">
+          {itinerary.map((item, i) => (
+            <li key={`${item.time}-${item.text}-${i}`} className="lg-timeline-item">
+              <span className="lg-timeline-time">{item.time}</span>
+              <span className="lg-timeline-text">{item.text}</span>
+              <button
+                type="button"
+                onClick={() => removeItem(i)}
+                aria-label={`Remove ${item.text}`}
+                className="lg-tap-target lg-remove-btn"
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   )
 }

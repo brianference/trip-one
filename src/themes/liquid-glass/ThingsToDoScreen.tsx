@@ -33,20 +33,20 @@ export function ThingsToDoScreen({ locationSlug }: { locationSlug: string }) {
     .map((item) => ({ lat: item.lat as number, lng: item.lng as number, label: item.name, category: item.category }))
 
   return (
-    <>
+    <div className="lg-app-screen">
       {location && (
         <div className="lg-glass-card lg-map-card">
           <MapView lat={location.lat} lng={location.lng} label={location.displayName} markers={markers} />
         </div>
       )}
-      <ul className="lg-glass-card">
+      <ul className="lg-things-list">
         {items.map((item) => (
-          <li key={item.name}>
-            <span>{item.name}</span>
-            <span> ({item.category})</span>
+          <li key={item.name} className="lg-glass-card lg-thing-card">
+            <span className="lg-thing-name">{item.name}</span>
+            <span className="lg-thing-badge">({item.category})</span>
             <button
               type="button"
-              className="lg-tap-target"
+              className="lg-tap-target lg-btn lg-btn-secondary lg-thing-add"
               onClick={() => addItem({ time: '', text: item.name, type: 'option', q: item.name })}
             >
               Add
@@ -54,6 +54,6 @@ export function ThingsToDoScreen({ locationSlug }: { locationSlug: string }) {
           </li>
         ))}
       </ul>
-    </>
+    </div>
   )
 }

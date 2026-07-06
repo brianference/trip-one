@@ -32,24 +32,25 @@ export function LocalInfoScreen({ locationSlug }: { locationSlug: string }) {
   const translateUrl = 'https://translate.google.com/?sl=en&tl=auto&op=translate'
 
   return (
-    <div className="lg-glass-card">
-      <h1>Local info: {displayName}</h1>
-      {!loading && rate !== null && (
-        <p>
-          <span>1 USD ≈ {rate}</span> <span>{targetCurrency}</span>
-        </p>
-      )}
-      {!loading && rate === null && <p>Currency rate unavailable right now.</p>}
-      <p>
-        <a className="lg-tap-target" href={transitUrl} target="_blank" rel="noopener noreferrer">
-          Transit directions
-        </a>
-      </p>
-      <p>
-        <a className="lg-tap-target" href={translateUrl} target="_blank" rel="noopener noreferrer">
-          Phrasebook
-        </a>
-      </p>
+    <div className="lg-app-screen">
+      <div className="lg-glass-card">
+        <h1 className="lg-title">Local info: {displayName}</h1>
+        {!loading && rate !== null && (
+          <p className="lg-rate-row">
+            <span className="lg-rate-value">1 USD ≈ {rate}</span>
+            <span className="lg-rate-currency">{targetCurrency}</span>
+          </p>
+        )}
+        {!loading && rate === null && <p className="lg-rate-unavailable">Currency rate unavailable right now.</p>}
+        <div className="lg-link-row">
+          <a className="lg-tap-target lg-btn lg-btn-secondary" href={transitUrl} target="_blank" rel="noopener noreferrer">
+            Transit directions
+          </a>
+          <a className="lg-tap-target lg-btn lg-btn-secondary" href={translateUrl} target="_blank" rel="noopener noreferrer">
+            Phrasebook
+          </a>
+        </div>
+      </div>
     </div>
   )
 }
