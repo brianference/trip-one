@@ -14,6 +14,7 @@ function Chapter({ trip, location }: { trip: Trip; location: LocationResult | nu
   const displayName = location?.displayName ?? trip.locationSlug
   return (
     <article className="chronicle-chapter">
+      <span className="chronicle-kicker">Chapter one</span>
       <h1>Day one: {displayName}</h1>
       <nav>
         <Link to={`/trip/${trip.id}/itinerary`}>Itinerary</Link>
@@ -22,8 +23,16 @@ function Chapter({ trip, location }: { trip: Trip; location: LocationResult | nu
         {' · '}
         <Link to={`/trip/${trip.id}/local-info`}>Local info</Link>
       </nav>
-      {forecast && <p>{forecast.temperatureF}°F — {forecast.condition}</p>}
-      {location && <MapView lat={location.lat} lng={location.lng} label={displayName} />}
+      {forecast && (
+        <p className="chronicle-weather">
+          {forecast.temperatureF}°F <span className="chronicle-weather-condition">— {forecast.condition}</span>
+        </p>
+      )}
+      {location && (
+        <div className="chronicle-map-frame">
+          <MapView lat={location.lat} lng={location.lng} label={displayName} />
+        </div>
+      )}
     </article>
   )
 }
@@ -55,11 +64,18 @@ export function OverviewScreen() {
     }
   }, [id])
 
-  if (!trip) return <p>Loading…</p>
+  if (!trip)
+    return (
+      <div className="chronicle-page">
+        <p>Loading…</p>
+      </div>
+    )
 
   return (
-    <ErrorBoundary label="Overview">
-      <Chapter trip={trip} location={location} />
-    </ErrorBoundary>
+    <div className="chronicle-page">
+      <ErrorBoundary label="Overview">
+        <Chapter trip={trip} location={location} />
+      </ErrorBoundary>
+    </div>
   )
 }

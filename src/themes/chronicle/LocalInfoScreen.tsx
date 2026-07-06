@@ -32,24 +32,29 @@ export function LocalInfoScreen({ locationSlug }: { locationSlug: string }) {
   const translateUrl = 'https://translate.google.com/?sl=en&tl=auto&op=translate'
 
   return (
-    <article className="chronicle-chapter">
-      <h1>Local info: {displayName}</h1>
-      {!loading && rate !== null && (
-        <p>
-          1 USD ≈ {rate} {targetCurrency}
-        </p>
-      )}
-      {!loading && rate === null && <p>Currency rate unavailable right now.</p>}
-      <p>
-        <a href={transitUrl} target="_blank" rel="noopener noreferrer">
-          Transit directions
-        </a>
-      </p>
-      <p>
-        <a href={translateUrl} target="_blank" rel="noopener noreferrer">
-          Phrasebook
-        </a>
-      </p>
-    </article>
+    <div className="chronicle-page">
+      <article className="chronicle-chapter">
+        <span className="chronicle-kicker">Field notes</span>
+        <h1>Local info: {displayName}</h1>
+        {!loading && rate !== null && (
+          <p className="chronicle-rate-line">
+            1 USD ≈ <strong>{rate}</strong> {targetCurrency}
+          </p>
+        )}
+        {!loading && rate === null && <p className="chronicle-rate-line">Currency rate unavailable right now.</p>}
+        <ul className="chronicle-link-list">
+          <li>
+            <a href={transitUrl} target="_blank" rel="noopener noreferrer">
+              Transit directions
+            </a>
+          </li>
+          <li>
+            <a href={translateUrl} target="_blank" rel="noopener noreferrer">
+              Phrasebook
+            </a>
+          </li>
+        </ul>
+      </article>
+    </div>
   )
 }

@@ -1,25 +1,521 @@
-.chronicle-timeline ol {
-  border-left: 3px solid #2d2d2d;
-  margin-left: 12px;
-  padding-left: 16px;
+/* =============================================================================
+   Trip One — Chronicle theme
+   Editorial day-by-day timeline: each day reads as a magazine chapter —
+   narrative, chronological, literary. Charcoal canvas, thermal-teal and
+   sulfur-gold accents, warm cream surfaces. Playfair Display (display) +
+   Source Serif 4 (body) + JetBrains Mono (labels/dates).
+
+   All custom properties and classes are namespaced with `chronicle-` so this
+   stylesheet — which is imported globally alongside the other four themes —
+   never leaks into Bento / Field Guide / Liquid Glass / Trail Ledger.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300&display=swap');
+
+:root {
+  /* ---- Surfaces (dark, default) ---- */
+  --chronicle-bg-canvas: #1a1a1a;
+  --chronicle-bg-surface: #232323;
+  --chronicle-bg-surface-2: #2b2b2b;
+
+  /* ---- Borders ---- */
+  --chronicle-border-hairline: rgba(245, 240, 230, 0.1);
+  --chronicle-border-subtle: rgba(245, 240, 230, 0.18);
+  --chronicle-spine: #3a3a3a;
+
+  /* ---- Accents ---- */
+  --chronicle-teal: #2fa396;
+  --chronicle-teal-hover: #3ebdae;
+  --chronicle-gold: #e8b84a;
+  --chronicle-gold-hover: #f0c55e;
+  --chronicle-muted: #8b8b83;
+
+  /* ---- Text ---- */
+  --chronicle-text-primary: #f5f0e6;
+  --chronicle-text-secondary: #c9c3b4;
+  --chronicle-text-tertiary: #8f8a7c;
+  --chronicle-text-on-gold: #1a1a1a;
+
+  /* ---- Semantic ---- */
+  --chronicle-danger: #d9635a;
+
+  /* ---- Typography ---- */
+  --chronicle-font-display: 'Playfair Display', Georgia, serif;
+  --chronicle-font-body: 'Source Serif 4', Georgia, serif;
+  --chronicle-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* ---- Spacing (4px base) ---- */
+  --chronicle-space-xs: 4px;
+  --chronicle-space-sm: 8px;
+  --chronicle-space-md: 16px;
+  --chronicle-space-lg: 24px;
+  --chronicle-space-xl: 32px;
+  --chronicle-space-2xl: 48px;
+  --chronicle-space-3xl: 64px;
+
+  /* ---- Radius ---- */
+  --chronicle-radius-sm: 4px;
+  --chronicle-radius-md: 8px;
+  --chronicle-radius-lg: 14px;
+  --chronicle-radius-pill: 999px;
+
+  /* ---- Shadow ---- */
+  --chronicle-shadow-card: 0 1px 0 rgba(0, 0, 0, 0.5), 0 12px 24px -14px rgba(0, 0, 0, 0.6);
+  --chronicle-shadow-focus: 0 0 0 2px var(--chronicle-bg-canvas), 0 0 0 4px var(--chronicle-teal);
 }
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --chronicle-bg-canvas: #f7f2e7;
+    --chronicle-bg-surface: #fffdf8;
+    --chronicle-bg-surface-2: #f0e9d8;
+
+    --chronicle-border-hairline: rgba(26, 26, 26, 0.1);
+    --chronicle-border-subtle: rgba(26, 26, 26, 0.18);
+    --chronicle-spine: #d8cfba;
+
+    --chronicle-teal: #1d8a7d;
+    --chronicle-teal-hover: #166f64;
+    --chronicle-gold: #b8912e;
+    --chronicle-gold-hover: #967520;
+    --chronicle-muted: #8a8370;
+
+    --chronicle-text-primary: #1a1a1a;
+    --chronicle-text-secondary: #4a4438;
+    --chronicle-text-tertiary: #746c5a;
+    --chronicle-text-on-gold: #fffdf8;
+
+    --chronicle-shadow-card: 0 1px 2px rgba(26, 26, 26, 0.06), 0 8px 20px -12px rgba(26, 26, 26, 0.16);
+  }
+}
+
+/* ---------- Base ---------- */
+.chronicle-page {
+  font-family: var(--chronicle-font-body);
+  background: var(--chronicle-bg-canvas);
+  color: var(--chronicle-text-primary);
+  min-height: 100vh;
+  line-height: 1.6;
+  padding: var(--chronicle-space-lg) var(--chronicle-space-md) var(--chronicle-space-3xl);
+}
+
+.chronicle-page :focus-visible {
+  outline: none;
+  box-shadow: var(--chronicle-shadow-focus);
+  border-radius: inherit;
+}
+
+.chronicle-masthead {
+  max-width: 720px;
+  margin: 0 auto var(--chronicle-space-lg);
+  text-align: center;
+}
+
+.chronicle-kicker {
+  display: block;
+  font-family: var(--chronicle-font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--chronicle-gold);
+  margin: 0 0 var(--chronicle-space-xs);
+}
+
+/* ---------- Chapter (Overview / Local info) ---------- */
+.chronicle-chapter {
+  max-width: 680px;
+  margin: 0 auto;
+  background: var(--chronicle-bg-surface);
+  border: 1px solid var(--chronicle-border-hairline);
+  border-radius: var(--chronicle-radius-lg);
+  padding: var(--chronicle-space-xl) var(--chronicle-space-lg);
+  box-shadow: var(--chronicle-shadow-card);
+}
+
+.chronicle-chapter h1 {
+  font-family: var(--chronicle-font-display);
+  font-weight: 900;
+  font-style: italic;
+  font-size: clamp(28px, 5vw, 40px);
+  line-height: 1.15;
+  margin: 0 0 var(--chronicle-space-md);
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-chapter nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--chronicle-space-sm) var(--chronicle-space-md);
+  font-family: var(--chronicle-font-mono);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  padding-bottom: var(--chronicle-space-md);
+  margin-bottom: var(--chronicle-space-md);
+  border-bottom: 1px solid var(--chronicle-border-hairline);
+}
+
+.chronicle-chapter nav a {
+  color: var(--chronicle-teal);
+  text-decoration: none;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.chronicle-chapter nav a:hover,
+.chronicle-chapter nav a:focus-visible {
+  color: var(--chronicle-teal-hover);
+  text-decoration: underline;
+}
+
+.chronicle-dek {
+  font-family: var(--chronicle-font-body);
+  font-weight: 400;
+  font-size: 18px;
+  color: var(--chronicle-text-secondary);
+  margin: 0 0 var(--chronicle-space-md);
+}
+
+.chronicle-weather {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--chronicle-space-sm);
+  font-family: var(--chronicle-font-display);
+  font-weight: 700;
+  font-size: 28px;
+  color: var(--chronicle-gold);
+  margin: 0 0 var(--chronicle-space-lg);
+}
+
+.chronicle-weather-condition {
+  font-family: var(--chronicle-font-body);
+  font-size: 16px;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-map-frame {
+  border-radius: var(--chronicle-radius-md);
+  overflow: hidden;
+  border: 1px solid var(--chronicle-border-hairline);
+}
+
+.chronicle-map-frame--things {
+  max-width: 680px;
+  margin: 0 auto var(--chronicle-space-lg);
+}
+
+.chronicle-rate-line {
+  font-family: var(--chronicle-font-mono);
+  font-size: 15px;
+  color: var(--chronicle-text-secondary);
+  margin: 0 0 var(--chronicle-space-md);
+}
+
+.chronicle-rate-line strong {
+  color: var(--chronicle-gold);
+  font-weight: 500;
+}
+
+.chronicle-link-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chronicle-link-list a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-family: var(--chronicle-font-body);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--chronicle-teal);
+  text-decoration: none;
+}
+
+.chronicle-link-list a::before {
+  content: '→';
+  margin-right: var(--chronicle-space-sm);
+  color: var(--chronicle-gold);
+}
+
+.chronicle-link-list a:hover,
+.chronicle-link-list a:focus-visible {
+  color: var(--chronicle-teal-hover);
+  text-decoration: underline;
+}
+
+/* ---------- Vertical timeline (Itinerary) ---------- */
+.chronicle-timeline {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.chronicle-timeline-heading {
+  font-family: var(--chronicle-font-display);
+  font-weight: 900;
+  font-style: italic;
+  font-size: clamp(26px, 4.5vw, 36px);
+  margin: 0 0 var(--chronicle-space-lg);
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-stop-form {
+  display: grid;
+  grid-template-columns: 1fr 2fr auto;
+  gap: var(--chronicle-space-sm);
+  align-items: end;
+  background: var(--chronicle-bg-surface);
+  border: 1px solid var(--chronicle-border-hairline);
+  border-radius: var(--chronicle-radius-lg);
+  padding: var(--chronicle-space-md);
+  margin-bottom: var(--chronicle-space-xl);
+  box-shadow: var(--chronicle-shadow-card);
+}
+
+.chronicle-stop-form label {
+  display: block;
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--chronicle-text-tertiary);
+  margin-bottom: var(--chronicle-space-xs);
+}
+
+.chronicle-stop-form input {
+  width: 100%;
+  height: 44px;
+  padding: 0 var(--chronicle-space-sm);
+  border: 1px solid var(--chronicle-border-hairline);
+  border-radius: var(--chronicle-radius-sm);
+  background: var(--chronicle-bg-surface-2);
+  color: var(--chronicle-text-primary);
+  font-family: var(--chronicle-font-body);
+  font-size: 15px;
+}
+
+.chronicle-stop-form input:focus {
+  outline: none;
+  border-color: var(--chronicle-teal);
+}
+
+.chronicle-stop-submit {
+  height: 44px;
+  min-width: 44px;
+  padding: 0 var(--chronicle-space-lg);
+  border: none;
+  border-radius: var(--chronicle-radius-pill);
+  background: var(--chronicle-gold);
+  color: var(--chronicle-text-on-gold);
+  font-family: var(--chronicle-font-mono);
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.chronicle-stop-submit:hover {
+  background: var(--chronicle-gold-hover);
+}
+
+.chronicle-timeline ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  border-left: 2px solid var(--chronicle-spine);
+  margin-left: 5px;
+  padding-left: var(--chronicle-space-lg);
+}
+
 .chronicle-entry {
   position: relative;
-  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: var(--chronicle-space-sm);
+  flex-wrap: wrap;
+  padding: var(--chronicle-space-md) 0;
+  border-bottom: 1px solid var(--chronicle-border-hairline);
 }
+
+.chronicle-entry:last-child {
+  border-bottom: none;
+}
+
 .chronicle-entry span[data-testid^='timeline-dot'] {
+  position: absolute;
+  left: calc(-1 * var(--chronicle-space-lg) - 5px);
+  top: 50%;
+  transform: translateY(-50%);
   display: inline-block;
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  margin-right: 8px;
+  border: 2px solid var(--chronicle-bg-canvas);
+  margin-right: 0;
 }
-.chronicle-chapter h1 {
-  font-style: italic;
+
+.chronicle-entry-time {
+  font-family: var(--chronicle-font-mono);
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--chronicle-gold);
+  min-width: 3.5em;
 }
+
+.chronicle-entry-text {
+  font-family: var(--chronicle-font-body);
+  font-size: 16px;
+  color: var(--chronicle-text-primary);
+  flex: 1;
+}
+
+.chronicle-entry-remove {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--chronicle-border-hairline);
+  background: var(--chronicle-bg-surface-2);
+  color: var(--chronicle-text-secondary);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.chronicle-entry-remove:hover,
+.chronicle-entry-remove:focus-visible {
+  color: var(--chronicle-danger);
+  border-color: var(--chronicle-danger);
+}
+
+/* ---------- Things to do ---------- */
+.chronicle-suggestions {
+  max-width: 680px;
+  margin: var(--chronicle-space-lg) auto 0;
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-sm);
+}
+
+.chronicle-suggestions li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--chronicle-space-sm) var(--chronicle-space-md);
+  background: var(--chronicle-bg-surface);
+  border: 1px solid var(--chronicle-border-hairline);
+  border-radius: var(--chronicle-radius-md);
+  padding: var(--chronicle-space-md);
+  box-shadow: var(--chronicle-shadow-card);
+}
+
+.chronicle-suggestion-category {
+  font-family: var(--chronicle-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chronicle-teal);
+  border: 1px solid var(--chronicle-teal);
+  border-radius: var(--chronicle-radius-pill);
+  padding: 2px 10px;
+}
+
+.chronicle-suggestion-name {
+  font-family: var(--chronicle-font-display);
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--chronicle-text-primary);
+  flex: 1;
+}
+
+.chronicle-suggestion-add {
+  height: 44px;
+  min-width: 44px;
+  padding: 0 var(--chronicle-space-md);
+  border: none;
+  border-radius: var(--chronicle-radius-pill);
+  background: var(--chronicle-teal);
+  color: var(--chronicle-text-on-gold);
+  font-family: var(--chronicle-font-mono);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.chronicle-suggestion-add:hover {
+  background: var(--chronicle-teal-hover);
+}
+
+/* ---------- ThemeSwitcher / ErrorBoundary polish under Chronicle ----------
+   These shared components live outside this theme's own component files, so
+   we don't restyle them directly — we only make sure they read cleanly when
+   they happen to render alongside a Chronicle screen. */
+body:has(.chronicle-page) select {
+  font-family: var(--chronicle-font-mono);
+  font-size: 13px;
+  color: var(--chronicle-text-primary);
+  background: var(--chronicle-bg-surface-2);
+  border: 1px solid var(--chronicle-border-hairline);
+  border-radius: var(--chronicle-radius-pill);
+  padding: 6px 14px;
+  min-height: 44px;
+}
+
+body:has(.chronicle-page) label {
+  font-family: var(--chronicle-font-mono);
+  font-size: 12px;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-page [role='alert'] {
+  max-width: 680px;
+  margin: 0 auto var(--chronicle-space-md);
+  background: var(--chronicle-bg-surface);
+  border: 1px solid var(--chronicle-danger);
+  border-radius: var(--chronicle-radius-md);
+  padding: var(--chronicle-space-md);
+  color: var(--chronicle-text-primary);
+  font-family: var(--chronicle-font-body);
+}
+
+/* ---------- Responsive ---------- */
 @media (max-width: 480px) {
   .chronicle-timeline ol {
-    margin-left: 6px;
-    padding-left: 10px;
+    margin-left: 3px;
+    padding-left: var(--chronicle-space-md);
+  }
+
+  .chronicle-entry span[data-testid^='timeline-dot'] {
+    left: calc(-1 * var(--chronicle-space-md) - 3px);
+  }
+
+  .chronicle-stop-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .chronicle-stop-submit,
+  .chronicle-suggestion-add {
+    transition-duration: 0.01ms;
   }
 }

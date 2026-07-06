@@ -25,27 +25,35 @@ export function ItineraryScreen() {
   }
 
   return (
-    <div className="chronicle-timeline">
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="chronicle-stop-time">Time</label>
-        <input id="chronicle-stop-time" value={time} onChange={(e) => setTime(e.target.value)} />
-        <label htmlFor="chronicle-stop-text">What</label>
-        <input id="chronicle-stop-text" value={text} onChange={(e) => setText(e.target.value)} />
-        <button type="submit">Add stop</button>
-      </form>
-      <ol>
-        {itinerary.map((item, i) => (
-          <li key={`${item.time}-${item.text}-${i}`} className="chronicle-entry">
-            <span data-testid={`timeline-dot-${item.type}`} style={{ background: DOT_COLOR[item.type] }} />
-            <span>{item.time}</span>
-            <span> — </span>
-            <span>{item.text}</span>
-            <button type="button" onClick={() => removeItem(i)} aria-label={`Remove ${item.text}`}>
-              ×
-            </button>
-          </li>
-        ))}
-      </ol>
+    <div className="chronicle-page">
+      <div className="chronicle-timeline">
+        <h1 className="chronicle-timeline-heading">The itinerary</h1>
+        <form className="chronicle-stop-form" onSubmit={handleSubmit}>
+          <div>
+            <label htmlFor="chronicle-stop-time">Time</label>
+            <input id="chronicle-stop-time" value={time} onChange={(e) => setTime(e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="chronicle-stop-text">What</label>
+            <input id="chronicle-stop-text" value={text} onChange={(e) => setText(e.target.value)} />
+          </div>
+          <button type="submit" className="chronicle-stop-submit">
+            Add stop
+          </button>
+        </form>
+        <ol>
+          {itinerary.map((item, i) => (
+            <li key={`${item.time}-${item.text}-${i}`} className="chronicle-entry">
+              <span data-testid={`timeline-dot-${item.type}`} style={{ background: DOT_COLOR[item.type] }} />
+              <span className="chronicle-entry-time">{item.time}</span>
+              <span className="chronicle-entry-text">{item.text}</span>
+              <button type="button" className="chronicle-entry-remove" onClick={() => removeItem(i)} aria-label={`Remove ${item.text}`}>
+                ×
+              </button>
+            </li>
+          ))}
+        </ol>
+      </div>
     </div>
   )
 }

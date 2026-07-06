@@ -33,18 +33,27 @@ export function ThingsToDoScreen({ locationSlug }: { locationSlug: string }) {
     .map((item) => ({ lat: item.lat as number, lng: item.lng as number, label: item.name, category: item.category }))
 
   return (
-    <>
-      {location && <MapView lat={location.lat} lng={location.lng} label={location.displayName} markers={markers} />}
+    <div className="chronicle-page">
+      {location && (
+        <div className="chronicle-map-frame chronicle-map-frame--things">
+          <MapView lat={location.lat} lng={location.lng} label={location.displayName} markers={markers} />
+        </div>
+      )}
       <ol className="chronicle-suggestions">
         {items.map((item) => (
           <li key={item.name}>
-            <span>{item.name}</span> ({item.category})
-            <button type="button" onClick={() => addItem({ time: '', text: item.name, type: 'option', q: item.name })}>
+            <span className="chronicle-suggestion-category">{item.category}</span>
+            <span className="chronicle-suggestion-name">{item.name}</span>
+            <button
+              type="button"
+              className="chronicle-suggestion-add"
+              onClick={() => addItem({ time: '', text: item.name, type: 'option', q: item.name })}
+            >
               Add to timeline
             </button>
           </li>
         ))}
       </ol>
-    </>
+    </div>
   )
 }
