@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { OverviewScreen } from './OverviewScreen'
 import { ItineraryScreen } from './ItineraryScreen'
 import { ThingsToDoScreen } from './ThingsToDoScreen'
+import { LocalInfoScreen } from './LocalInfoScreen'
 import { useTripStore } from '../../store/tripStore'
 import * as client from '../../lib/api/client'
 import * as forecastHook from '../../features/weather/useForecast'
@@ -116,5 +117,20 @@ describe('Trail Ledger theme', () => {
     await waitFor(() => expect(loggerSpy).toHaveBeenCalledWith('failed to load things to do', expect.any(Error)))
     // Verify no crash or unhandled rejection
     expect(screen.queryByRole('table')).toBeInTheDocument()
+  })
+
+  it('LocalInfoScreen shows the exchange rate and transit/phrasebook links in a table', async () => {
+    vi.spyOn(client, 'fetchLocation').mockResolvedValue({
+      slug: 'reykjavik-iceland',
+      lat: 64.128,
+      lng: -21.9426,
+      displayName: 'Reykjavik, Iceland',
+      thingsToDo: [],
+    })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rates: { ISK: 138.2 } }) }))
+    render(<LocalInfoScreen locationSlug="reykjavik-iceland" />)
+    await waitFor(() => expect(screen.getByText(/138\.2/)).toBeInTheDocument())
+    expect(screen.getByRole('link', { name: /transit directions/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /phrasebook/i })).toBeInTheDocument()
   })
 })

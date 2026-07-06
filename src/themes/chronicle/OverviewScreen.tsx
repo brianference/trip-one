@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { getTrip, fetchLocation, type Trip, type LocationResult } from '../../lib/api/client'
 import { useForecast } from '../../features/weather/useForecast'
 import { MapView } from '../../features/map/MapView'
@@ -15,6 +15,13 @@ function Chapter({ trip, location }: { trip: Trip; location: LocationResult | nu
   return (
     <article className="chronicle-chapter">
       <h1>Day one: {displayName}</h1>
+      <nav>
+        <Link to={`/trip/${trip.id}/itinerary`}>Itinerary</Link>
+        {' · '}
+        <Link to={`/trip/${trip.id}/things-to-do`}>Things to do</Link>
+        {' · '}
+        <Link to={`/trip/${trip.id}/local-info`}>Local info</Link>
+      </nav>
       {forecast && <p>{forecast.temperatureF}°F — {forecast.condition}</p>}
       {location && <MapView lat={location.lat} lng={location.lng} label={displayName} />}
     </article>

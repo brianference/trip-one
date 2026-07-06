@@ -16,6 +16,8 @@ function OverviewContent({ tripId, trip, location }: { tripId: string; trip: Tri
           <Link to={`/trip/${tripId}/itinerary`}>Itinerary</Link>
           {' · '}
           <Link to={`/trip/${tripId}/things-to-do`}>Things to do</Link>
+          {' · '}
+          <Link to={`/trip/${tripId}/local-info`}>Local info</Link>
         </nav>
       </div>
       {forecast && (

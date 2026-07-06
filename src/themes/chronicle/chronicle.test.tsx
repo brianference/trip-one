@@ -5,6 +5,7 @@ import { SearchScreen } from './SearchScreen'
 import { OverviewScreen } from './OverviewScreen'
 import { ItineraryScreen } from './ItineraryScreen'
 import { ThingsToDoScreen } from './ThingsToDoScreen'
+import { LocalInfoScreen } from './LocalInfoScreen'
 import { useTripStore } from '../../store/tripStore'
 import * as client from '../../lib/api/client'
 import * as forecastHook from '../../features/weather/useForecast'
@@ -91,5 +92,20 @@ describe('Chronicle theme', () => {
     })
     render(<ThingsToDoScreen locationSlug="kyoto-japan" />)
     await waitFor(() => expect(screen.getByText('Fushimi Inari Shrine')).toBeInTheDocument())
+  })
+
+  it('LocalInfoScreen shows the exchange rate and transit/phrasebook links', async () => {
+    vi.spyOn(client, 'fetchLocation').mockResolvedValue({
+      slug: 'kyoto-japan',
+      lat: 35.01,
+      lng: 135.77,
+      displayName: 'Kyoto, Japan',
+      thingsToDo: [],
+    })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rates: { JPY: 157.3 } }) }))
+    render(<LocalInfoScreen locationSlug="kyoto-japan" />)
+    await waitFor(() => expect(screen.getByText(/157\.3/)).toBeInTheDocument())
+    expect(screen.getByRole('link', { name: /transit directions/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /phrasebook/i })).toBeInTheDocument()
   })
 })

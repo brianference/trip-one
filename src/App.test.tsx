@@ -68,6 +68,32 @@ describe('App', () => {
     },
   )
 
+  it.each(Object.keys(ITINERARY_MARKER_BY_THEME) as DesignStyle[])(
+    'renders the %s theme LocalInfoScreen at /trip/:id/local-info',
+    async (style) => {
+      useTripStore.setState({ tripId: 't1', locationSlug: 'dublin-ireland', itinerary: [], designStyle: style })
+      vi.spyOn(client, 'getTrip').mockResolvedValue({
+        id: 't1',
+        locationSlug: 'dublin-ireland',
+        itinerary: [],
+        designStyle: style,
+      })
+      vi.spyOn(client, 'fetchLocation').mockResolvedValue({
+        slug: 'dublin-ireland',
+        lat: 53.35,
+        lng: -6.26,
+        displayName: 'Dublin, Ireland',
+        thingsToDo: [],
+      })
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rates: { EUR: 0.92 } }) }))
+      navigateTo('/trip/t1/local-info')
+      render(<App />)
+      await waitFor(() => expect(screen.getByRole('link', { name: /transit directions/i })).toBeInTheDocument())
+      expect(screen.getByRole('link', { name: /phrasebook/i })).toBeInTheDocument()
+      vi.unstubAllGlobals()
+    },
+  )
+
   it('renders the ThemeSwitcher alongside the matching theme Overview at /trip/:id', async () => {
     useTripStore.setState({ tripId: 't1', locationSlug: 'dublin-ireland', itinerary: [], designStyle: 'trail-ledger' })
     vi.spyOn(client, 'getTrip').mockResolvedValue({

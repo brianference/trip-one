@@ -5,6 +5,7 @@ import { SearchScreen } from './SearchScreen'
 import { OverviewScreen } from './OverviewScreen'
 import { ItineraryScreen } from './ItineraryScreen'
 import { ThingsToDoScreen } from './ThingsToDoScreen'
+import { LocalInfoScreen } from './LocalInfoScreen'
 import { useTripStore } from '../../store/tripStore'
 import * as client from '../../lib/api/client'
 import * as forecastHook from '../../features/weather/useForecast'
@@ -91,5 +92,19 @@ describe('Field Guide theme', () => {
     })
     render(<ThingsToDoScreen locationSlug="yellowstone-demo" />)
     await waitFor(() => expect(screen.getByText('Old Faithful')).toBeInTheDocument())
+  })
+
+  it('LocalInfoScreen shows the exchange rate and transit/phrasebook links', async () => {
+    vi.spyOn(client, 'fetchLocation').mockResolvedValue({
+      slug: 'yellowstone-demo',
+      lat: 44.6,
+      lng: -110.5,
+      displayName: 'Yellowstone, United States',
+      thingsToDo: [],
+    })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rates: { USD: 1 } }) }))
+    render(<LocalInfoScreen locationSlug="yellowstone-demo" />)
+    await waitFor(() => expect(screen.getByRole('link', { name: /transit directions/i })).toBeInTheDocument())
+    expect(screen.getByRole('link', { name: /phrasebook/i })).toBeInTheDocument()
   })
 })

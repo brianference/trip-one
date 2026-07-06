@@ -1,0 +1,55 @@
+import { useEffect, useState } from 'react'
+import { fetchLocation, type LocationResult } from '../../lib/api/client'
+import { currencyForDisplayName } from '../../features/localinfo/currencyByCountry'
+import { useCurrencyRate } from '../../features/localinfo/useCurrencyRate'
+import { logger } from '../../lib/logger'
+
+/**
+ * Local info screen for Liquid Glass theme — currency conversion plus
+ * transit and phrasebook links, styled with the frosted glass card.
+ */
+export function LocalInfoScreen({ locationSlug }: { locationSlug: string }) {
+  const [location, setLocation] = useState<LocationResult | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetchLocation(locationSlug)
+      .then((loc) => {
+        if (!cancelled) setLocation(loc)
+      })
+      .catch((err) => {
+        logger.error('failed to load local info', err)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [locationSlug])
+
+  const displayName = location?.displayName ?? locationSlug
+  const targetCurrency = currencyForDisplayName(displayName)
+  const { rate, loading } = useCurrencyRate(targetCurrency)
+  const transitUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`public transit in ${displayName}`)}`
+  const translateUrl = 'https://translate.google.com/?sl=en&tl=auto&op=translate'
+
+  return (
+    <div className="lg-glass-card">
+      <h1>Local info: {displayName}</h1>
+      {!loading && rate !== null && (
+        <p>
+          <span>1 USD ≈ {rate}</span> <span>{targetCurrency}</span>
+        </p>
+      )}
+      {!loading && rate === null && <p>Currency rate unavailable right now.</p>}
+      <p>
+        <a className="lg-tap-target" href={transitUrl} target="_blank" rel="noopener noreferrer">
+          Transit directions
+        </a>
+      </p>
+      <p>
+        <a className="lg-tap-target" href={translateUrl} target="_blank" rel="noopener noreferrer">
+          Phrasebook
+        </a>
+      </p>
+    </div>
+  )
+}

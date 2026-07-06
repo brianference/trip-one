@@ -5,6 +5,7 @@ import { SearchScreen } from './SearchScreen'
 import { OverviewScreen } from './OverviewScreen'
 import { ItineraryScreen } from './ItineraryScreen'
 import { ThingsToDoScreen } from './ThingsToDoScreen'
+import { LocalInfoScreen } from './LocalInfoScreen'
 import { useTripStore } from '../../store/tripStore'
 import * as client from '../../lib/api/client'
 import * as forecastHook from '../../features/weather/useForecast'
@@ -119,5 +120,20 @@ describe('Liquid Glass theme', () => {
     expect(screen.getByText('(food)')).toBeInTheDocument()
     const addButton = screen.getByRole('button', { name: /add/i })
     expect(addButton).toHaveClass('lg-tap-target')
+  })
+
+  it('LocalInfoScreen shows the exchange rate and transit/phrasebook links', async () => {
+    vi.spyOn(client, 'fetchLocation').mockResolvedValue({
+      slug: 'lisbon-portugal',
+      lat: 38.7,
+      lng: -9.1,
+      displayName: 'Lisbon, Portugal',
+      thingsToDo: [],
+    })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rates: { EUR: 0.92 } }) }))
+    render(<LocalInfoScreen locationSlug="lisbon-portugal" />)
+    await waitFor(() => expect(screen.getByText(/0\.92/)).toBeInTheDocument())
+    expect(screen.getByRole('link', { name: /transit directions/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /phrasebook/i })).toBeInTheDocument()
   })
 })

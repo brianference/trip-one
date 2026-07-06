@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { getTrip, fetchLocation, type Trip, type LocationResult } from '../../lib/api/client'
 import { useForecast } from '../../features/weather/useForecast'
 import { MapView } from '../../features/map/MapView'
@@ -15,6 +15,19 @@ function GlassOverview({ trip, location }: { trip: Trip; location: LocationResul
   return (
     <div className="lg-glass-card">
       <h1>{displayName}</h1>
+      <nav>
+        <Link className="lg-tap-target" to={`/trip/${trip.id}/itinerary`}>
+          Itinerary
+        </Link>
+        {' · '}
+        <Link className="lg-tap-target" to={`/trip/${trip.id}/things-to-do`}>
+          Things to do
+        </Link>
+        {' · '}
+        <Link className="lg-tap-target" to={`/trip/${trip.id}/local-info`}>
+          Local info
+        </Link>
+      </nav>
       {forecast && (
         <p>
           <span>{forecast.temperatureF}°F</span>

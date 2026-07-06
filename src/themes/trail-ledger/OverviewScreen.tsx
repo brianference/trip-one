@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { getTrip, fetchLocation, type Trip, type LocationResult } from '../../lib/api/client'
 import { useForecast } from '../../features/weather/useForecast'
 import { MapView } from '../../features/map/MapView'
@@ -28,6 +28,13 @@ function LedgerTable({ trip, location }: { trip: Trip; location: LocationResult 
           )}
         </tbody>
       </table>
+      <nav>
+        <Link to={`/trip/${trip.id}/itinerary`}>Itinerary</Link>
+        {' · '}
+        <Link to={`/trip/${trip.id}/things-to-do`}>Things to do</Link>
+        {' · '}
+        <Link to={`/trip/${trip.id}/local-info`}>Local info</Link>
+      </nav>
       {location && <MapView lat={location.lat} lng={location.lng} label={displayName} />}
     </div>
   )
