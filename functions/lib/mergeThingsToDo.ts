@@ -4,6 +4,17 @@ export interface ThingToDo {
   source: 'tripadvisor' | 'places'
   rating?: number
   address?: string
+  /**
+   * Per-item coordinates, when the upstream source provides them. Google
+   * Places' Nearby Search response includes `geometry.location` per result,
+   * so `places`-sourced entries get real coordinates. Tripadvisor's
+   * `nearby_search` endpoint does not return per-item lat/long (only the
+   * separate Location Details endpoint does, which this app doesn't call),
+   * so `tripadvisor`-sourced entries omit these fields rather than
+   * fabricating a value.
+   */
+  lat?: number
+  lng?: number
 }
 
 /**

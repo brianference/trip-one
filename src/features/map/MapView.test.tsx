@@ -72,4 +72,37 @@ describe('MapView', () => {
     const divIconResult = leafletMocked.divIcon.mock.results[0].value
     expect(leafletMocked.marker).toHaveBeenCalledWith([53.35, -6.26], { icon: divIconResult })
   })
+
+  it('renders the base location marker plus one colored marker per entry in the markers prop', () => {
+    render(
+      <MapView
+        lat={35.68}
+        lng={139.76}
+        label="Tokyo, Japan"
+        markers={[
+          { lat: 35.6595, lng: 139.7005, label: 'Shibuya Crossing', category: 'tourist_attraction' },
+          { lat: 35.7148, lng: 139.7967, label: 'Ueno Park', category: 'park' },
+        ]}
+      />,
+    )
+
+    const leafletMocked = vi.mocked(L)
+
+    // 1 base marker (city center) + 2 things-to-do markers
+    expect(leafletMocked.marker).toHaveBeenCalledTimes(3)
+    expect(leafletMocked.marker).toHaveBeenNthCalledWith(1, [35.68, 139.76], expect.anything())
+    expect(leafletMocked.marker).toHaveBeenNthCalledWith(2, [35.6595, 139.7005], expect.anything())
+    expect(leafletMocked.marker).toHaveBeenNthCalledWith(3, [35.7148, 139.7967], expect.anything())
+
+    // Each marker gets its own divIcon, and different categories get different colors.
+    expect(leafletMocked.divIcon).toHaveBeenCalledTimes(3)
+    const htmlArgs = leafletMocked.divIcon.mock.calls.map((call) => call[0]?.html)
+    expect(new Set(htmlArgs).size).toBe(3)
+  })
+
+  it('does not render any extra markers when markers is an empty array', () => {
+    render(<MapView lat={35.68} lng={139.76} label="Tokyo, Japan" markers={[]} />)
+    const leafletMocked = vi.mocked(L)
+    expect(leafletMocked.marker).toHaveBeenCalledTimes(1)
+  })
 })

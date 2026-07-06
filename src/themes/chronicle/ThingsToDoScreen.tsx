@@ -1,20 +1,21 @@
 import { useEffect, useState } from 'react'
-import { fetchLocation, type ThingToDo } from '../../lib/api/client'
+import { fetchLocation, type LocationResult, type ThingToDo } from '../../lib/api/client'
 import { useTripStore } from '../../store/tripStore'
+import { MapView } from '../../features/map/MapView'
 import { logger } from '../../lib/logger'
 
 /**
  * Things to do screen for Chronicle theme — displays cached location suggestions with timeline add buttons.
  */
 export function ThingsToDoScreen({ locationSlug }: { locationSlug: string }) {
-  const [items, setItems] = useState<ThingToDo[]>([])
+  const [location, setLocation] = useState<LocationResult | null>(null)
   const addItem = useTripStore((s) => s.addItem)
 
   useEffect(() => {
     let cancelled = false
     fetchLocation(locationSlug)
       .then((loc) => {
-        if (!cancelled) setItems(loc.thingsToDo)
+        if (!cancelled) setLocation(loc)
       })
       .catch((err) => {
         logger.error('failed to load things to do', err)
@@ -24,16 +25,26 @@ export function ThingsToDoScreen({ locationSlug }: { locationSlug: string }) {
     }
   }, [locationSlug])
 
+  const items: ThingToDo[] = location?.thingsToDo ?? []
+  // Only Places-sourced entries carry real per-item coordinates today —
+  // Tripadvisor entries without lat/lng are left off the map.
+  const markers = items
+    .filter((item) => item.lat != null && item.lng != null)
+    .map((item) => ({ lat: item.lat as number, lng: item.lng as number, label: item.name, category: item.category }))
+
   return (
-    <ol className="chronicle-suggestions">
-      {items.map((item) => (
-        <li key={item.name}>
-          <span>{item.name}</span> ({item.category})
-          <button type="button" onClick={() => addItem({ time: '', text: item.name, type: 'option', q: item.name })}>
-            Add to timeline
-          </button>
-        </li>
-      ))}
-    </ol>
+    <>
+      {location && <MapView lat={location.lat} lng={location.lng} label={location.displayName} markers={markers} />}
+      <ol className="chronicle-suggestions">
+        {items.map((item) => (
+          <li key={item.name}>
+            <span>{item.name}</span> ({item.category})
+            <button type="button" onClick={() => addItem({ time: '', text: item.name, type: 'option', q: item.name })}>
+              Add to timeline
+            </button>
+          </li>
+        ))}
+      </ol>
+    </>
   )
 }

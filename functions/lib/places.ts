@@ -19,7 +19,13 @@ export async function searchPlaces(lat: number, lng: number, apiKey: string): Pr
       return []
     }
     const body = (await res.json()) as {
-      results: Array<{ name: string; types: string[]; rating?: number; vicinity?: string }>
+      results: Array<{
+        name: string
+        types: string[]
+        rating?: number
+        vicinity?: string
+        geometry?: { location?: { lat?: number; lng?: number } }
+      }>
     }
     return (body.results ?? []).map((item) => ({
       name: item.name,
@@ -27,6 +33,8 @@ export async function searchPlaces(lat: number, lng: number, apiKey: string): Pr
       source: 'places' as const,
       rating: item.rating,
       address: item.vicinity,
+      lat: item.geometry?.location?.lat,
+      lng: item.geometry?.location?.lng,
     }))
   } catch (err) {
     logger.error('places search failed', err)

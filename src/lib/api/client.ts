@@ -8,6 +8,14 @@ export interface ThingToDo {
   source: 'tripadvisor' | 'places'
   rating?: number
   address?: string
+  /**
+   * Per-item coordinates, present only for `places`-sourced entries (Google
+   * Places' Nearby Search response includes them per result). Tripadvisor's
+   * `nearby_search` endpoint doesn't return per-item lat/long, so those
+   * entries omit these fields rather than fabricating a value.
+   */
+  lat?: number
+  lng?: number
 }
 
 export interface LocationResult {
