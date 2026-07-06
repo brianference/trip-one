@@ -20,23 +20,34 @@ export function ItineraryScreen() {
   }
 
   return (
-    <div className="field-guide-postcards">
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="fg-stop-time">Time</label>
-        <input id="fg-stop-time" value={time} onChange={(e) => setTime(e.target.value)} />
-        <label htmlFor="fg-stop-text">What</label>
-        <input id="fg-stop-text" value={text} onChange={(e) => setText(e.target.value)} />
-        <button type="submit">Add stop</button>
+    <div className="field-guide-app-screen field-guide-postcards">
+      <p className="field-guide-eyebrow">Trip itinerary</p>
+      <form onSubmit={handleSubmit} className="field-guide-form">
+        <div className="field-guide-field">
+          <label htmlFor="fg-stop-time">Time</label>
+          <input id="fg-stop-time" value={time} onChange={(e) => setTime(e.target.value)} />
+        </div>
+        <div className="field-guide-field">
+          <label htmlFor="fg-stop-text">What</label>
+          <input id="fg-stop-text" value={text} onChange={(e) => setText(e.target.value)} />
+        </div>
+        <button type="submit" className="field-guide-btn">
+          Add stop
+        </button>
       </form>
       <div className="field-guide-postcard-grid">
         {itinerary.map((item, i) => (
           <div key={`${item.time}-${item.text}-${i}`} className="field-guide-postcard">
-            <p>
-              {item.time} — <span>{item.text}</span>
-            </p>
-            <button type="button" onClick={() => removeItem(i)} aria-label={`Remove ${item.text}`}>
+            <button
+              type="button"
+              className="field-guide-btn field-guide-btn--icon field-guide-postcard-remove"
+              onClick={() => removeItem(i)}
+              aria-label={`Remove ${item.text}`}
+            >
               ×
             </button>
+            <p className="field-guide-postcard-time">{item.time || 'Anytime'}</p>
+            <p className="field-guide-postcard-title">{item.text}</p>
           </div>
         ))}
       </div>

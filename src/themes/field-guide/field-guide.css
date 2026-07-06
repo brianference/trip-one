@@ -1,30 +1,474 @@
+/* =============================================================================
+   Trip One — Field Guide theme
+   Vintage WPA national-park-poster styling: aged parchment cards, deep
+   evergreen ink, mustard/brick accents, letterspaced small-caps eyebrows.
+   The map is the hero; everything else annotates it like postcard stamps.
+
+   Fraunces + Inter are already loaded globally via index.html's Google
+   Fonts <link> (shared with the Bento theme), so no @import is needed here.
+
+   All custom properties and classes are namespaced with `field-guide-` so
+   this stylesheet — imported globally alongside the other four themes —
+   never leaks into Bento / Chronicle / Liquid Glass / Trail Ledger.
+   ========================================================================== */
+
+:root {
+  /* ---- Surfaces (parchment, default) ---- */
+  --fg-bg-canvas: #f1e9d6;
+  --fg-bg-card: #fbf6e8;
+  --fg-bg-card-2: #f4ecd8;
+
+  /* ---- Borders ---- */
+  --fg-border-hairline: rgba(19, 36, 26, 0.14);
+  --fg-border-subtle: rgba(19, 36, 26, 0.22);
+  --fg-border-strong: rgba(19, 36, 26, 0.4);
+
+  /* ---- Ink & accents ---- */
+  --fg-evergreen: #13241a;
+  --fg-evergreen-2: #1d3327;
+  --fg-mustard: #b9842a;
+  --fg-mustard-hover: #a5741f;
+  --fg-mustard-press: #8f631a;
+  --fg-rust: #b0492a;
+
+  /* ---- Text ---- */
+  --fg-text-primary: #13241a;
+  --fg-text-secondary: rgba(19, 36, 26, 0.68);
+  --fg-text-tertiary: rgba(19, 36, 26, 0.5);
+  --fg-text-on-mustard: #13241a;
+  --fg-text-on-evergreen: #f1e9d6;
+
+  /* ---- Semantic ---- */
+  --fg-danger: #a3392a;
+
+  /* ---- Typography ---- */
+  --fg-font-display: 'Fraunces', 'Georgia', serif;
+  --fg-font-ui: 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
+
+  /* ---- Spacing (4px base) ---- */
+  --fg-space-xs: 4px;
+  --fg-space-sm: 8px;
+  --fg-space-md: 16px;
+  --fg-space-lg: 24px;
+  --fg-space-xl: 32px;
+  --fg-space-2xl: 48px;
+
+  /* ---- Radius ---- */
+  --fg-radius-sm: 4px;
+  --fg-radius-md: 10px;
+  --fg-radius-lg: 16px;
+  --fg-radius-pill: 999px;
+
+  /* ---- Shadow ---- */
+  --fg-shadow-card: 0 1px 0 rgba(19, 36, 26, 0.06), 0 10px 24px -14px rgba(19, 36, 26, 0.45);
+  --fg-shadow-focus: 0 0 0 2px var(--fg-bg-canvas), 0 0 0 4px var(--fg-mustard);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg-bg-canvas: #0f1d15;
+    --fg-bg-card: #17281f;
+    --fg-bg-card-2: #1d3327;
+
+    --fg-border-hairline: rgba(241, 233, 214, 0.14);
+    --fg-border-subtle: rgba(241, 233, 214, 0.22);
+    --fg-border-strong: rgba(241, 233, 214, 0.4);
+
+    --fg-mustard: #d9a746;
+    --fg-mustard-hover: #e6b75c;
+    --fg-mustard-press: #c2922f;
+    --fg-rust: #d2694a;
+
+    --fg-text-primary: #f1e9d6;
+    --fg-text-secondary: rgba(241, 233, 214, 0.72);
+    --fg-text-tertiary: rgba(241, 233, 214, 0.52);
+    --fg-text-on-mustard: #13241a;
+    --fg-text-on-evergreen: #f1e9d6;
+
+    --fg-shadow-card: 0 1px 0 rgba(0, 0, 0, 0.3), 0 12px 28px -14px rgba(0, 0, 0, 0.6);
+  }
+}
+
+/* ---------- Base surfaces ---------- */
+.field-guide-page,
+.field-guide-app-screen {
+  font-family: var(--fg-font-ui);
+  background: var(--fg-bg-canvas);
+  color: var(--fg-text-primary);
+  min-height: 100vh;
+  line-height: 1.55;
+}
+
+.field-guide-app-screen {
+  padding-bottom: var(--fg-space-2xl);
+}
+
+.field-guide-page :focus-visible,
+.field-guide-app-screen :focus-visible {
+  outline: none;
+  box-shadow: var(--fg-shadow-focus);
+  border-radius: inherit;
+}
+
+.field-guide-eyebrow {
+  font-family: var(--fg-font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-mustard-hover);
+  margin: 0 0 var(--fg-space-xs);
+}
+
+.field-guide-section-eyebrow {
+  margin: var(--fg-space-lg) var(--fg-space-md) 0;
+}
+
+.field-guide-loading {
+  padding: var(--fg-space-2xl) var(--fg-space-md);
+  text-align: center;
+  font-family: var(--fg-font-display);
+  font-style: italic;
+  font-size: 20px;
+  color: var(--fg-text-secondary);
+}
+
+/* ---------- Buttons ---------- */
+.field-guide-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--fg-space-sm);
+  min-height: 44px;
+  padding: 0 var(--fg-space-lg);
+  border-radius: var(--fg-radius-sm);
+  border: 1.5px solid var(--fg-evergreen);
+  font-family: var(--fg-font-ui);
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  background: var(--fg-mustard);
+  color: var(--fg-text-on-mustard);
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.field-guide-btn:hover {
+  background: var(--fg-mustard-hover);
+}
+
+.field-guide-btn:active {
+  background: var(--fg-mustard-press);
+}
+
+.field-guide-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.field-guide-btn--ghost {
+  background: transparent;
+  color: var(--fg-evergreen);
+  border-color: var(--fg-border-strong);
+}
+
+.field-guide-btn--ghost:hover {
+  background: var(--fg-bg-card-2);
+}
+
+.field-guide-btn--icon {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: var(--fg-radius-pill);
+  background: var(--fg-bg-card);
+  color: var(--fg-rust);
+  border: 1.5px solid var(--fg-border-subtle);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.field-guide-btn--icon:hover {
+  background: var(--fg-bg-card-2);
+  border-color: var(--fg-rust);
+}
+
+/* ---------- Map hero ---------- */
 .field-guide-hero {
   position: relative;
+  border-bottom: 3px solid var(--fg-evergreen);
 }
+
+.field-guide-hero :where(.leaflet-container) {
+  min-height: 46vh;
+}
+
+.field-guide-map-frame {
+  position: relative;
+  border-bottom: 3px solid var(--fg-evergreen);
+}
+
+.field-guide-map-frame :where(.leaflet-container) {
+  min-height: 34vh;
+}
+
 .field-guide-overlay-card {
   position: absolute;
-  bottom: 12px;
-  left: 12px;
-  right: 12px;
-  background: #fdf8ec;
-  border: 2px solid #2f4f3a;
-  border-radius: 4px;
-  padding: 12px;
+  bottom: var(--fg-space-md);
+  left: var(--fg-space-md);
+  right: var(--fg-space-md);
+  background: var(--fg-bg-card);
+  border: 2px solid var(--fg-evergreen);
+  border-radius: var(--fg-radius-md);
+  padding: var(--fg-space-md) var(--fg-space-lg);
+  box-shadow: var(--fg-shadow-card);
 }
+
+.field-guide-overlay-card h1 {
+  font-family: var(--fg-font-display);
+  font-weight: 600;
+  font-size: clamp(24px, 5vw, 34px);
+  line-height: 1.1;
+  margin: 0 0 var(--fg-space-sm);
+  color: var(--fg-text-primary);
+}
+
+.field-guide-overlay-card h1 em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--fg-mustard-hover);
+}
+
+.field-guide-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fg-space-sm);
+  margin: 0 0 var(--fg-space-sm);
+  padding: 0;
+  list-style: none;
+}
+
+.field-guide-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--fg-space-md);
+  border-radius: var(--fg-radius-pill);
+  border: 1.5px solid var(--fg-border-strong);
+  color: var(--fg-text-primary);
+  font-family: var(--fg-font-ui);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.field-guide-nav a:hover,
+.field-guide-nav a:focus-visible {
+  background: var(--fg-mustard);
+  border-color: var(--fg-mustard);
+  color: var(--fg-text-on-mustard);
+}
+
+.field-guide-weather {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fg-space-xs);
+  font-family: var(--fg-font-ui);
+  font-weight: 500;
+  font-size: 15px;
+  color: var(--fg-text-secondary);
+  margin: 0;
+}
+
+.field-guide-weather strong {
+  font-family: var(--fg-font-display);
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--fg-text-primary);
+}
+
+/* ---------- Postcard grid ---------- */
+.field-guide-postcards {
+  padding: var(--fg-space-lg) var(--fg-space-md);
+}
+
 .field-guide-postcard-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  padding: 12px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--fg-space-md);
+  padding: var(--fg-space-lg) var(--fg-space-md);
 }
+
 .field-guide-postcard {
-  background: #fdf8ec;
-  border: 1px solid #b8860b;
-  border-radius: 4px;
-  padding: 10px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fg-space-sm);
+  background: var(--fg-bg-card);
+  border: 1.5px solid var(--fg-border-subtle);
+  border-radius: var(--fg-radius-md);
+  padding: var(--fg-space-md);
+  box-shadow: var(--fg-shadow-card);
 }
-@media (max-width: 480px) {
+
+.field-guide-postcard::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed var(--fg-border-hairline);
+  border-radius: calc(var(--fg-radius-md) - 4px);
+  pointer-events: none;
+}
+
+.field-guide-postcard-time {
+  font-family: var(--fg-font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-mustard-hover);
+  margin: 0;
+}
+
+.field-guide-postcard-title {
+  font-family: var(--fg-font-display);
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 1.25;
+  color: var(--fg-text-primary);
+  margin: 0;
+}
+
+.field-guide-postcard-badge {
+  align-self: flex-start;
+  font-family: var(--fg-font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-text-on-evergreen);
+  background: var(--fg-evergreen);
+  border-radius: var(--fg-radius-sm);
+  padding: 2px 8px;
+}
+
+.field-guide-postcard-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: auto;
+}
+
+.field-guide-postcard-remove {
+  position: absolute;
+  top: var(--fg-space-sm);
+  right: var(--fg-space-sm);
+}
+
+@media (max-width: 560px) {
   .field-guide-postcard-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ---------- Forms ---------- */
+.field-guide-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) auto;
+  gap: var(--fg-space-md);
+  align-items: end;
+  background: var(--fg-bg-card-2);
+  border: 1.5px solid var(--fg-border-subtle);
+  border-radius: var(--fg-radius-md);
+  padding: var(--fg-space-md);
+}
+
+.field-guide-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fg-space-xs);
+}
+
+.field-guide-field label {
+  font-family: var(--fg-font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-text-secondary);
+}
+
+.field-guide-field input {
+  min-height: 44px;
+  padding: 0 var(--fg-space-md);
+  border-radius: var(--fg-radius-sm);
+  border: 1.5px solid var(--fg-border-strong);
+  background: var(--fg-bg-card);
+  color: var(--fg-text-primary);
+  font-family: var(--fg-font-ui);
+  font-size: 15px;
+}
+
+.field-guide-field input:focus-visible {
+  outline: none;
+  border-color: var(--fg-mustard);
+  box-shadow: var(--fg-shadow-focus);
+}
+
+/* ---------- Local info ---------- */
+.field-guide-info-card {
+  margin: var(--fg-space-lg) var(--fg-space-md);
+  background: var(--fg-bg-card);
+  border: 2px solid var(--fg-evergreen);
+  border-radius: var(--fg-radius-md);
+  padding: var(--fg-space-lg);
+  box-shadow: var(--fg-shadow-card);
+}
+
+.field-guide-info-card h1 {
+  font-family: var(--fg-font-display);
+  font-weight: 600;
+  font-size: clamp(22px, 5vw, 30px);
+  margin: 0 0 var(--fg-space-md);
+  color: var(--fg-text-primary);
+}
+
+.field-guide-rate-line {
+  font-family: var(--fg-font-ui);
+  font-size: 16px;
+  color: var(--fg-text-primary);
+  margin: 0 0 var(--fg-space-md);
+}
+
+.field-guide-rate-line strong {
+  font-family: var(--fg-font-display);
+  font-size: 20px;
+}
+
+.field-guide-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fg-space-sm);
+  margin-top: var(--fg-space-md);
+}
+
+.field-guide-link-row a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--fg-space-lg);
+  border-radius: var(--fg-radius-sm);
+  border: 1.5px solid var(--fg-evergreen);
+  background: transparent;
+  color: var(--fg-evergreen);
+  font-family: var(--fg-font-ui);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.field-guide-link-row a:hover,
+.field-guide-link-row a:focus-visible {
+  background: var(--fg-evergreen);
+  color: var(--fg-text-on-evergreen);
 }

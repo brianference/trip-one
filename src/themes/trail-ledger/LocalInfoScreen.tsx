@@ -32,35 +32,38 @@ export function LocalInfoScreen({ locationSlug }: { locationSlug: string }) {
   const translateUrl = 'https://translate.google.com/?sl=en&tl=auto&op=translate'
 
   return (
-    <div className="tl-ledger">
-      <table>
-        <tbody>
-          <tr>
-            <th>Location</th>
-            <td>{displayName}</td>
-          </tr>
-          <tr>
-            <th>Exchange rate</th>
-            <td>{!loading && rate !== null ? `1 USD ≈ ${rate} ${targetCurrency}` : 'Unavailable right now'}</td>
-          </tr>
-          <tr>
-            <th>Transit</th>
-            <td>
-              <a href={transitUrl} target="_blank" rel="noopener noreferrer">
-                Transit directions
-              </a>
-            </td>
-          </tr>
-          <tr>
-            <th>Phrasebook</th>
-            <td>
-              <a href={translateUrl} target="_blank" rel="noopener noreferrer">
-                Phrasebook
-              </a>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div className="tl-screen">
+      <div className="tl-container">
+        <h1 className="tl-page-title">Local info</h1>
+        <table className="tl-table">
+          <tbody>
+            <tr>
+              <th>Location</th>
+              <td>{displayName}</td>
+            </tr>
+            <tr>
+              <th>Exchange rate</th>
+              <td>{!loading && rate !== null ? `1 USD ≈ ${rate} ${targetCurrency}` : 'Unavailable right now'}</td>
+            </tr>
+            <tr>
+              <th>Transit</th>
+              <td>
+                <a href={transitUrl} target="_blank" rel="noopener noreferrer">
+                  Transit directions
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <th>Phrasebook</th>
+              <td>
+                <a href={translateUrl} target="_blank" rel="noopener noreferrer">
+                  Phrasebook
+                </a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

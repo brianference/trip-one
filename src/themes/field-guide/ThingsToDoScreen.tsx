@@ -33,20 +33,30 @@ export function ThingsToDoScreen({ locationSlug }: { locationSlug: string }) {
     .map((item) => ({ lat: item.lat as number, lng: item.lng as number, label: item.name, category: item.category }))
 
   return (
-    <>
-      {location && <MapView lat={location.lat} lng={location.lng} label={location.displayName} markers={markers} />}
+    <div className="field-guide-app-screen">
+      {location && (
+        <div className="field-guide-map-frame">
+          <MapView lat={location.lat} lng={location.lng} label={location.displayName} markers={markers} />
+        </div>
+      )}
+      <p className="field-guide-eyebrow field-guide-section-eyebrow">Things to do</p>
       <div className="field-guide-postcard-grid">
         {items.map((item) => (
           <div key={item.name} className="field-guide-postcard">
-            <p>
-              <span>{item.name}</span> ({item.category})
-            </p>
-            <button type="button" onClick={() => addItem({ time: '', text: item.name, type: 'option', q: item.name })}>
-              Add to guide
-            </button>
+            <span className="field-guide-postcard-badge">{item.category}</span>
+            <p className="field-guide-postcard-title">{item.name}</p>
+            <div className="field-guide-postcard-actions">
+              <button
+                type="button"
+                className="field-guide-btn"
+                onClick={() => addItem({ time: '', text: item.name, type: 'option', q: item.name })}
+              >
+                Add to guide
+              </button>
+            </div>
           </div>
         ))}
       </div>
-    </>
+    </div>
   )
 }

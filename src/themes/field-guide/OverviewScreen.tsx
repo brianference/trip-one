@@ -16,15 +16,24 @@ function Hero({ trip, location }: { trip: Trip; location: LocationResult | null 
     <div className="field-guide-hero">
       <MapView lat={location?.lat ?? 0} lng={location?.lng ?? 0} label={displayName} />
       <div className="field-guide-overlay-card" data-testid="field-guide-overlay-card">
+        <p className="field-guide-eyebrow">Field guide</p>
         <h1>{displayName}</h1>
-        <nav>
-          <Link to={`/trip/${trip.id}/itinerary`}>Itinerary</Link>
-          {' · '}
-          <Link to={`/trip/${trip.id}/things-to-do`}>Things to do</Link>
-          {' · '}
-          <Link to={`/trip/${trip.id}/local-info`}>Local info</Link>
-        </nav>
-        {forecast && <p>{forecast.temperatureF}°F — {forecast.condition}</p>}
+        <ul className="field-guide-nav">
+          <li>
+            <Link to={`/trip/${trip.id}/itinerary`}>Itinerary</Link>
+          </li>
+          <li>
+            <Link to={`/trip/${trip.id}/things-to-do`}>Things to do</Link>
+          </li>
+          <li>
+            <Link to={`/trip/${trip.id}/local-info`}>Local info</Link>
+          </li>
+        </ul>
+        {forecast && (
+          <p className="field-guide-weather">
+            <strong>{forecast.temperatureF}°F</strong> — {forecast.condition}
+          </p>
+        )}
       </div>
     </div>
   )
@@ -57,11 +66,13 @@ export function OverviewScreen() {
     }
   }, [id])
 
-  if (!trip) return <p>Loading…</p>
+  if (!trip) return <p className="field-guide-loading">Loading…</p>
 
   return (
-    <ErrorBoundary label="Overview">
-      <Hero trip={trip} location={location} />
-    </ErrorBoundary>
+    <div className="field-guide-app-screen">
+      <ErrorBoundary label="Overview">
+        <Hero trip={trip} location={location} />
+      </ErrorBoundary>
+    </div>
   )
 }

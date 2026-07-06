@@ -32,24 +32,25 @@ export function LocalInfoScreen({ locationSlug }: { locationSlug: string }) {
   const translateUrl = 'https://translate.google.com/?sl=en&tl=auto&op=translate'
 
   return (
-    <div className="field-guide-overlay-card">
-      <h1>Local info: {displayName}</h1>
-      {!loading && rate !== null && (
-        <p>
-          1 USD ≈ {rate} {targetCurrency}
-        </p>
-      )}
-      {!loading && rate === null && <p>Currency rate unavailable right now.</p>}
-      <p>
-        <a href={transitUrl} target="_blank" rel="noopener noreferrer">
-          Transit directions
-        </a>
-      </p>
-      <p>
-        <a href={translateUrl} target="_blank" rel="noopener noreferrer">
-          Phrasebook
-        </a>
-      </p>
+    <div className="field-guide-app-screen">
+      <div className="field-guide-info-card">
+        <p className="field-guide-eyebrow">Local info</p>
+        <h1>{displayName}</h1>
+        {!loading && rate !== null && (
+          <p className="field-guide-rate-line">
+            1 USD ≈ <strong>{rate}</strong> {targetCurrency}
+          </p>
+        )}
+        {!loading && rate === null && <p className="field-guide-rate-line">Currency rate unavailable right now.</p>}
+        <div className="field-guide-link-row">
+          <a href={transitUrl} target="_blank" rel="noopener noreferrer">
+            Transit directions
+          </a>
+          <a href={translateUrl} target="_blank" rel="noopener noreferrer">
+            Phrasebook
+          </a>
+        </div>
+      </div>
     </div>
   )
 }

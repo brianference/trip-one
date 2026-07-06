@@ -13,29 +13,36 @@ function LedgerTable({ trip, location }: { trip: Trip; location: LocationResult 
   const { data: forecast } = useForecast(location?.lat ?? 0, location?.lng ?? 0)
   const displayName = location?.displayName ?? trip.locationSlug
   return (
-    <div className="tl-ledger">
-      <table>
-        <tbody>
-          <tr>
-            <th>Location</th>
-            <td>{displayName}</td>
-          </tr>
-          {forecast && (
+    <div className="tl-screen">
+      <div className="tl-container">
+        <h1 className="tl-page-title">Overview</h1>
+        <table className="tl-table">
+          <tbody>
             <tr>
-              <th>Weather</th>
-              <td>{forecast.temperatureF}°F — {forecast.condition}</td>
+              <th>Location</th>
+              <td>{displayName}</td>
             </tr>
-          )}
-        </tbody>
-      </table>
-      <nav>
-        <Link to={`/trip/${trip.id}/itinerary`}>Itinerary</Link>
-        {' · '}
-        <Link to={`/trip/${trip.id}/things-to-do`}>Things to do</Link>
-        {' · '}
-        <Link to={`/trip/${trip.id}/local-info`}>Local info</Link>
-      </nav>
-      {location && <MapView lat={location.lat} lng={location.lng} label={displayName} />}
+            {forecast && (
+              <tr>
+                <th>Weather</th>
+                <td>{forecast.temperatureF}°F — {forecast.condition}</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+        <nav className="tl-nav">
+          <Link to={`/trip/${trip.id}/itinerary`}>Itinerary</Link>
+          {' · '}
+          <Link to={`/trip/${trip.id}/things-to-do`}>Things to do</Link>
+          {' · '}
+          <Link to={`/trip/${trip.id}/local-info`}>Local info</Link>
+        </nav>
+        {location && (
+          <div className="tl-map">
+            <MapView lat={location.lat} lng={location.lng} label={displayName} />
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -67,7 +74,7 @@ export function OverviewScreen() {
     }
   }, [id])
 
-  if (!trip) return <p>Loading…</p>
+  if (!trip) return <p className="tl-screen">Loading…</p>
 
   return (
     <ErrorBoundary label="Overview">

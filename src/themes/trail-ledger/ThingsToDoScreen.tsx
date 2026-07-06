@@ -33,30 +33,43 @@ export function ThingsToDoScreen({ locationSlug }: { locationSlug: string }) {
     .map((item) => ({ lat: item.lat as number, lng: item.lng as number, label: item.name, category: item.category }))
 
   return (
-    <>
-      {location && <MapView lat={location.lat} lng={location.lng} label={location.displayName} markers={markers} />}
-      <table className="tl-suggestions">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Category</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => (
-            <tr key={item.name}>
-              <td>{item.name}</td>
-              <td>{item.category}</td>
-              <td>
-                <button type="button" onClick={() => addItem({ time: '', text: item.name, type: 'option', q: item.name })}>
-                  Add
-                </button>
-              </td>
+    <div className="tl-screen">
+      <div className="tl-container">
+        <h1 className="tl-page-title">Things to do</h1>
+        {location && (
+          <div className="tl-map">
+            <MapView lat={location.lat} lng={location.lng} label={location.displayName} markers={markers} />
+          </div>
+        )}
+        <table className="tl-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Category</th>
+              <th />
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr key={item.name}>
+                <td>{item.name}</td>
+                <td>
+                  <span className="tl-badge">{item.category}</span>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    className="tl-btn tl-btn-add"
+                    onClick={() => addItem({ time: '', text: item.name, type: 'option', q: item.name })}
+                  >
+                    Add
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   )
 }

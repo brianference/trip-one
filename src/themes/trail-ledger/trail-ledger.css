@@ -1,23 +1,346 @@
-.tl-ledger table,
-.tl-suggestions {
+/* =============================================================================
+   Trip One — Trail Ledger theme
+   Utilitarian spreadsheet/ledger aesthetic: dense real <table> markup, thin
+   1px row borders, tight tabular padding, zero card chrome. Fira Code for
+   headings and numeric/time data, Fira Sans for body copy and labels. One
+   muted slate-blue accent used only for links and actions — everything else
+   is a restrained near-white/near-black neutral scale.
+
+   All custom properties and classes are namespaced with `tl-` so this
+   stylesheet — which is imported globally alongside the other four themes —
+   never leaks into Bento / Chronicle / Field Guide / Liquid Glass.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* ---- Surfaces (light, default) ---- */
+  --tl-bg: #fafafa;
+  --tl-bg-alt: #f1f1ef;
+  --tl-bg-row-alt: #f5f5f4;
+
+  /* ---- Borders ---- */
+  --tl-border: #d9d9d5;
+  --tl-border-strong: #b7b7b1;
+
+  /* ---- Accent (single muted slate-blue) ---- */
+  --tl-accent: #3a5a78;
+  --tl-accent-hover: #2d465e;
+  --tl-accent-press: #22374a;
+
+  /* ---- Text ---- */
+  --tl-text: #16171a;
+  --tl-text-secondary: #55585e;
+  --tl-text-tertiary: #85888d;
+  --tl-text-on-accent: #fafafa;
+
+  /* ---- Semantic ---- */
+  --tl-danger: #a1352a;
+
+  /* ---- Typography ---- */
+  --tl-font-data: 'Fira Code', ui-monospace, 'SFMono-Regular', monospace;
+  --tl-font-label: 'Fira Sans', -apple-system, 'Segoe UI', system-ui, sans-serif;
+
+  /* ---- Spacing (4px base) ---- */
+  --tl-space-xs: 4px;
+  --tl-space-sm: 8px;
+  --tl-space-md: 16px;
+  --tl-space-lg: 24px;
+  --tl-space-xl: 32px;
+
+  /* ---- Radius (minimal — this theme is deliberately square) ---- */
+  --tl-radius-sm: 2px;
+  --tl-radius-md: 3px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --tl-bg: #17181b;
+    --tl-bg-alt: #1e2024;
+    --tl-bg-row-alt: #1b1d20;
+
+    --tl-border: #34363b;
+    --tl-border-strong: #4b4e55;
+
+    --tl-accent: #86aecb;
+    --tl-accent-hover: #a1c1da;
+    --tl-accent-press: #6a94b3;
+
+    --tl-text: #f1f1ef;
+    --tl-text-secondary: #b7b9be;
+    --tl-text-tertiary: #8b8e94;
+    --tl-text-on-accent: #101215;
+
+    --tl-danger: #e0847a;
+  }
+}
+
+/* ---------- Base page surface ---------- */
+.tl-screen {
+  font-family: var(--tl-font-label);
+  background: var(--tl-bg);
+  color: var(--tl-text);
+  min-height: 100vh;
+  line-height: 1.45;
+  padding: var(--tl-space-lg) var(--tl-space-md) var(--tl-space-xl);
+}
+
+.tl-screen :focus-visible {
+  outline: 2px solid var(--tl-accent);
+  outline-offset: 1px;
+}
+
+.tl-container {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.tl-page-title {
+  font-family: var(--tl-font-data);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tl-text-tertiary);
+  margin: 0 0 var(--tl-space-md);
+}
+
+/* ---------- Tables (the theme's core structural pattern) ---------- */
+.tl-table {
   width: 100%;
   border-collapse: collapse;
-  font-family: ui-monospace, monospace;
+  font-size: 14px;
+  background: var(--tl-bg);
+}
+
+.tl-table th,
+.tl-table td {
+  border-bottom: 1px solid var(--tl-border);
+  padding: 10px var(--tl-space-sm);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.tl-table thead th {
+  font-family: var(--tl-font-label);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tl-text-tertiary);
+  border-bottom: 1px solid var(--tl-border-strong);
+  background: var(--tl-bg-alt);
+}
+
+.tl-table tbody th {
+  font-family: var(--tl-font-label);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tl-text-secondary);
+  white-space: nowrap;
+  width: 1%;
+}
+
+.tl-table td {
+  font-family: var(--tl-font-data);
+  font-variant-numeric: tabular-nums;
+  color: var(--tl-text);
+}
+
+.tl-table tbody tr:nth-child(even) {
+  background: var(--tl-bg-row-alt);
+}
+
+.tl-table tbody tr:hover {
+  background: var(--tl-bg-alt);
+}
+
+.tl-table td a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--tl-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.tl-table a:hover,
+.tl-table a:focus-visible {
+  text-decoration: underline;
+}
+
+/* ---------- Nav / links row ---------- */
+.tl-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tl-space-md);
+  margin: var(--tl-space-md) 0;
+  font-family: var(--tl-font-label);
   font-size: 14px;
 }
 
-.tl-ledger td,
-.tl-ledger th,
-.tl-suggestions td,
-.tl-suggestions th {
-  border-bottom: 1px solid #e5e5e5;
-  padding: 6px 8px;
-  text-align: left;
+.tl-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--tl-accent);
+  font-weight: 600;
+  text-decoration: none;
 }
 
+.tl-nav a:hover,
+.tl-nav a:focus-visible {
+  color: var(--tl-accent-hover);
+  text-decoration: underline;
+}
+
+/* ---------- Map ---------- */
+.tl-map {
+  margin-top: var(--tl-space-md);
+  border: 1px solid var(--tl-border);
+  border-radius: var(--tl-radius-md);
+  overflow: hidden;
+}
+
+/* ---------- Buttons ---------- */
+.tl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 var(--tl-space-md);
+  border: 1px solid var(--tl-border-strong);
+  border-radius: var(--tl-radius-sm);
+  background: var(--tl-accent);
+  color: var(--tl-text-on-accent);
+  font-family: var(--tl-font-label);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.tl-btn:hover {
+  background: var(--tl-accent-hover);
+}
+
+.tl-btn:active {
+  background: var(--tl-accent-press);
+}
+
+.tl-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tl-btn-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  border: 1px solid var(--tl-border);
+  border-radius: var(--tl-radius-sm);
+  background: var(--tl-bg);
+  color: var(--tl-text-secondary);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tl-btn-remove:hover,
+.tl-btn-remove:focus-visible {
+  color: var(--tl-danger);
+  border-color: var(--tl-danger);
+}
+
+.tl-btn-add {
+  padding: 0 var(--tl-space-sm);
+  font-size: 12px;
+}
+
+/* ---------- Forms (itinerary "add stop" row) ---------- */
+.tl-form {
+  display: grid;
+  grid-template-columns: 1fr 2fr auto;
+  gap: var(--tl-space-sm);
+  align-items: end;
+  margin-bottom: var(--tl-space-lg);
+  padding: var(--tl-space-md);
+  border: 1px solid var(--tl-border);
+  background: var(--tl-bg-alt);
+}
+
+.tl-form label {
+  display: block;
+  font-family: var(--tl-font-label);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tl-text-tertiary);
+  margin-bottom: var(--tl-space-xs);
+}
+
+.tl-form input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 var(--tl-space-sm);
+  border: 1px solid var(--tl-border-strong);
+  border-radius: var(--tl-radius-sm);
+  background: var(--tl-bg);
+  color: var(--tl-text);
+  font-family: var(--tl-font-data);
+  font-size: 14px;
+}
+
+.tl-form input:focus {
+  outline: none;
+  border-color: var(--tl-accent);
+  box-shadow: 0 0 0 1px var(--tl-accent);
+}
+
+/* ---------- Category badge (things-to-do table) ---------- */
+.tl-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid var(--tl-border-strong);
+  border-radius: var(--tl-radius-sm);
+  font-family: var(--tl-font-data);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--tl-text-secondary);
+  background: var(--tl-bg-alt);
+  white-space: nowrap;
+}
+
+/* ---------- Alert banner (shared component under this theme) ---------- */
+.tl-screen [role='alert'] {
+  border: 1px solid var(--tl-danger);
+  border-radius: var(--tl-radius-sm);
+  padding: var(--tl-space-sm) var(--tl-space-md);
+  margin: var(--tl-space-md) 0;
+  color: var(--tl-danger);
+  font-family: var(--tl-font-label);
+  font-size: 14px;
+}
+
+/* ---------- Responsive ---------- */
 @media (max-width: 480px) {
-  .tl-ledger table,
-  .tl-suggestions {
+  .tl-table {
     font-size: 12px;
+  }
+
+  .tl-table th,
+  .tl-table td {
+    padding: var(--tl-space-sm) 6px;
+  }
+
+  .tl-form {
+    grid-template-columns: 1fr;
   }
 }
