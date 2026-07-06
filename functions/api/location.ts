@@ -47,14 +47,20 @@ export async function onRequestGet({
   try {
     const slug = normalizeLocationSlug(parsed.data)
     const cached = await getLocationBySlug(env, slug)
-    if (cached) {
+    // A cached row with zero things-to-do is treated as a cache miss and
+    // refreshed below, rather than trusted forever: it's almost always a
+    // location cached before the Tripadvisor/Places integration existed (or
+    // one whose search legitimately failed at the time), not a real place
+    // with nothing nearby.
+    const cachedThingsToDo = Array.isArray(cached?.things_to_do) ? cached.things_to_do : []
+    if (cached && cachedThingsToDo.length > 0) {
       return json(
         {
           slug: cached.slug,
           lat: cached.lat,
           lng: cached.lng,
           displayName: cached.display_name,
-          thingsToDo: cached.things_to_do ?? [],
+          thingsToDo: cachedThingsToDo,
         },
         200,
       )

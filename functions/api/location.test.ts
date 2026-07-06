@@ -48,6 +48,38 @@ describe('GET /api/location', () => {
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('tripadvisor'))).toBe(false)
   })
 
+  it('refreshes instead of trusting a cached row with zero things-to-do', async () => {
+    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      if (url.includes('/rest/v1/locations') && (!init || init.method === undefined)) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => [
+            { slug: 'yellowstone-demo', lat: 44.6, lng: -110.5, display_name: 'Yellowstone', things_to_do: [] },
+          ],
+        })
+      }
+      if (url.includes('/rest/v1/locations')) {
+        return Promise.resolve({ ok: true, json: async () => ({}) })
+      }
+      if (url.includes('/rest/v1/request_log')) {
+        return Promise.resolve({ ok: true, headers: new Headers({ 'content-range': '*/1' }), json: async () => [] })
+      }
+      if (url.includes('nominatim.openstreetmap.org')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => [{ lat: '44.6', lon: '-110.5', display_name: 'Yellowstone National Park, USA' }],
+        })
+      }
+      if (url.includes('tripadvisor.com')) return Promise.resolve({ ok: true, json: async () => ({ data: [] }) })
+      if (url.includes('googleapis.com')) return Promise.resolve({ ok: true, json: async () => ({ results: [] }) })
+      throw new Error(`unexpected fetch to ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const res = await onRequestGet({ env, request: req('https://x/api/location?q=Yellowstone') } as never)
+    expect(res.status).toBe(200)
+    expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('nominatim.openstreetmap.org'))).toBe(true)
+  })
+
   it('returns 429 when the rate limit is exceeded on a cache miss', async () => {
     vi.stubGlobal('fetch', (url: string) => {
       if (url.includes('/rest/v1/locations')) return Promise.resolve({ ok: true, json: async () => [] })
