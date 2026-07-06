@@ -167,6 +167,12 @@ export function SearchScreen() {
   }, [])
 
   async function submitLocation(locationQuery: string) {
+    // Guard against submitting a blank/whitespace query (e.g. an accidental
+    // Enter/click on an empty box) and against overlapping submissions if a
+    // prior submitLocation call is still in flight — either one previously
+    // hit the API with an invalid/duplicate query and left a stale error
+    // banner on screen that a later, valid query never cleared.
+    if (!locationQuery.trim() || busy) return
     setBusy(true)
     setError(null)
     try {
@@ -222,7 +228,14 @@ export function SearchScreen() {
                 id="location-query"
                 className="bento-search-input"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  setQuery(e.target.value)
+                  // Clear any error left over from a previous failed submission as
+                  // soon as the user starts editing the query again — otherwise a
+                  // stale "invalid query" banner from an earlier submit can sit on
+                  // screen next to fresh, valid autocomplete suggestions.
+                  setError(null)
+                }}
                 onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
                 placeholder="Yellowstone, Tokyo, Reykjavik…"
                 autoComplete="off"

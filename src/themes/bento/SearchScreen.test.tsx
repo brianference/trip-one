@@ -154,4 +154,61 @@ describe('SearchScreen', () => {
     await waitFor(() => expect(client.fetchLocation).toHaveBeenCalledWith('Dublin, Ohio, USA'))
     await waitFor(() => expect(client.createTrip).toHaveBeenCalledWith('dublin-ireland'))
   })
+
+  it('does not show a stale "invalid query" error after typing a new valid query and submitting (regression)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    // First, an earlier submission fails (e.g. a typo or a location that
+    // doesn't resolve), leaving an error banner on screen.
+    vi.spyOn(client, 'fetchLocation').mockRejectedValueOnce(new Error('invalid query'))
+    vi.spyOn(client, 'fetchAutocomplete').mockResolvedValue([
+      { displayName: 'Tokyo, Japan', lat: 35.68, lng: 139.76 },
+    ])
+
+    render(
+      <MemoryRouter>
+        <SearchScreen />
+      </MemoryRouter>,
+    )
+
+    fireEvent.change(screen.getByLabelText(/where to/i), { target: { value: 'askdjaskjd' } })
+    fireEvent.click(screen.getByRole('button', { name: /go/i }))
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/invalid query/i))
+
+    // Now the user clears the box and types a fresh, valid query — the
+    // debounced autocomplete resolves with a suggestion while the stale
+    // error from the previous failed submission would still be mounted if
+    // it weren't cleared on input change.
+    vi.spyOn(client, 'fetchLocation').mockResolvedValue({
+      slug: 'tokyo-japan',
+      lat: 35.68,
+      lng: 139.76,
+      displayName: 'Tokyo, Japan',
+      thingsToDo: [],
+    })
+    vi.spyOn(client, 'createTrip').mockResolvedValue({
+      id: 't2',
+      locationSlug: 'tokyo-japan',
+      itinerary: [],
+      designStyle: 'bento',
+    })
+
+    fireEvent.change(screen.getByLabelText(/where to/i), { target: { value: '' } })
+    fireEvent.change(screen.getByLabelText(/where to/i), { target: { value: 'Tokyo, japan' } })
+
+    // The stale error must be cleared the moment the user starts typing again,
+    // well before the autocomplete debounce or any new submission resolves.
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
+    await waitFor(() => expect(screen.getByText('Tokyo, Japan')).toBeInTheDocument())
+
+    // Suggestion is visible and there is still no error — submitting now should succeed.
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /go/i }))
+    await waitFor(() => expect(client.createTrip).toHaveBeenCalledWith('tokyo-japan'))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
 })

@@ -21,6 +21,9 @@ export function SearchScreen() {
    */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    // Guard against submitting a blank query or overlapping an in-flight
+    // submission — either can leave a stale error banner on screen.
+    if (!query.trim() || busy) return
     setBusy(true)
     setError(null)
     try {
@@ -43,7 +46,15 @@ export function SearchScreen() {
     <>
       <form onSubmit={handleSubmit} className="lg-glass-card lg-search">
         <label htmlFor="lg-location-query">Where to?</label>
-        <input id="lg-location-query" value={query} onChange={(e) => setQuery(e.target.value)} className="lg-tap-target" />
+        <input
+          id="lg-location-query"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            setError(null)
+          }}
+          className="lg-tap-target"
+        />
         <button type="submit" disabled={busy} className="lg-tap-target">
           {busy ? 'Loading…' : 'Go'}
         </button>
