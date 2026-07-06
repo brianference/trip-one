@@ -1,0 +1,1668 @@
+{
+  "locations": [
+    {
+      "slug": "yellowstone-demo",
+      "lat": 44.6,
+      "lng": -110.5,
+      "display_name": "Yellowstone National Park, Wyoming",
+      "weather_baseline": null,
+      "things_to_do": [],
+      "last_refreshed": "2026-07-01T08:08:24.835746+00:00"
+    },
+    {
+      "slug": "tokyo-demo",
+      "lat": 35.6812,
+      "lng": 139.7671,
+      "display_name": "Tokyo, Japan",
+      "weather_baseline": null,
+      "things_to_do": [],
+      "last_refreshed": "2026-07-01T08:08:25.170614+00:00"
+    },
+    {
+      "slug": "dublin-ireland",
+      "lat": 53.3493795,
+      "lng": -6.2605593,
+      "display_name": "Dublin, County Dublin, Leinster, Éire / Ireland",
+      "weather_baseline": null,
+      "things_to_do": [
+        {
+          "name": "Trinity College Dublin",
+          "rating": 4.6,
+          "source": "places",
+          "address": "College Green, Dublin 2",
+          "category": "university"
+        },
+        {
+          "name": "Seán Heuston Bridge",
+          "rating": 4.3,
+          "source": "places",
+          "address": "17 R109, Dublin",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Anna Livia",
+          "rating": 4.4,
+          "source": "places",
+          "address": "Wolfe Tone Quay, Arran Quay, Dublin",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Guinness Storehouse",
+          "rating": 4.4,
+          "source": "places",
+          "address": "St. James's Gate, Dublin 8",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Poolbeg Lighthouse",
+          "rating": 4.7,
+          "source": "places",
+          "address": "South Wall, Poolbeg, Dublin",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Dublin Castle",
+          "rating": 4.3,
+          "source": "places",
+          "address": "Dame Street, Dublin 2",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Dublin Zoo",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Phoenix park, Dublin",
+          "category": "zoo"
+        },
+        {
+          "name": "The Custom House",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Dublin 1",
+          "category": "local_government_office"
+        },
+        {
+          "name": "Aviva Stadium",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Lansdowne Road, Dublin 4",
+          "category": "stadium"
+        },
+        {
+          "name": "Jameson Distillery Bow St.",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Bow Street, Smithfield, Dublin 7",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Christ Church Cathedral",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Christchurch Place, Dublin",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Croke Park",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Jones' Road, Drumcondra, Dublin 3",
+          "category": "stadium"
+        },
+        {
+          "name": "Kilmainham Gaol",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Inchicore Road, Kilmainham, Dublin 8",
+          "category": "museum"
+        },
+        {
+          "name": "The Church Café Bar",
+          "rating": 4.4,
+          "source": "places",
+          "address": "Jervis Street, North City, Dublin 1",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "National Museum of Ireland, Kildare Street",
+          "rating": 4.6,
+          "source": "places",
+          "address": "35A Kildare Street, Dublin 2",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "St Stephen's Green",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Saint Stephen's Green, Dublin 2",
+          "category": "park"
+        },
+        {
+          "name": "Phoenix Park",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Dublin 8",
+          "category": "park"
+        },
+        {
+          "name": "Parliament House",
+          "rating": 4.2,
+          "source": "places",
+          "address": "College Green, Dublin",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "National Gallery of Ireland",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Merrion Square West, Dublin 2",
+          "category": "art_gallery"
+        },
+        {
+          "name": "An Post, General Post Office",
+          "rating": 4.2,
+          "source": "places",
+          "address": "O'Connell Street Lower, North City, Dublin 1",
+          "category": "post_office"
+        }
+      ],
+      "last_refreshed": "2026-07-02T05:06:39.542647+00:00"
+    },
+    {
+      "slug": "cork-ireland",
+      "lat": 51.8985136,
+      "lng": -8.4726423,
+      "display_name": "Cork, County Cork, Munster, Éire / Ireland",
+      "weather_baseline": null,
+      "things_to_do": [
+        {
+          "name": "The Metropole Hotel",
+          "rating": 4.3,
+          "source": "places",
+          "address": "MacCurtain Street, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Cork Opera House",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Cork Opera House, Emmett Place, Centre, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Saint Fin Barre's Cathedral",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Bishop Street, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Triskel Arts Centre",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Triskel Arts Centre, Tobin Street, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "The Old Town Whiskey Bar at Bodega",
+          "rating": 4.4,
+          "source": "places",
+          "address": "44-45 Corn Market Street, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Blackrock Castle Observatory",
+          "rating": 4.4,
+          "source": "places",
+          "address": "Castle Road, Blackrock, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Cork City Gaol",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Convent Avenue, Sunday's Well, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Blarney Castle & Gardens",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Blarney",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Arts at Civic Trust House",
+          "rating": 5,
+          "source": "places",
+          "address": "50 Pope's Quay, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Cork Ghost Tour",
+          "rating": 5,
+          "source": "places",
+          "address": "Emmett Place, Centre, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Victoria Casino",
+          "rating": 4.5,
+          "source": "places",
+          "address": "5 Saint Patrick's Quay, Cork",
+          "category": "casino"
+        },
+        {
+          "name": "Macau Sporting Club",
+          "rating": 4.2,
+          "source": "places",
+          "address": "16 Saint Patrick's Street, Centre, Cork",
+          "category": "casino"
+        },
+        {
+          "name": "Mother Jones Flea Market",
+          "rating": 4.4,
+          "source": "places",
+          "address": "City, 2 York Street, Centre",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Elizabeth Fort",
+          "rating": 4.4,
+          "source": "places",
+          "address": "Barrack Street, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Tramore Valley Park",
+          "rating": 4.6,
+          "source": "places",
+          "address": "South City Link Road, Cork",
+          "category": "park"
+        },
+        {
+          "name": "Planet Entertainment Centre Cork",
+          "rating": 4.2,
+          "source": "places",
+          "address": "Old Mallow Road, Blackpool, Cork",
+          "category": "bowling_alley"
+        },
+        {
+          "name": "Ballintemple Graveyard",
+          "rating": 3.7,
+          "source": "places",
+          "address": "Ballintemple, Cork",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Ballybrack Woods",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Ardarrig, Cork",
+          "category": "park"
+        },
+        {
+          "name": "Curraheen Park Greyhound Stadium",
+          "rating": 4.4,
+          "source": "places",
+          "address": "Park Greyhound Stadium, Curraheen Road, Curraheen, Cork",
+          "category": "stadium"
+        },
+        {
+          "name": "St Anne's Church Shandon Bells & Tower",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Church Street, Shandon, Cork",
+          "category": "tourist_attraction"
+        }
+      ],
+      "last_refreshed": "2026-07-02T05:07:31.759615+00:00"
+    },
+    {
+      "slug": "galway-ireland",
+      "lat": 53.2744122,
+      "lng": -9.0490601,
+      "display_name": "Cathair na Gaillimhe, County Galway, Connacht, Éire / Ireland",
+      "weather_baseline": null,
+      "things_to_do": [
+        {
+          "name": "Jet Lag Jack Tours",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Tour & Taste Galway",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Richardson's Bar",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Experience Galway",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Crowe Tours",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Lally Tours",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Marteen Lane | Tourist Guide",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Bank of Ireland",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Great Escape Rooms Galway Prospect Hill",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Galway Ceili Club",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "The Ardilaun Hotel",
+          "rating": 4.3,
+          "source": "places",
+          "address": "The Ardilaun Hotel, Taylor's Hill Road, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Galway Cathedral",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Gaol Road, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Eyre Square",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Eyre Square, Galway",
+          "category": "park"
+        },
+        {
+          "name": "St Augustine's Catholic Parish",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Middle Street, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Statue of Oscar Wilde and Eduard Vilde",
+          "rating": 4.4,
+          "source": "places",
+          "address": "43 William Street, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Liam O'Maoiliosa Statue",
+          "rating": 4,
+          "source": "places",
+          "address": "Galway City",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Great Escape Rooms Galway",
+          "rating": 4.8,
+          "source": "places",
+          "address": "The Great Escape Rooms, 27 Abbeygate Street Upper, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Hall of the Red Earl",
+          "rating": 4.3,
+          "source": "places",
+          "address": "Druid Lane, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "The Latin Quarter",
+          "rating": 4.6,
+          "source": "places",
+          "address": "22 High Street, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Port of Galway",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Harbour Office, New Docks, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "James Mitchell Geology Museum",
+          "rating": 4.1,
+          "source": "places",
+          "address": "Quadrangle, 19 University Road, Galway",
+          "category": "museum"
+        },
+        {
+          "name": "Wild Atlantic Workshop & Katie's Claddagh Cottage",
+          "rating": 4.2,
+          "source": "places",
+          "address": "Fairhill Road Upper, The Claddagh, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Terryland Castle",
+          "rating": 3.7,
+          "source": "places",
+          "address": "Terryland, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Celia Griffin Memorial Park",
+          "rating": 4.4,
+          "source": "places",
+          "address": "Grattan Road",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Terryland Forest Park",
+          "rating": 4,
+          "source": "places",
+          "address": "Newcastle Road, Galway",
+          "category": "park"
+        },
+        {
+          "name": "Merlin Castle",
+          "rating": 4.3,
+          "source": "places",
+          "address": "Merlin Woods, Merlin Park,, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Merlin Park Woods",
+          "rating": 4.5,
+          "source": "places",
+          "address": "City Park, Merlin Woods, Doughiska Road, Galway",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Cappagh Park",
+          "rating": 4.6,
+          "source": "places",
+          "address": "7V77+WQ5, Cappagh Road, Galway",
+          "category": "park"
+        },
+        {
+          "name": "Galway City Museum",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Spanish Parade, Galway",
+          "category": "museum"
+        }
+      ],
+      "last_refreshed": "2026-07-02T05:11:26.715357+00:00"
+    },
+    {
+      "slug": "lisbon-portugal",
+      "lat": 38.7077507,
+      "lng": -9.1365919,
+      "display_name": "Lisboa, Portugal",
+      "weather_baseline": null,
+      "things_to_do": [
+        {
+          "name": "Centro Interpretativo da Historia do Bacalhau",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "African Lisbon Tour",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Portugal Top Tours",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Mythic City Tours",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Isaluma - Tuktuk Tours Em Lisboa",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Praca Do Comercio",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Portukgal",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Hi Lisbon Walking Tours",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Jm Tours Lisbon",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Lisboa Story Centre",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Rua Augusta Arch",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Rua Augusta 2, Lisboa",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Igreja de Santo Estêvão",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Largo de Santo Estêvão, Lisboa",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Teatro Eden",
+          "rating": 4.4,
+          "source": "places",
+          "address": "Praça dos Restauradores 9, Lisboa",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Castelo de São Jorge",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Rua de Santa Cruz do Castelo, Lisboa",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Santa Justa Lift",
+          "rating": 4.1,
+          "source": "places",
+          "address": "Rua de Santa Justa, Lisboa",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Lisbon Cathedral",
+          "rating": 4.4,
+          "source": "places",
+          "address": "Largo da Sé 1, Lisboa",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Mercado de Santa Clara",
+          "rating": 4.3,
+          "source": "places",
+          "address": "Campo de Santa Clara, Lisboa",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Sanctuary of Christ the King",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Avenida do Cristo Rei, Almada",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Botanical Garden of Lisbon",
+          "rating": 4,
+          "source": "places",
+          "address": "Rua da Escola Politécnica 58, Lisboa",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Igreja de São Roque",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Largo Trindade Coelho, Lisboa",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Statue Of John I",
+          "rating": 4.4,
+          "source": "places",
+          "address": "Praça da Figueira, Lisboa",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Belém Tower",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Av. Brasília, Lisboa",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Monument to the Discoveries",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Av. Brasília, Lisboa",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Museu da Carris",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Rua 1º de Maio 101 103, Lisboa",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Oceanário de Lisboa",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Esplanada Dom Carlos I s/nº, Lisboa",
+          "category": "aquarium"
+        },
+        {
+          "name": "Ponte 25 de Abril",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Lisbon",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "National Museum of Ancient Art",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Rua das Janelas Verdes, Lisboa",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Aqueduto das Águas Livres - view point",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Calçada da Quintinha 6, Lisboa",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "National Pantheon",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Campo de Santa Clara, Lisboa",
+          "category": "museum"
+        },
+        {
+          "name": "Calouste Gulbenkian Museum",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Avenida de Berna 45A, Lisboa",
+          "category": "tourist_attraction"
+        }
+      ],
+      "last_refreshed": "2026-07-02T12:34:03.736968+00:00"
+    },
+    {
+      "slug": "porto-portugal",
+      "lat": 41.1502195,
+      "lng": -8.6103497,
+      "display_name": "Porto, Portugal",
+      "weather_baseline": null,
+      "things_to_do": [
+        {
+          "name": "PadToGo",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Clube Fenianos Portuenses",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Porto Official Tourism Office",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Porto City Hall",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Porto With Love Walking Tours",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Miradouro Do Furado Norte",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Miradouro da Ponta da Canavieira",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Happy Orange - Pub Crawl Porto",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Cyber Cafe Gaming",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Placa Trindade Fountain",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Ageas Porto Coliseum",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Rua de Passos Manuel 137, Porto",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Ponte de São João",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Porto",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Felgueiras Lighthouse",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Rua Alegre, Porto",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Casa da Música",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Avenida da Boavista 604-610 Piso 0, Porto",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Livraria Lello",
+          "rating": 4,
+          "source": "places",
+          "address": "Rua das Carmelitas 144, Porto",
+          "category": "book_store"
+        },
+        {
+          "name": "Torre dos Clérigos",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Rua de São Filipe de Nery, Porto",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Porto Cathedral",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Terreiro da Sé, Porto",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Palácio da Bolsa",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Palácio da Bolsa, Rua de Ferreira Borges 11, Porto",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Saint Lawrence Church",
+          "rating": 4.4,
+          "source": "places",
+          "address": "Largo do Colégio, Porto",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Parque da Cidade do Porto",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Estrada Interior da Circunvalação, Porto",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Jardins do Palácio de Cristal",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Rua de Dom Manuel II, Porto",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Clérigos Church",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Rua de São Filipe de Nery, Porto",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Chapel of Souls",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Rua de Santa Catarina 428, Porto",
+          "category": "church"
+        },
+        {
+          "name": "Mosteiro Santo Agostinho da Serra do Pilar",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Largo Aviz, Vila Nova de Gaia",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Igreja da Lapa",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Largo da Lapa 1, Porto",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Serralves Museum of Contemporary Art",
+          "rating": 4.4,
+          "source": "places",
+          "address": "Rua Dom João de Castro 210, Porto",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Military Museum Porto",
+          "rating": 4.4,
+          "source": "places",
+          "address": "Rua do Heroísmo 329, Porto",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Sandeman",
+          "rating": 4.3,
+          "source": "places",
+          "address": "Largo Miguel Bombarda 47, Vila Nova de Gaia",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Social Factory - Foundation sculptor José Rodrigues",
+          "rating": 4.3,
+          "source": "places",
+          "address": "Rua da Fábrica Social s/n, Porto",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Taste Porto Food Tours",
+          "rating": 5,
+          "source": "places",
+          "address": "Campo dos Mártires da Pátria 144 A, Porto",
+          "category": "tourist_attraction"
+        }
+      ],
+      "last_refreshed": "2026-07-02T12:34:37.091185+00:00"
+    },
+    {
+      "slug": "barcelona-spain",
+      "lat": 41.3825802,
+      "lng": 2.177073,
+      "display_name": "Barcelona, Barcelonès, Barcelona, Catalunya, España",
+      "weather_baseline": null,
+      "things_to_do": [
+        {
+          "name": "BarcelonaGuide",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "City Hall (Casa de la Ciutat / Ayuntamiento)",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Barcelona City Hall Tourist Office",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Walk & Bike Barcelona",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Placa de Sant Jaume",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "El Engano Historico de Barcelona",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "El Paraigua",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Coopecot",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Taxi6peoplebarcelona",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Taxi6PeopleBarcelona",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Plaça de Catalunya",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Plaça de Catalunya, Barcelona",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Basilica of the Sagrada Familia",
+          "rating": 4.8,
+          "source": "places",
+          "address": "Carrer de Mallorca, 401, Barcelona",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Park Güell",
+          "rating": 4.4,
+          "source": "places",
+          "address": "Barcelona",
+          "category": "park"
+        },
+        {
+          "name": "La Pedrera - Casa Milà",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Passeig de Gràcia, 92, Barcelona",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Capella d'en Marcús",
+          "rating": 4.4,
+          "source": "places",
+          "address": "Carrer dels Carders, 2, Barcelona",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Casa Batlló",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Passeig de Gràcia, 43, Barcelona",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Palau Güell",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Carrer Nou de la Rambla, 3-5, Barcelona",
+          "category": "museum"
+        },
+        {
+          "name": "Picasso Museum Barcelona",
+          "rating": 4.4,
+          "source": "places",
+          "address": "Carrer de Montcada, 15-23, Barcelona",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Palau de la Música Catalana",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Carrer del Palau de la Música, 4-6, Barcelona",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Spotify Camp Nou",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Barcelona",
+          "category": "stadium"
+        },
+        {
+          "name": "Palau Sant Jordi",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Passeig Olímpic, 5-7, Barcelona",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Cathedral of Barcelona",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Pla de la Seu, s/n, Barcelona",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "CaixaForum Barcelona",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Avinguda de Francesc Ferrer i Guàrdia, 6-8, Barcelona",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Mercat de la Boqueria",
+          "rating": 4.5,
+          "source": "places",
+          "address": "La Rambla, 91, Barcelona",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Basílica de Santa Maria del Mar",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Plaça de Santa Maria, 1, Barcelona",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Poble Espanyol",
+          "rating": 4.2,
+          "source": "places",
+          "address": "Avinguda de Francesc Ferrer i Guàrdia, 13, Barcelona",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "CosmoCaixa Museum of Science",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Carrer d'Isaac Newton, 26, Barcelona",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Ateneu Barcelonès",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Carrer de la Canuda, 6, Barcelona",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Can Cargol",
+          "rating": 4.9,
+          "source": "places",
+          "address": "Calle de Montserrat, 16, Esplugues de Llobregat",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Can Cortada",
+          "rating": 4.3,
+          "source": "places",
+          "address": "Esplugues de Llobregat",
+          "category": "tourist_attraction"
+        }
+      ],
+      "last_refreshed": "2026-07-02T12:37:23.220615+00:00"
+    },
+    {
+      "slug": "prague-czech-republic",
+      "lat": 50.0874654,
+      "lng": 14.4212535,
+      "display_name": "Praha, Česko",
+      "weather_baseline": null,
+      "things_to_do": [
+        {
+          "name": "Treasure Hunt Prague",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Ludek The Czech",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Imperial-transfer.com",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Affable & Tailored Prague Tours",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Topicuv Salon Galerie",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Galarie u Bileho jednorozce",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Chiesa di Santa Maria di Tyn",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Stone Bell House",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Free Walking Tour Prague",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Jana",
+          "source": "tripadvisor",
+          "category": "attraction"
+        },
+        {
+          "name": "Loreto",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Loretánské náměstí 7, Praha 1",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Memorial to the Victims of Communism",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Újezd 420/14, Malá Strana",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "St. Peter at Poříčí",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Biskupská, Praha 1-Petrská čtvrť",
+          "category": "church"
+        },
+        {
+          "name": "Letna Park Carousel",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Kostelní, Praha 7",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Kostel svatého Václava na Zderaze",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Resslova 300/6, Nové Město",
+          "category": "church"
+        },
+        {
+          "name": "Baba ruins",
+          "rating": 4.6,
+          "source": "places",
+          "address": "2, Na Ostrohu 2430, Dejvice, Praha 6",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Kostel Jana Křtitele Na Prádle",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Kostel Svaty Jana Křtitele Na Prádle, 6, Říční 440, Praha 1-Malá Strana",
+          "category": "church"
+        },
+        {
+          "name": "Sex Machines Museum",
+          "rating": 4.2,
+          "source": "places",
+          "address": "Melantrichova 476 /18/110 00, Staré Město",
+          "category": "museum"
+        },
+        {
+          "name": "Království Železnic",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Stroupežnického 23, Praha 5",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "State Opera",
+          "rating": 4.8,
+          "source": "places",
+          "address": "Wilsonova 4, Praha 1",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Prague Castle",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Prague 1",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Prague Astronomical Clock",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Staroměstské náměstí 1, Praha 1",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Charles Bridge",
+          "rating": 4.8,
+          "source": "places",
+          "address": "Karlův most, Praha 1",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "St. Vitus Cathedral",
+          "rating": 4.8,
+          "source": "places",
+          "address": "III. nádvoří 48/2, Praha 1",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "National Theatre",
+          "rating": 4.8,
+          "source": "places",
+          "address": "Národní 2/110 00, Nové Město",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Petrin Tower",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Petřínské sady 633, Malá Strana, Praha 1",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "The Powder Tower",
+          "rating": 4.6,
+          "source": "places",
+          "address": "Náměstí Republiky 5, Staré Město, Praha 1",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Strahov Monastery",
+          "rating": 4.5,
+          "source": "places",
+          "address": "Strahovské nádvoří 1/132, Praha 1",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Municipal house",
+          "rating": 4.7,
+          "source": "places",
+          "address": "Náměstí Republiky 5, Praha 1",
+          "category": "tourist_attraction"
+        },
+        {
+          "name": "Old Town Square",
+          "rating": 4.8,
+          "source": "places",
+          "address": "Staroměstské náměstí, Praha 1",
+          "category": "tourist_attraction"
+        }
+      ],
+      "last_refreshed": "2026-07-02T12:38:49.665828+00:00"
+    }
+  ],
+  "trips": [
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "location_slug": "tokyo-demo",
+      "itinerary": [
+        {
+          "text": "Breakfast near Shinjuku",
+          "time": "08:00",
+          "type": "fixed"
+        },
+        {
+          "q": "Shibuya Crossing, Tokyo",
+          "text": "Shibuya Crossing",
+          "time": "10:00",
+          "type": "fixed"
+        },
+        {
+          "text": "Ramen lunch in Shibuya",
+          "time": "12:00",
+          "type": "option"
+        },
+        {
+          "q": "Meiji Jingu, Tokyo",
+          "text": "Meiji Jingu Shrine",
+          "time": "14:00",
+          "type": "option"
+        },
+        {
+          "q": "Samurai Museum Shinjuku",
+          "text": "Samurai Museum",
+          "time": "16:00",
+          "type": "option"
+        },
+        {
+          "text": "Dinner in Shinjuku",
+          "time": "19:00",
+          "type": "fixed"
+        }
+      ],
+      "design_style": "bento",
+      "created_at": "2026-07-01T08:08:25.260379+00:00"
+    },
+    {
+      "id": "9d4b4259-abe5-45c6-a1e1-518a117bc97b",
+      "location_slug": "dublin-ireland",
+      "itinerary": [],
+      "design_style": "liquid-glass",
+      "created_at": "2026-07-02T05:40:00.222408+00:00"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "location_slug": "yellowstone-demo",
+      "itinerary": [
+        {
+          "text": "Breakfast near West Yellowstone",
+          "time": "08:00",
+          "type": "fixed"
+        },
+        {
+          "q": "Old Faithful, Yellowstone National Park",
+          "text": "Drive to Old Faithful",
+          "time": "09:30",
+          "type": "travel"
+        },
+        {
+          "q": "Old Faithful, Yellowstone National Park",
+          "text": "Watch Old Faithful erupt",
+          "time": "10:30",
+          "type": "fixed"
+        },
+        {
+          "text": "Lunch at Old Faithful Inn",
+          "time": "12:00",
+          "type": "option"
+        },
+        {
+          "q": "Hayden Valley, Yellowstone",
+          "text": "Hayden Valley wildlife viewing",
+          "time": "14:00",
+          "type": "option"
+        },
+        {
+          "q": "Grand Prismatic Spring",
+          "text": "Sunset at Grand Prismatic overlook",
+          "time": "17:00",
+          "type": "option"
+        }
+      ],
+      "design_style": "chronicle",
+      "created_at": "2026-07-01T08:08:25.067213+00:00"
+    },
+    {
+      "id": "d8e801e6-4c47-431b-adc5-d3c3768b44bf",
+      "location_slug": "dublin-ireland",
+      "itinerary": [],
+      "design_style": "bento",
+      "created_at": "2026-07-02T12:33:29.099299+00:00"
+    },
+    {
+      "id": "6368f57b-a201-4e5d-b745-1abcd31b0834",
+      "location_slug": "lisbon-portugal",
+      "itinerary": [],
+      "design_style": "bento",
+      "created_at": "2026-07-02T12:34:15.133662+00:00"
+    },
+    {
+      "id": "6c4afa00-f7d2-4a88-870b-81244baaf918",
+      "location_slug": "porto-portugal",
+      "itinerary": [],
+      "design_style": "bento",
+      "created_at": "2026-07-02T12:34:37.284138+00:00"
+    },
+    {
+      "id": "cfeec2b6-af1f-4c7f-8193-fcd4770e6a54",
+      "location_slug": "barcelona-spain",
+      "itinerary": [
+        {
+          "q": "Can Cargol",
+          "text": "Can Cargol",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "Basilica of the Sagrada Familia",
+          "text": "Basilica of the Sagrada Familia",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "Casa Batlló",
+          "text": "Casa Batlló",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "Palau de la Música Catalana",
+          "text": "Palau de la Música Catalana",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "Basílica de Santa Maria del Mar",
+          "text": "Basílica de Santa Maria del Mar",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "CosmoCaixa Museum of Science",
+          "text": "CosmoCaixa Museum of Science",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "La Pedrera - Casa Milà",
+          "text": "La Pedrera - Casa Milà",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "Palau Güell",
+          "text": "Palau Güell",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "Spotify Camp Nou",
+          "text": "Spotify Camp Nou",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "Plaça de Catalunya",
+          "text": "Plaça de Catalunya",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "Palau Sant Jordi",
+          "text": "Palau Sant Jordi",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "Cathedral of Barcelona",
+          "text": "Cathedral of Barcelona",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "CaixaForum Barcelona",
+          "text": "CaixaForum Barcelona",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "Mercat de la Boqueria",
+          "text": "Mercat de la Boqueria",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "Ateneu Barcelonès",
+          "text": "Ateneu Barcelonès",
+          "time": "",
+          "type": "option"
+        }
+      ],
+      "design_style": "bento",
+      "created_at": "2026-07-02T12:37:23.329092+00:00"
+    },
+    {
+      "id": "9a841f2b-e728-4d79-9e7f-0419e3602d4c",
+      "location_slug": "prague-czech-republic",
+      "itinerary": [
+        {
+          "q": "State Opera",
+          "text": "State Opera",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "Charles Bridge",
+          "text": "Charles Bridge",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "St. Vitus Cathedral",
+          "text": "St. Vitus Cathedral",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "National Theatre",
+          "text": "National Theatre",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "Old Town Square",
+          "text": "Old Town Square",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "St. Peter at Poříčí",
+          "text": "St. Peter at Poříčí",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "Letna Park Carousel",
+          "text": "Letna Park Carousel",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "Prague Castle",
+          "text": "Prague Castle",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "Prague Astronomical Clock",
+          "text": "Prague Astronomical Clock",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "Municipal house",
+          "text": "Municipal house",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "Loreto",
+          "text": "Loreto",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "Baba ruins",
+          "text": "Baba ruins",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "Kostel Jana Křtitele Na Prádle",
+          "text": "Kostel Jana Křtitele Na Prádle",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "The Powder Tower",
+          "text": "The Powder Tower",
+          "time": "",
+          "type": "option"
+        },
+        {
+          "q": "Memorial to the Victims of Communism",
+          "text": "Memorial to the Victims of Communism",
+          "time": "",
+          "type": "option"
+        }
+      ],
+      "design_style": "bento",
+      "created_at": "2026-07-02T12:38:49.762963+00:00"
+    }
+  ],
+  "request_log": [
+    {
+      "id": 1,
+      "ip_hash": "d90b60291184eaa3aa553cf34d0d12e539d630ae6981e5e610713dabee9397c4",
+      "endpoint": "location",
+      "created_at": "2026-07-02T05:06:37.830609+00:00"
+    },
+    {
+      "id": 2,
+      "ip_hash": "d90b60291184eaa3aa553cf34d0d12e539d630ae6981e5e610713dabee9397c4",
+      "endpoint": "location",
+      "created_at": "2026-07-02T05:07:30.441805+00:00"
+    },
+    {
+      "id": 3,
+      "ip_hash": "d90b60291184eaa3aa553cf34d0d12e539d630ae6981e5e610713dabee9397c4",
+      "endpoint": "location",
+      "created_at": "2026-07-02T05:11:25.53617+00:00"
+    },
+    {
+      "id": 4,
+      "ip_hash": "d90b60291184eaa3aa553cf34d0d12e539d630ae6981e5e610713dabee9397c4",
+      "endpoint": "location",
+      "created_at": "2026-07-02T12:34:02.205216+00:00"
+    },
+    {
+      "id": 5,
+      "ip_hash": "d90b60291184eaa3aa553cf34d0d12e539d630ae6981e5e610713dabee9397c4",
+      "endpoint": "location",
+      "created_at": "2026-07-02T12:34:35.600513+00:00"
+    },
+    {
+      "id": 6,
+      "ip_hash": "d90b60291184eaa3aa553cf34d0d12e539d630ae6981e5e610713dabee9397c4",
+      "endpoint": "location",
+      "created_at": "2026-07-02T12:37:21.957746+00:00"
+    },
+    {
+      "id": 7,
+      "ip_hash": "d90b60291184eaa3aa553cf34d0d12e539d630ae6981e5e610713dabee9397c4",
+      "endpoint": "location",
+      "created_at": "2026-07-02T12:38:48.431375+00:00"
+    }
+  ]
+}
