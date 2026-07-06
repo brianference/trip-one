@@ -8,6 +8,12 @@ import { logger } from '../../lib/logger'
 
 function OverviewContent({ tripId, trip, location }: { tripId: string; trip: Trip; location: LocationResult | null }) {
   const { data: forecast } = useForecast(location?.lat ?? 0, location?.lng ?? 0)
+  // Only Places-sourced entries carry real per-item coordinates today (see
+  // ThingToDo in src/lib/api/client.ts) — Tripadvisor entries without lat/lng
+  // are left off the map rather than guessing a location for them.
+  const markers = (location?.thingsToDo ?? [])
+    .filter((item) => item.lat != null && item.lng != null)
+    .map((item) => ({ lat: item.lat as number, lng: item.lng as number, label: item.name, category: item.category }))
   return (
     <div className="bento-grid">
       <div className="bento-tile">
@@ -28,7 +34,7 @@ function OverviewContent({ tripId, trip, location }: { tripId: string; trip: Tri
       )}
       {location && (
         <div className="bento-tile bento-tile--map">
-          <MapView lat={location.lat} lng={location.lng} label={location.displayName} />
+          <MapView lat={location.lat} lng={location.lng} label={location.displayName} markers={markers} />
         </div>
       )}
     </div>
