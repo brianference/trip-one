@@ -105,7 +105,7 @@ describe('App', () => {
         displayName: 'Dublin, Ireland',
         thingsToDo: [],
       })
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rates: { EUR: 0.92 } }) }))
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rate: 0.92 }) }))
       navigateTo('/trip/t1/local-info')
       render(<App />)
       await waitFor(() => expect(screen.getByRole('link', { name: /transit directions/i })).toBeInTheDocument())

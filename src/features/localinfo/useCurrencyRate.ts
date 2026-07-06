@@ -9,11 +9,13 @@ export interface CurrencyRateState {
 }
 
 /**
- * Fetch the current exchange rate from USD to `targetCurrency` via the free,
- * keyless Frankfurter API. Fails soft: any network/parse error, or a
- * currency Frankfurter doesn't recognize, yields `rate: null` rather than
- * throwing, since local info is a non-essential enhancement over the rest
- * of the trip screens.
+ * Fetch the current exchange rate from USD to `targetCurrency` via this
+ * app's own `/api/currency` proxy (which in turn calls the free, keyless
+ * Frankfurter API server-side — Frankfurter sends no CORS header, so a
+ * direct browser fetch is blocked regardless of this app's CSP). Fails
+ * soft: any network/parse error, or a currency Frankfurter doesn't
+ * recognize, yields `rate: null` rather than throwing, since local info is
+ * a non-essential enhancement over the rest of the trip screens.
  * @param targetCurrency - ISO 4217 currency code to convert USD into, e.g. "JPY"
  * @returns The latest rate (or null on failure/unknown currency) and a loading flag
  */
@@ -33,11 +35,11 @@ export function useCurrencyRate(targetCurrency: string): CurrencyRateState {
       return
     }
 
-    fetch(`https://api.frankfurter.app/latest?from=${FRANKFURTER_BASE_CURRENCY}&to=${targetCurrency}`)
+    fetch(`/api/currency?to=${targetCurrency}`)
       .then((res) => res.json())
-      .then((body: { rates?: Record<string, number> }) => {
+      .then((body: { rate?: number | null }) => {
         if (cancelled) return
-        setRate(body.rates?.[targetCurrency] ?? null)
+        setRate(body.rate ?? null)
         setLoading(false)
       })
       .catch((err) => {

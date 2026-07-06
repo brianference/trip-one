@@ -102,7 +102,7 @@ describe('Field Guide theme', () => {
       displayName: 'Yellowstone, United States',
       thingsToDo: [],
     })
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rates: { USD: 1 } }) }))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rate: 1 }) }))
     render(<LocalInfoScreen locationSlug="yellowstone-demo" />)
     await waitFor(() => expect(screen.getByRole('link', { name: /transit directions/i })).toBeInTheDocument())
     expect(screen.getByRole('link', { name: /phrasebook/i })).toBeInTheDocument()

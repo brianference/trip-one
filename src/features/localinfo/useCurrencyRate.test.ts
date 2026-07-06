@@ -6,10 +6,14 @@ describe('useCurrencyRate', () => {
   afterEach(() => vi.restoreAllMocks())
 
   it('returns the rate for the target currency', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rates: { EUR: 0.92 } }) }))
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rate: 0.92 }) })
+    vi.stubGlobal('fetch', fetchMock)
     const { result } = renderHook(() => useCurrencyRate('EUR'))
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.rate).toBe(0.92)
+    // Calls this app's own proxy, never the upstream API directly — Frankfurter
+    // sends no CORS header, so a direct browser fetch would be blocked.
+    expect(fetchMock).toHaveBeenCalledWith('/api/currency?to=EUR')
   })
 
   it('returns null on failure instead of throwing', async () => {

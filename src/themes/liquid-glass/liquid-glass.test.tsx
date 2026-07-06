@@ -130,7 +130,7 @@ describe('Liquid Glass theme', () => {
       displayName: 'Lisbon, Portugal',
       thingsToDo: [],
     })
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rates: { EUR: 0.92 } }) }))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rate: 0.92 }) }))
     render(<LocalInfoScreen locationSlug="lisbon-portugal" />)
     await waitFor(() => expect(screen.getByText(/0\.92/)).toBeInTheDocument())
     expect(screen.getByRole('link', { name: /transit directions/i })).toBeInTheDocument()

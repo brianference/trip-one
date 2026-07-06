@@ -127,7 +127,7 @@ describe('Trail Ledger theme', () => {
       displayName: 'Reykjavik, Iceland',
       thingsToDo: [],
     })
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rates: { ISK: 138.2 } }) }))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rate: 138.2 }) }))
     render(<LocalInfoScreen locationSlug="reykjavik-iceland" />)
     await waitFor(() => expect(screen.getByText(/138\.2/)).toBeInTheDocument())
     expect(screen.getByRole('link', { name: /transit directions/i })).toBeInTheDocument()

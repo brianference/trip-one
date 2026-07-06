@@ -102,7 +102,7 @@ describe('Chronicle theme', () => {
       displayName: 'Kyoto, Japan',
       thingsToDo: [],
     })
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rates: { JPY: 157.3 } }) }))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rate: 157.3 }) }))
     render(<LocalInfoScreen locationSlug="kyoto-japan" />)
     await waitFor(() => expect(screen.getByText(/157\.3/)).toBeInTheDocument())
     expect(screen.getByRole('link', { name: /transit directions/i })).toBeInTheDocument()
