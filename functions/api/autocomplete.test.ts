@@ -40,7 +40,7 @@ describe('GET /api/autocomplete', () => {
     const calledUrl = String(fetchMock.mock.calls[0][0])
     expect(calledUrl).toContain('nominatim.openstreetmap.org/search')
     expect(calledUrl).toContain('q=dublin')
-    expect(calledUrl).toContain('limit=5')
+    expect(calledUrl).toContain('limit=10')
     expect(calledUrl).toContain('addressdetails=1')
     const calledOpts = fetchMock.mock.calls[0][1]
     expect(calledOpts.headers['User-Agent']).toBeDefined()

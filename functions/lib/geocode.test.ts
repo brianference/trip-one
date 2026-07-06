@@ -47,4 +47,19 @@ describe('autocompleteSearch', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [] }))
     expect(await autocompleteSearch('asdfghjkl')).toEqual([])
   })
+
+  it('ranks a more significant place (e.g. the country) above a less significant match with the same text', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [
+          { lat: '18.0', lon: '-77.5', display_name: 'Jamaica Avenue, Queens, New York, USA', importance: 0.3 },
+          { lat: '18.18', lon: '-77.39', display_name: 'Jamaica', importance: 0.76 },
+        ],
+      }),
+    )
+    const result = await autocompleteSearch('jamaica')
+    expect(result[0].displayName).toBe('Jamaica')
+  })
 })
