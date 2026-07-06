@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
 import { fetchLocation, type LocationResult } from '../../lib/api/client'
 import { currencyForDisplayName } from '../../features/localinfo/currencyByCountry'
 import { useCurrencyRate } from '../../features/localinfo/useCurrencyRate'
@@ -9,6 +10,7 @@ import { logger } from '../../lib/logger'
  * and phrasebook links, styled as another chapter in the timeline.
  */
 export function LocalInfoScreen({ locationSlug }: { locationSlug: string }) {
+  const { id } = useParams<{ id: string }>()
   const [location, setLocation] = useState<LocationResult | null>(null)
 
   useEffect(() => {
@@ -34,6 +36,19 @@ export function LocalInfoScreen({ locationSlug }: { locationSlug: string }) {
   return (
     <div className="chronicle-page">
       <article className="chronicle-chapter">
+        {id && (
+          <nav>
+            <Link to={`/trip/${id}`}>Overview</Link>
+            {' · '}
+            <Link to={`/trip/${id}/itinerary`}>Itinerary</Link>
+            {' · '}
+            <Link to={`/trip/${id}/things-to-do`}>Things to do</Link>
+            {' · '}
+            <Link to={`/trip/${id}/local-info`} aria-current="page">
+              Local info
+            </Link>
+          </nav>
+        )}
         <span className="chronicle-kicker">Field notes</span>
         <h1>Local info: {displayName}</h1>
         {!loading && rate !== null && (

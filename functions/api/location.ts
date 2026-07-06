@@ -54,6 +54,11 @@ export async function onRequestGet({
     // with nothing nearby.
     const cachedThingsToDo = Array.isArray(cached?.things_to_do) ? cached.things_to_do : []
     if (cached && cachedThingsToDo.length > 0) {
+      // The dedicated weather_baseline column has never stored weather data
+      // (see supabaseAdmin.ts) — it's repurposed here to carry the geocoded
+      // bounding box so a fresh Nominatim call isn't needed just to zoom the
+      // map to a place's real extent.
+      const baseline = cached.weather_baseline as { boundingBox?: [number, number, number, number] } | null
       return json(
         {
           slug: cached.slug,
@@ -61,6 +66,7 @@ export async function onRequestGet({
           lng: cached.lng,
           displayName: cached.display_name,
           thingsToDo: cachedThingsToDo,
+          boundingBox: baseline?.boundingBox,
         },
         200,
       )
@@ -90,10 +96,14 @@ export async function onRequestGet({
       lng: geo.lng,
       display_name: geo.displayName,
       things_to_do: thingsToDo,
+      weather_baseline: geo.boundingBox ? { boundingBox: geo.boundingBox } : null,
     })
     logger.info('generated new location', { slug })
 
-    return json({ slug, lat: geo.lat, lng: geo.lng, displayName: geo.displayName, thingsToDo }, 200)
+    return json(
+      { slug, lat: geo.lat, lng: geo.lng, displayName: geo.displayName, thingsToDo, boundingBox: geo.boundingBox },
+      200,
+    )
   } catch (err) {
     logger.error('location lookup failed', err)
     return json({ error: 'internal error' }, 500)

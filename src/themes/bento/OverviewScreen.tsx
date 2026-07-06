@@ -34,7 +34,13 @@ function OverviewContent({ tripId, trip, location }: { tripId: string; trip: Tri
       )}
       {location && (
         <div className="bento-tile bento-tile--map">
-          <MapView lat={location.lat} lng={location.lng} label={location.displayName} markers={markers} />
+          <MapView
+            lat={location.lat}
+            lng={location.lng}
+            label={location.displayName}
+            markers={markers}
+            boundingBox={location.boundingBox}
+          />
         </div>
       )}
     </div>

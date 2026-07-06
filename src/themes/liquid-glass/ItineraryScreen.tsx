@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
 import { useTripStore } from '../../store/tripStore'
 
 /**
  * Itinerary screen for Liquid Glass theme — displays items in a frosted glass card with add/remove functionality.
  */
 export function ItineraryScreen() {
+  const { id } = useParams<{ id: string }>()
   const [time, setTime] = useState('')
   const [text, setText] = useState('')
   const itinerary = useTripStore((s) => s.itinerary)
@@ -24,6 +26,22 @@ export function ItineraryScreen() {
 
   return (
     <div className="lg-app-screen">
+      {id && (
+        <nav className="lg-nav">
+          <Link className="lg-tap-target lg-nav-link" to={`/trip/${id}`}>
+            Overview
+          </Link>
+          <Link className="lg-tap-target lg-nav-link" to={`/trip/${id}/itinerary`} aria-current="page">
+            Itinerary
+          </Link>
+          <Link className="lg-tap-target lg-nav-link" to={`/trip/${id}/things-to-do`}>
+            Things to do
+          </Link>
+          <Link className="lg-tap-target lg-nav-link" to={`/trip/${id}/local-info`}>
+            Local info
+          </Link>
+        </nav>
+      )}
       <div className="lg-glass-card">
         <form onSubmit={handleSubmit} className="lg-itinerary-form">
           <div className="lg-field">

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
 import { fetchLocation, type LocationResult } from '../../lib/api/client'
 import { currencyForDisplayName } from '../../features/localinfo/currencyByCountry'
 import { useCurrencyRate } from '../../features/localinfo/useCurrencyRate'
@@ -9,6 +10,7 @@ import { logger } from '../../lib/logger'
  * and phrasebook links, styled as a postcard-style overlay card.
  */
 export function LocalInfoScreen({ locationSlug }: { locationSlug: string }) {
+  const { id } = useParams<{ id: string }>()
   const [location, setLocation] = useState<LocationResult | null>(null)
 
   useEffect(() => {
@@ -34,6 +36,24 @@ export function LocalInfoScreen({ locationSlug }: { locationSlug: string }) {
   return (
     <div className="field-guide-app-screen">
       <div className="field-guide-info-card">
+        {id && (
+          <ul className="field-guide-nav">
+            <li>
+              <Link to={`/trip/${id}`}>Overview</Link>
+            </li>
+            <li>
+              <Link to={`/trip/${id}/itinerary`}>Itinerary</Link>
+            </li>
+            <li>
+              <Link to={`/trip/${id}/things-to-do`}>Things to do</Link>
+            </li>
+            <li>
+              <Link to={`/trip/${id}/local-info`} aria-current="page">
+                Local info
+              </Link>
+            </li>
+          </ul>
+        )}
         <p className="field-guide-eyebrow">Local info</p>
         <h1>{displayName}</h1>
         {!loading && rate !== null && (

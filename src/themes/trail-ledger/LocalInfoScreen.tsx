@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
 import { fetchLocation, type LocationResult } from '../../lib/api/client'
 import { currencyForDisplayName } from '../../features/localinfo/currencyByCountry'
 import { useCurrencyRate } from '../../features/localinfo/useCurrencyRate'
@@ -9,6 +10,7 @@ import { logger } from '../../lib/logger'
  * transit and phrasebook links, displayed as a two-column table.
  */
 export function LocalInfoScreen({ locationSlug }: { locationSlug: string }) {
+  const { id } = useParams<{ id: string }>()
   const [location, setLocation] = useState<LocationResult | null>(null)
 
   useEffect(() => {
@@ -34,6 +36,19 @@ export function LocalInfoScreen({ locationSlug }: { locationSlug: string }) {
   return (
     <div className="tl-screen">
       <div className="tl-container">
+        {id && (
+          <nav className="tl-nav">
+            <Link to={`/trip/${id}`}>Overview</Link>
+            {' · '}
+            <Link to={`/trip/${id}/itinerary`}>Itinerary</Link>
+            {' · '}
+            <Link to={`/trip/${id}/things-to-do`}>Things to do</Link>
+            {' · '}
+            <Link to={`/trip/${id}/local-info`} aria-current="page">
+              Local info
+            </Link>
+          </nav>
+        )}
         <h1 className="tl-page-title">Local info</h1>
         <table className="tl-table">
           <tbody>

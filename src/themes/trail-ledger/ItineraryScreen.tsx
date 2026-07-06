@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
 import { useTripStore } from '../../store/tripStore'
 
 /**
  * Itinerary screen for Trail Ledger theme — displays and manages trip stops in table format.
  */
 export function ItineraryScreen() {
+  const { id } = useParams<{ id: string }>()
   const [time, setTime] = useState('')
   const [text, setText] = useState('')
   const itinerary = useTripStore((s) => s.itinerary)
@@ -22,6 +24,19 @@ export function ItineraryScreen() {
   return (
     <div className="tl-screen tl-ledger">
       <div className="tl-container">
+        {id && (
+          <nav className="tl-nav">
+            <Link to={`/trip/${id}`}>Overview</Link>
+            {' · '}
+            <Link to={`/trip/${id}/itinerary`} aria-current="page">
+              Itinerary
+            </Link>
+            {' · '}
+            <Link to={`/trip/${id}/things-to-do`}>Things to do</Link>
+            {' · '}
+            <Link to={`/trip/${id}/local-info`}>Local info</Link>
+          </nav>
+        )}
         <h1 className="tl-page-title">Itinerary</h1>
         <form className="tl-form" onSubmit={handleSubmit}>
           <div>

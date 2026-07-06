@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
 import { useTripStore } from '../../store/tripStore'
 
 /**
  * Itinerary screen for Field Guide theme — displays trip itinerary as postcard grid.
  */
 export function ItineraryScreen() {
+  const { id } = useParams<{ id: string }>()
   const [time, setTime] = useState('')
   const [text, setText] = useState('')
   const itinerary = useTripStore((s) => s.itinerary)
@@ -21,6 +23,24 @@ export function ItineraryScreen() {
 
   return (
     <div className="field-guide-app-screen field-guide-postcards">
+      {id && (
+        <ul className="field-guide-nav">
+          <li>
+            <Link to={`/trip/${id}`}>Overview</Link>
+          </li>
+          <li>
+            <Link to={`/trip/${id}/itinerary`} aria-current="page">
+              Itinerary
+            </Link>
+          </li>
+          <li>
+            <Link to={`/trip/${id}/things-to-do`}>Things to do</Link>
+          </li>
+          <li>
+            <Link to={`/trip/${id}/local-info`}>Local info</Link>
+          </li>
+        </ul>
+      )}
       <p className="field-guide-eyebrow">Trip itinerary</p>
       <form onSubmit={handleSubmit} className="field-guide-form">
         <div className="field-guide-field">

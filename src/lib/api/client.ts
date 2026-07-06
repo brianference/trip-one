@@ -24,6 +24,14 @@ export interface LocationResult {
   lng: number
   displayName: string
   thingsToDo: ThingToDo[]
+  /**
+   * [south, north, west, east], from the upstream geocoder. Present for most
+   * real places; absent for a handful of point-only results. Used to zoom
+   * the map to the place's real extent instead of a fixed zoom level, so a
+   * whole country or island shows its actual shape rather than a tight,
+   * arbitrary crop around its geometric center.
+   */
+  boundingBox?: [number, number, number, number]
 }
 
 export interface Trip {

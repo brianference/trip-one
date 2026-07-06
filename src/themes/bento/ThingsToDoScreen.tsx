@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
 import { fetchLocation, type LocationResult, type ThingToDo } from '../../lib/api/client'
 import { useTripStore } from '../../store/tripStore'
 import { MapView } from '../../features/map/MapView'
 import { logger } from '../../lib/logger'
 
 export function ThingsToDoScreen({ locationSlug }: { locationSlug: string }) {
+  const { id } = useParams<{ id: string }>()
   const [location, setLocation] = useState<LocationResult | null>(null)
   const addItem = useTripStore((s) => s.addItem)
 
@@ -32,9 +34,28 @@ export function ThingsToDoScreen({ locationSlug }: { locationSlug: string }) {
 
   return (
     <div className="bento-app-screen">
+      {id && (
+        <nav className="bento-app-nav">
+          <Link to={`/trip/${id}`}>Overview</Link>
+          {' · '}
+          <Link to={`/trip/${id}/itinerary`}>Itinerary</Link>
+          {' · '}
+          <Link to={`/trip/${id}/things-to-do`} aria-current="page">
+            Things to do
+          </Link>
+          {' · '}
+          <Link to={`/trip/${id}/local-info`}>Local info</Link>
+        </nav>
+      )}
       {location && (
         <div className="bento-tile bento-tile--map">
-          <MapView lat={location.lat} lng={location.lng} label={location.displayName} markers={markers} />
+          <MapView
+            lat={location.lat}
+            lng={location.lng}
+            label={location.displayName}
+            markers={markers}
+            boundingBox={location.boundingBox}
+          />
         </div>
       )}
       <ul className="bento-things-to-do">

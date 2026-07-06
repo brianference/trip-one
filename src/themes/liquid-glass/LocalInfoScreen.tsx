@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
 import { fetchLocation, type LocationResult } from '../../lib/api/client'
 import { currencyForDisplayName } from '../../features/localinfo/currencyByCountry'
 import { useCurrencyRate } from '../../features/localinfo/useCurrencyRate'
@@ -9,6 +10,7 @@ import { logger } from '../../lib/logger'
  * transit and phrasebook links, styled with the frosted glass card.
  */
 export function LocalInfoScreen({ locationSlug }: { locationSlug: string }) {
+  const { id } = useParams<{ id: string }>()
   const [location, setLocation] = useState<LocationResult | null>(null)
 
   useEffect(() => {
@@ -34,6 +36,22 @@ export function LocalInfoScreen({ locationSlug }: { locationSlug: string }) {
   return (
     <div className="lg-app-screen">
       <div className="lg-glass-card">
+        {id && (
+          <nav className="lg-nav">
+            <Link className="lg-tap-target lg-nav-link" to={`/trip/${id}`}>
+              Overview
+            </Link>
+            <Link className="lg-tap-target lg-nav-link" to={`/trip/${id}/itinerary`}>
+              Itinerary
+            </Link>
+            <Link className="lg-tap-target lg-nav-link" to={`/trip/${id}/things-to-do`}>
+              Things to do
+            </Link>
+            <Link className="lg-tap-target lg-nav-link" to={`/trip/${id}/local-info`} aria-current="page">
+              Local info
+            </Link>
+          </nav>
+        )}
         <h1 className="lg-title">Local info: {displayName}</h1>
         {!loading && rate !== null && (
           <p className="lg-rate-row">

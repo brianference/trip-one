@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
 import { fetchLocation, type LocationResult } from '../../lib/api/client'
 import { currencyForDisplayName } from '../../features/localinfo/currencyByCountry'
 import { useCurrencyRate } from '../../features/localinfo/useCurrencyRate'
@@ -9,6 +10,7 @@ import { logger } from '../../lib/logger'
  * phrasebook links for the trip's location.
  */
 export function LocalInfoScreen({ locationSlug }: { locationSlug: string }) {
+  const { id } = useParams<{ id: string }>()
   const [location, setLocation] = useState<LocationResult | null>(null)
 
   useEffect(() => {
@@ -33,6 +35,19 @@ export function LocalInfoScreen({ locationSlug }: { locationSlug: string }) {
 
   return (
     <div className="bento-app-screen">
+      {id && (
+        <nav className="bento-app-nav">
+          <Link to={`/trip/${id}`}>Overview</Link>
+          {' · '}
+          <Link to={`/trip/${id}/itinerary`}>Itinerary</Link>
+          {' · '}
+          <Link to={`/trip/${id}/things-to-do`}>Things to do</Link>
+          {' · '}
+          <Link to={`/trip/${id}/local-info`} aria-current="page">
+            Local info
+          </Link>
+        </nav>
+      )}
       <div className="bento-tile">
         <h1>Local info: {displayName}</h1>
         {!loading && rate !== null && (

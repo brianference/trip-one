@@ -5,9 +5,14 @@ import L from 'leaflet'
 
 vi.mock('leaflet', () => {
   const createMapMock = () => {
-    const mapMock: { remove: ReturnType<typeof vi.fn>; setView: ReturnType<typeof vi.fn> } = {
+    const mapMock: {
+      remove: ReturnType<typeof vi.fn>
+      setView: ReturnType<typeof vi.fn>
+      fitBounds: ReturnType<typeof vi.fn>
+    } = {
       remove: vi.fn(),
       setView: vi.fn(),
+      fitBounds: vi.fn(),
     }
     mapMock.setView = vi.fn(() => mapMock)
     return mapMock
@@ -104,5 +109,29 @@ describe('MapView', () => {
     render(<MapView lat={35.68} lng={139.76} label="Tokyo, Japan" markers={[]} />)
     const leafletMocked = vi.mocked(L)
     expect(leafletMocked.marker).toHaveBeenCalledTimes(1)
+  })
+
+  it('fits the map to a real bounding box (e.g. a whole country) instead of a fixed zoom', () => {
+    render(
+      <MapView
+        lat={18.18}
+        lng={-77.39}
+        label="Jamaica"
+        boundingBox={[16.5899443, 18.7256394, -78.5782366, -75.7541143]}
+      />,
+    )
+    const leafletMocked = vi.mocked(L)
+    const mapInstance = leafletMocked.map.mock.results[0].value
+    expect(mapInstance.fitBounds).toHaveBeenCalledWith([
+      [16.5899443, -78.5782366],
+      [18.7256394, -75.7541143],
+    ])
+  })
+
+  it('ignores a near-point-sized bounding box and keeps the fixed default zoom', () => {
+    render(<MapView lat={53.35} lng={-6.26} label="A single address" boundingBox={[53.349, 53.351, -6.261, -6.259]} />)
+    const leafletMocked = vi.mocked(L)
+    const mapInstance = leafletMocked.map.mock.results[0].value
+    expect(mapInstance.fitBounds).not.toHaveBeenCalled()
   })
 })

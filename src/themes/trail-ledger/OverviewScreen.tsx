@@ -12,6 +12,11 @@ import { logger } from '../../lib/logger'
 function LedgerTable({ trip, location }: { trip: Trip; location: LocationResult | null }) {
   const { data: forecast } = useForecast(location?.lat ?? 0, location?.lng ?? 0)
   const displayName = location?.displayName ?? trip.locationSlug
+  // Only Places-sourced entries carry real per-item coordinates today —
+  // Tripadvisor entries without lat/lng are left off the map.
+  const markers = (location?.thingsToDo ?? [])
+    .filter((item) => item.lat != null && item.lng != null)
+    .map((item) => ({ lat: item.lat as number, lng: item.lng as number, label: item.name, category: item.category }))
   return (
     <div className="tl-screen">
       <div className="tl-container">
@@ -39,7 +44,13 @@ function LedgerTable({ trip, location }: { trip: Trip; location: LocationResult 
         </nav>
         {location && (
           <div className="tl-map">
-            <MapView lat={location.lat} lng={location.lng} label={displayName} />
+            <MapView
+              lat={location.lat}
+              lng={location.lng}
+              label={displayName}
+              markers={markers}
+              boundingBox={location.boundingBox}
+            />
           </div>
         )}
       </div>

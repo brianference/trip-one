@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
 import { useTripStore } from '../../store/tripStore'
 
 const DOT_COLOR: Record<string, string> = { fixed: '#a5d088', travel: '#ffd700', option: '#5ba3ff' }
@@ -7,6 +8,7 @@ const DOT_COLOR: Record<string, string> = { fixed: '#a5d088', travel: '#ffd700',
  * Itinerary screen for Chronicle theme — displays items as vertical timeline with colored dots.
  */
 export function ItineraryScreen() {
+  const { id } = useParams<{ id: string }>()
   const [time, setTime] = useState('')
   const [text, setText] = useState('')
   const itinerary = useTripStore((s) => s.itinerary)
@@ -27,6 +29,19 @@ export function ItineraryScreen() {
   return (
     <div className="chronicle-page">
       <div className="chronicle-timeline">
+        {id && (
+          <nav>
+            <Link to={`/trip/${id}`}>Overview</Link>
+            {' · '}
+            <Link to={`/trip/${id}/itinerary`} aria-current="page">
+              Itinerary
+            </Link>
+            {' · '}
+            <Link to={`/trip/${id}/things-to-do`}>Things to do</Link>
+            {' · '}
+            <Link to={`/trip/${id}/local-info`}>Local info</Link>
+          </nav>
+        )}
         <h1 className="chronicle-timeline-heading">The itinerary</h1>
         <form className="chronicle-stop-form" onSubmit={handleSubmit}>
           <div>

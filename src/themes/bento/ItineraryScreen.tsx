@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
 import { useTripStore } from '../../store/tripStore'
 
 export function ItineraryScreen() {
+  const { id } = useParams<{ id: string }>()
   const [time, setTime] = useState('')
   const [text, setText] = useState('')
   const itinerary = useTripStore((s) => s.itinerary)
@@ -18,6 +20,19 @@ export function ItineraryScreen() {
 
   return (
     <div className="bento-app-screen bento-itinerary">
+      {id && (
+        <nav className="bento-app-nav">
+          <Link to={`/trip/${id}`}>Overview</Link>
+          {' · '}
+          <Link to={`/trip/${id}/itinerary`} aria-current="page">
+            Itinerary
+          </Link>
+          {' · '}
+          <Link to={`/trip/${id}/things-to-do`}>Things to do</Link>
+          {' · '}
+          <Link to={`/trip/${id}/local-info`}>Local info</Link>
+        </nav>
+      )}
       <form onSubmit={handleSubmit} className="bento-itinerary-form">
         <div>
           <label htmlFor="stop-time">Time</label>

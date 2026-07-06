@@ -20,7 +20,19 @@ interface Props {
    * single-marker behavior unchanged.
    */
   markers?: MapMarker[]
+  /**
+   * [south, north, west, east] from the geocoder. When present and larger
+   * than a small point-radius, the map fits this real extent instead of
+   * using a fixed zoom level — so a country or island shows its actual
+   * shape rather than a tight, arbitrary crop around its center point.
+   */
+  boundingBox?: [number, number, number, number]
 }
+
+// Below this size (in degrees), a bounding box is treated as effectively a
+// point (e.g. a single address) and the fixed default zoom is used instead —
+// fitBounds on a near-zero-size box zooms in far too tight to be useful.
+const MIN_BOUNDS_SPAN_DEGREES = 0.05
 
 // A small, fixed palette for common things-to-do categories. Anything not
 // listed here (there's no bounded category vocabulary upstream) falls back
@@ -72,14 +84,19 @@ function buildPopupEl(text: string): HTMLDivElement {
   return popupEl
 }
 
-export function MapView({ lat, lng, label, markers }: Props) {
+export function MapView({ lat, lng, label, markers, boundingBox }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!containerRef.current) return
     const map = L.map(containerRef.current).setView([lat, lng], 12)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
+    // CartoDB's free Voyager tiles (no API key required) render cleaner
+    // typography and a lighter, less visually noisy basemap than raw OSM
+    // tiles, while still crediting OpenStreetMap as the underlying data.
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+      subdomains: 'abcd',
+      maxZoom: 20,
     }).addTo(map)
 
     const icon = buildPinIcon(DEFAULT_MARKER_COLOR)
@@ -93,10 +110,20 @@ export function MapView({ lat, lng, label, markers }: Props) {
         .bindPopup(buildPopupEl(`${marker.label} (${marker.category})`))
     }
 
+    if (boundingBox) {
+      const [south, north, west, east] = boundingBox
+      if (north - south > MIN_BOUNDS_SPAN_DEGREES || east - west > MIN_BOUNDS_SPAN_DEGREES) {
+        map.fitBounds([
+          [south, west],
+          [north, east],
+        ])
+      }
+    }
+
     return () => {
       map.remove()
     }
-  }, [lat, lng, label, markers])
+  }, [lat, lng, label, markers, boundingBox])
 
   return <div ref={containerRef} aria-label={`Map of ${label}`} style={{ height: '300px', width: '100%' }} />
 }

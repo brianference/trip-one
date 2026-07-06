@@ -2,6 +2,8 @@ export interface GeocodeResult {
   lat: number
   lng: number
   displayName: string
+  /** [south, north, west, east], straight from Nominatim's boundingbox field. */
+  boundingBox?: [number, number, number, number]
 }
 
 /**
@@ -12,10 +14,18 @@ export interface GeocodeResult {
 export async function geocode(query: string): Promise<GeocodeResult | null> {
   const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=en&q=${encodeURIComponent(query)}`
   const res = await fetch(url, { headers: { 'User-Agent': 'trip-one (https://github.com)' } })
-  const rows = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>
+  const rows = (await res.json()) as Array<{
+    lat: string
+    lon: string
+    display_name: string
+    boundingbox?: [string, string, string, string]
+  }>
   const first = rows[0]
   if (!first) return null
-  return { lat: Number(first.lat), lng: Number(first.lon), displayName: first.display_name }
+  const boundingBox = first.boundingbox
+    ? (first.boundingbox.map(Number) as [number, number, number, number])
+    : undefined
+  return { lat: Number(first.lat), lng: Number(first.lon), displayName: first.display_name, boundingBox }
 }
 
 /**

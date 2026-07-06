@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
 import { fetchLocation, type LocationResult, type ThingToDo } from '../../lib/api/client'
 import { useTripStore } from '../../store/tripStore'
 import { MapView } from '../../features/map/MapView'
@@ -8,6 +9,7 @@ import { logger } from '../../lib/logger'
  * Things to do screen for Field Guide theme — displays location attractions as postcard grid.
  */
 export function ThingsToDoScreen({ locationSlug }: { locationSlug: string }) {
+  const { id } = useParams<{ id: string }>()
   const [location, setLocation] = useState<LocationResult | null>(null)
   const addItem = useTripStore((s) => s.addItem)
 
@@ -34,9 +36,33 @@ export function ThingsToDoScreen({ locationSlug }: { locationSlug: string }) {
 
   return (
     <div className="field-guide-app-screen">
+      {id && (
+        <ul className="field-guide-nav">
+          <li>
+            <Link to={`/trip/${id}`}>Overview</Link>
+          </li>
+          <li>
+            <Link to={`/trip/${id}/itinerary`}>Itinerary</Link>
+          </li>
+          <li>
+            <Link to={`/trip/${id}/things-to-do`} aria-current="page">
+              Things to do
+            </Link>
+          </li>
+          <li>
+            <Link to={`/trip/${id}/local-info`}>Local info</Link>
+          </li>
+        </ul>
+      )}
       {location && (
         <div className="field-guide-map-frame">
-          <MapView lat={location.lat} lng={location.lng} label={location.displayName} markers={markers} />
+          <MapView
+            lat={location.lat}
+            lng={location.lng}
+            label={location.displayName}
+            markers={markers}
+            boundingBox={location.boundingBox}
+          />
         </div>
       )}
       <p className="field-guide-eyebrow field-guide-section-eyebrow">Things to do</p>
