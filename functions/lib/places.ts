@@ -12,7 +12,12 @@ import { logger } from '../../src/lib/logger'
  */
 export async function searchPlaces(lat: number, lng: number, apiKey: string): Promise<ThingToDo[]> {
   try {
-    const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=8000&type=tourist_attraction&key=${apiKey}`
+    // 50000m is the documented maximum radius Google Places Nearby Search
+    // accepts. A smaller radius (previously 8000m) works fine for a city but
+    // returns almost nothing for a large national park, whose real points of
+    // interest can be tens of kilometers from the park's single geocoded
+    // center coordinate.
+    const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=50000&type=tourist_attraction&key=${apiKey}`
     const res = await fetch(url)
     if (!res.ok) {
       logger.warn('places search non-ok response', { status: res.status })

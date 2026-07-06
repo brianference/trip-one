@@ -10,7 +10,7 @@ export interface GeocodeResult {
  * @returns The first matching result, or null if nothing was found
  */
 export async function geocode(query: string): Promise<GeocodeResult | null> {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=en&q=${encodeURIComponent(query)}`
   const res = await fetch(url, { headers: { 'User-Agent': 'trip-one (https://github.com)' } })
   const rows = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>
   const first = rows[0]
@@ -25,7 +25,7 @@ export async function geocode(query: string): Promise<GeocodeResult | null> {
  * @returns Matching results (may be empty)
  */
 export async function autocompleteSearch(query: string): Promise<GeocodeResult[]> {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=1&q=${encodeURIComponent(query)}`
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=1&accept-language=en&q=${encodeURIComponent(query)}`
   const res = await fetch(url, { headers: { 'User-Agent': 'trip-one (https://github.com)' } })
   const rows = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>
   return rows.map((row) => ({ lat: Number(row.lat), lng: Number(row.lon), displayName: row.display_name }))
