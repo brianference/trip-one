@@ -1,0 +1,36 @@
+#!/bin/bash
+# .git/hooks/pre-commit — blocks commits containing secrets
+
+PATTERNS=(
+  'sk-ant-'           # Anthropic API keys
+  'sk-live-'          # Stripe live keys
+  'sk_live_'          # Stripe live keys (alt format)
+  'ghp_'              # GitHub personal tokens
+  'gho_'              # GitHub OAuth tokens
+  'AKIA'              # AWS access keys
+  'xox[bpors]-'       # Slack tokens
+  'SG\.'              # SendGrid keys
+  'eyJ'               # JWTs
+  'BEGIN.*PRIVATE KEY' # Private key material
+)
+
+BLOCKED_FILES=('.env' 'credentials.json' 'id_rsa' '*.pem' '*.key' '.dev.vars')
+
+for pattern in "${PATTERNS[@]}"; do
+  # Exclude this hook's own source files so the pattern strings don't self-match.
+  if git diff --cached --diff-filter=ACM -- ':(exclude)hooks/pre-commit' ':(exclude).git/hooks/pre-commit' | grep -qE "$pattern"; then
+    echo "BLOCKED: Found potential secret matching '$pattern'"
+    echo "Remove the secret and try again."
+    exit 1
+  fi
+done
+
+for file in "${BLOCKED_FILES[@]}"; do
+  if git diff --cached --name-only | grep -q "$file"; then
+    echo "BLOCKED: Attempted to commit sensitive file: $file"
+    exit 1
+  fi
+done
+
+echo "Pre-commit security check passed."
+exit 0
