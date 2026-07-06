@@ -512,6 +512,13 @@ body:has(.chronicle-page) label {
   }
 }
 
+/* ---------- Unified trip page ---------- */
+.chronicle-book {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-lg);
+}
+
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   .chronicle-stop-submit,

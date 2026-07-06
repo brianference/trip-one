@@ -82,11 +82,11 @@ export async function fetchAutocomplete(query: string): Promise<AutocompleteSugg
   }
 }
 
-export async function createTrip(locationSlug: string): Promise<Trip> {
+export async function createTrip(locationSlug: string, designStyle?: DesignStyle): Promise<Trip> {
   const res = await fetch('/api/trips', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ location_slug: locationSlug }),
+    body: JSON.stringify({ location_slug: locationSlug, design_style: designStyle }),
   })
   const body = await res.json()
   if (!res.ok) throw new Error(body.error ?? 'failed to create trip')

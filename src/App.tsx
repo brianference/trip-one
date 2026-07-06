@@ -5,12 +5,10 @@ import { ThemeSwitcher } from './components/ThemeSwitcher'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { getTrip } from './lib/api/client'
 import { logger } from './lib/logger'
-import * as bento from './themes/bento/SearchScreen'
 import * as bentoOverview from './themes/bento/OverviewScreen'
 import * as bentoItinerary from './themes/bento/ItineraryScreen'
 import * as bentoThings from './themes/bento/ThingsToDoScreen'
 import * as bentoLocalInfo from './themes/bento/LocalInfoScreen'
-import * as chronicleOverview from './themes/chronicle/OverviewScreen'
 import * as chronicleItinerary from './themes/chronicle/ItineraryScreen'
 import * as chronicleThings from './themes/chronicle/ThingsToDoScreen'
 import * as chronicleLocalInfo from './themes/chronicle/LocalInfoScreen'
@@ -18,10 +16,12 @@ import * as fieldGuideOverview from './themes/field-guide/OverviewScreen'
 import * as fieldGuideItinerary from './themes/field-guide/ItineraryScreen'
 import * as fieldGuideThings from './themes/field-guide/ThingsToDoScreen'
 import * as fieldGuideLocalInfo from './themes/field-guide/LocalInfoScreen'
-import * as liquidGlassOverview from './themes/liquid-glass/OverviewScreen'
 import * as liquidGlassItinerary from './themes/liquid-glass/ItineraryScreen'
 import * as liquidGlassThings from './themes/liquid-glass/ThingsToDoScreen'
 import * as liquidGlassLocalInfo from './themes/liquid-glass/LocalInfoScreen'
+import * as liquidGlassSearch from './themes/liquid-glass/SearchScreen'
+import * as liquidGlassTripPage from './themes/liquid-glass/TripPage'
+import * as chronicleTripPage from './themes/chronicle/TripPage'
 import * as trailLedgerOverview from './themes/trail-ledger/OverviewScreen'
 import * as trailLedgerItinerary from './themes/trail-ledger/ItineraryScreen'
 import * as trailLedgerThings from './themes/trail-ledger/ThingsToDoScreen'
@@ -32,15 +32,26 @@ import './themes/field-guide/field-guide.css'
 import './themes/liquid-glass/liquid-glass.css'
 import './themes/trail-ledger/trail-ledger.css'
 
-const OVERVIEW_BY_THEME: Record<DesignStyle, React.ComponentType> = {
+// Liquid Glass and Chronicle render a single unified page (map, weather,
+// itinerary, things-to-do, and local info all in one scroll) instead of
+// separate per-section screens. Bento, Field Guide, and Trail Ledger keep
+// their original multi-page structure — they're no longer offered in
+// ThemeSwitcher, but a trip already saved with one of those styles (or
+// reached directly by URL) still renders that way.
+const UNIFIED_THEMES = new Set<DesignStyle>(['liquid-glass', 'chronicle'])
+
+const TRIP_PAGE_BY_UNIFIED_THEME: Partial<Record<DesignStyle, React.ComponentType<{ tripId: string }>>> = {
+  'liquid-glass': liquidGlassTripPage.TripPage,
+  chronicle: chronicleTripPage.TripPage,
+}
+
+const OVERVIEW_BY_THEME: Partial<Record<DesignStyle, React.ComponentType>> = {
   bento: bentoOverview.OverviewScreen,
-  chronicle: chronicleOverview.OverviewScreen,
   'field-guide': fieldGuideOverview.OverviewScreen,
-  'liquid-glass': liquidGlassOverview.OverviewScreen,
   'trail-ledger': trailLedgerOverview.OverviewScreen,
 }
 
-const ITINERARY_BY_THEME: Record<DesignStyle, React.ComponentType> = {
+const ITINERARY_BY_THEME: Partial<Record<DesignStyle, React.ComponentType>> = {
   bento: bentoItinerary.ItineraryScreen,
   chronicle: chronicleItinerary.ItineraryScreen,
   'field-guide': fieldGuideItinerary.ItineraryScreen,
@@ -48,7 +59,7 @@ const ITINERARY_BY_THEME: Record<DesignStyle, React.ComponentType> = {
   'trail-ledger': trailLedgerItinerary.ItineraryScreen,
 }
 
-const THINGS_TO_DO_BY_THEME: Record<DesignStyle, React.ComponentType<{ locationSlug: string }>> = {
+const THINGS_TO_DO_BY_THEME: Partial<Record<DesignStyle, React.ComponentType<{ locationSlug: string }>>> = {
   bento: bentoThings.ThingsToDoScreen,
   chronicle: chronicleThings.ThingsToDoScreen,
   'field-guide': fieldGuideThings.ThingsToDoScreen,
@@ -56,7 +67,7 @@ const THINGS_TO_DO_BY_THEME: Record<DesignStyle, React.ComponentType<{ locationS
   'trail-ledger': trailLedgerThings.ThingsToDoScreen,
 }
 
-const LOCAL_INFO_BY_THEME: Record<DesignStyle, React.ComponentType<{ locationSlug: string }>> = {
+const LOCAL_INFO_BY_THEME: Partial<Record<DesignStyle, React.ComponentType<{ locationSlug: string }>>> = {
   bento: bentoLocalInfo.LocalInfoScreen,
   chronicle: chronicleLocalInfo.LocalInfoScreen,
   'field-guide': fieldGuideLocalInfo.LocalInfoScreen,
@@ -64,10 +75,30 @@ const LOCAL_INFO_BY_THEME: Record<DesignStyle, React.ComponentType<{ locationSlu
   'trail-ledger': trailLedgerLocalInfo.LocalInfoScreen,
 }
 
+/**
+ * Renders the current trip regardless of which of the 4 trip sub-paths the
+ * user landed on — for a unified-theme trip, every one of those paths shows
+ * the same single scrollable page (deep links to old per-section URLs still
+ * work, they just show the whole page rather than one section of it).
+ */
+function UnifiedTrip({ tripId }: { tripId: string }) {
+  const designStyle = useTripStore((s) => s.designStyle)
+  const TripPage = TRIP_PAGE_BY_UNIFIED_THEME[designStyle]
+  if (!TripPage) return null
+  return (
+    <>
+      <ThemeSwitcher tripId={tripId} />
+      <TripPage tripId={tripId} />
+    </>
+  )
+}
+
 function TripOverview() {
   const { id } = useParams<{ id: string }>()
   const designStyle = useTripStore((s) => s.designStyle)
+  if (id && UNIFIED_THEMES.has(designStyle)) return <UnifiedTrip tripId={id} />
   const Overview = OVERVIEW_BY_THEME[designStyle]
+  if (!Overview) return null
   return (
     <>
       {id && <ThemeSwitcher tripId={id} />}
@@ -77,8 +108,11 @@ function TripOverview() {
 }
 
 function TripItinerary() {
+  const { id } = useParams<{ id: string }>()
   const designStyle = useTripStore((s) => s.designStyle)
+  if (id && UNIFIED_THEMES.has(designStyle)) return <UnifiedTrip tripId={id} />
   const Itinerary = ITINERARY_BY_THEME[designStyle]
+  if (!Itinerary) return null
   return <Itinerary />
 }
 
@@ -107,9 +141,11 @@ function ThingsToDoRoute() {
     }
   }, [id])
 
+  if (id && UNIFIED_THEMES.has(designStyle)) return <UnifiedTrip tripId={id} />
   if (!locationSlug) return <p>Loading…</p>
 
   const ThingsToDo = THINGS_TO_DO_BY_THEME[designStyle]
+  if (!ThingsToDo) return null
   return <ThingsToDo locationSlug={locationSlug} />
 }
 
@@ -138,9 +174,11 @@ function LocalInfoRoute() {
     }
   }, [id])
 
+  if (id && UNIFIED_THEMES.has(designStyle)) return <UnifiedTrip tripId={id} />
   if (!locationSlug) return <p>Loading…</p>
 
   const LocalInfo = LOCAL_INFO_BY_THEME[designStyle]
+  if (!LocalInfo) return null
   return <LocalInfo locationSlug={locationSlug} />
 }
 
@@ -152,7 +190,7 @@ export default function App() {
           path="/"
           element={
             <ErrorBoundary label="Search">
-              <bento.SearchScreen />
+              <liquidGlassSearch.SearchScreen />
             </ErrorBoundary>
           }
         />

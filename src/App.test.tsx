@@ -30,9 +30,13 @@ function navigateTo(path: string) {
   window.history.pushState({}, '', path)
 }
 
+// Liquid Glass and Chronicle now render one unified page rather than a
+// standalone itinerary-only screen, so their markers target a class that's
+// present somewhere in that unified page rather than an itinerary-specific
+// wrapper that no longer exists.
 const ITINERARY_MARKER_BY_THEME: Record<DesignStyle, string> = {
   bento: 'bento-itinerary',
-  chronicle: 'chronicle-timeline',
+  chronicle: 'chronicle-chapter',
   'field-guide': 'field-guide-postcards',
   'liquid-glass': 'lg-glass-card',
   'trail-ledger': 'tl-ledger',
@@ -51,16 +55,32 @@ describe('App', () => {
 
   it.each(Object.entries(ITINERARY_MARKER_BY_THEME))(
     'renders the %s theme at /trip/:id/itinerary',
-    (style, marker) => {
+    async (style, marker) => {
       useTripStore.setState({
         tripId: 't1',
         locationSlug: 'dublin-ireland',
         itinerary: [{ time: '09:00', text: 'Guinness Storehouse', type: 'option' }],
         designStyle: style as DesignStyle,
       })
+      // Liquid Glass and Chronicle render one unified page that fetches the
+      // trip/location itself (rather than trusting only pre-set store
+      // state, like the other themes' standalone Itinerary screen does).
+      vi.spyOn(client, 'getTrip').mockResolvedValue({
+        id: 't1',
+        locationSlug: 'dublin-ireland',
+        itinerary: [{ time: '09:00', text: 'Guinness Storehouse', type: 'option' }],
+        designStyle: style as DesignStyle,
+      })
+      vi.spyOn(client, 'fetchLocation').mockResolvedValue({
+        slug: 'dublin-ireland',
+        lat: 53.35,
+        lng: -6.26,
+        displayName: 'Dublin, Ireland',
+        thingsToDo: [],
+      })
       navigateTo('/trip/t1/itinerary')
       const { container } = render(<App />)
-      expect(container.querySelector(`.${marker}`)).toBeInTheDocument()
+      await waitFor(() => expect(container.querySelector(`.${marker}`)).toBeInTheDocument())
       // Some themes split item text across sibling text nodes rather than a
       // single element, so assert on rendered text content directly instead
       // of `getByText`, which only matches a single node's own text.

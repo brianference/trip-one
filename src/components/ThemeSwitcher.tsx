@@ -1,18 +1,18 @@
 import { useTripStore, type DesignStyle } from '../store/tripStore'
 import { updateTrip } from '../lib/api/client'
 
+// Bento, Field Guide, and Trail Ledger remain in the codebase (and remain
+// directly reachable by a trip that was already saved with one of those
+// design_style values) but are no longer offered as a choice here — the
+// product now standardizes on two: Liquid Glass (default) and Chronicle.
 const OPTIONS: { value: DesignStyle; label: string }[] = [
-  { value: 'bento', label: 'Bento' },
-  { value: 'chronicle', label: 'Chronicle' },
-  { value: 'field-guide', label: 'Field Guide' },
   { value: 'liquid-glass', label: 'Liquid Glass' },
-  { value: 'trail-ledger', label: 'Trail Ledger' },
+  { value: 'chronicle', label: 'Chronicle' },
 ]
 
 /**
- * Lets the traveler switch which of the 5 themes renders the current trip's
- * Overview/Itinerary/ThingsToDo screens, persisting the choice to the trip
- * record via `updateTrip`.
+ * Lets the traveler switch which of the 2 offered themes renders the current
+ * trip's unified page, persisting the choice to the trip record via `updateTrip`.
  */
 export function ThemeSwitcher({ tripId }: { tripId: string }) {
   const designStyle = useTripStore((s) => s.designStyle)

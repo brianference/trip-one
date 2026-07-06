@@ -24,6 +24,21 @@ describe('POST /api/trips', () => {
     expect(body.id).toBe('abc-123')
   })
 
+  it('defaults design_style to liquid-glass when none is sent', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [{ id: 'abc-123', location_slug: 'dublin-ireland', itinerary: [], design_style: 'liquid-glass', created_at: '2026-01-01' }],
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const request = new Request('https://x/api/trips', {
+      method: 'POST',
+      body: JSON.stringify({ location_slug: 'dublin-ireland' }),
+    })
+    await onRequestPost({ env, request } as never)
+    const sentBody = JSON.parse(String(fetchMock.mock.calls[0][1].body))
+    expect(sentBody.design_style).toBe('liquid-glass')
+  })
+
   it('rejects a missing location_slug', async () => {
     const request = new Request('https://x/api/trips', { method: 'POST', body: JSON.stringify({}) })
     const res = await onRequestPost({ env, request } as never)

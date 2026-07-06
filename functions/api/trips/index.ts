@@ -3,7 +3,10 @@ import { createTrip } from '../../lib/supabaseAdmin'
 import { logger } from '../../../src/lib/logger'
 import { z } from 'zod'
 
-const createTripSchema = z.object({ location_slug: z.string().min(1) })
+const createTripSchema = z.object({
+  location_slug: z.string().min(1),
+  design_style: z.enum(['bento', 'chronicle', 'field-guide', 'liquid-glass', 'trail-ledger']).optional(),
+})
 
 function json(body: unknown, status: number) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
@@ -24,7 +27,7 @@ export async function onRequestPost({ env, request }: { env: Env; request: Reque
     const trip = await createTrip(env, {
       location_slug: parsed.data.location_slug,
       itinerary: [],
-      design_style: 'bento',
+      design_style: parsed.data.design_style ?? 'liquid-glass',
     })
     return json(trip, 201)
   } catch (err) {

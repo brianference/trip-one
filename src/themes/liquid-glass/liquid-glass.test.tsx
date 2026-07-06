@@ -47,7 +47,7 @@ describe('Liquid Glass theme', () => {
     )
     fireEvent.change(screen.getByLabelText(/where to/i), { target: { value: 'Lisbon, Portugal' } })
     fireEvent.click(screen.getByRole('button', { name: /go/i }))
-    await waitFor(() => expect(client.createTrip).toHaveBeenCalledWith('lisbon-portugal'))
+    await waitFor(() => expect(client.createTrip).toHaveBeenCalledWith('lisbon-portugal', 'liquid-glass'))
   })
 
   it('remove-item tap targets are at least 44px per the mobile-optimization requirement', () => {
