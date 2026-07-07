@@ -760,6 +760,76 @@ body:has(.chronicle-page) label {
   color: var(--chronicle-teal);
 }
 
+/* ---------- Forecast strip + packing ---------- */
+.chronicle-forecast-strip {
+  display: flex;
+  gap: var(--chronicle-space-sm);
+  overflow-x: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 4px;
+}
+
+.chronicle-forecast-day {
+  flex: none;
+  width: 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--chronicle-space-sm);
+  background: var(--chronicle-bg-surface);
+  border: 1px solid var(--chronicle-border-hairline);
+  border-radius: var(--chronicle-radius-md);
+}
+
+.chronicle-forecast-date {
+  font-family: var(--chronicle-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--chronicle-text-tertiary);
+}
+
+.chronicle-forecast-condition {
+  font-family: var(--chronicle-font-body);
+  font-size: 13px;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-forecast-temps {
+  font-family: var(--chronicle-font-mono);
+  font-size: 14px;
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-forecast-precip {
+  font-family: var(--chronicle-font-mono);
+  font-size: 10px;
+  color: var(--chronicle-teal);
+}
+
+.chronicle-packing-tips {
+  margin-top: var(--chronicle-space-md);
+  padding-top: var(--chronicle-space-md);
+  border-top: 1px solid var(--chronicle-border-hairline);
+  text-align: left;
+}
+
+.chronicle-packing-tips h3 {
+  font-family: var(--chronicle-font-display);
+  font-size: 16px;
+  margin: 0 0 var(--chronicle-space-xs);
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-packing-tips ul {
+  margin: 0;
+  padding-left: 1.2em;
+  font-family: var(--chronicle-font-body);
+  font-size: 15px;
+  color: var(--chronicle-text-secondary);
+}
+
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   .chronicle-stop-submit,

@@ -9,6 +9,8 @@ import {
 } from '../../lib/api/client'
 import type { ItineraryItem } from '../../lib/validation/schemas'
 import { useForecast } from '../../features/weather/useForecast'
+import { useDailyForecast } from '../../features/weather/useDailyForecast'
+import { packingTips } from '../../features/weather/packingTips'
 import { useTripStore } from '../../store/tripStore'
 import { organizeItinerary } from '../../lib/itinerary/organizeItinerary'
 import { reorderItinerary } from '../../lib/itinerary/reorderItinerary'
@@ -82,12 +84,20 @@ export function TripPage({ tripId }: { tripId: string }) {
   )
 }
 
+const DEFAULT_FORECAST_DAYS = 5
+
 function TripContent({ tripId, location }: { tripId: string; location: LocationResult | null }) {
   const { data: forecast } = useForecast(location?.lat ?? 0, location?.lng ?? 0)
   const displayName = location?.displayName ?? 'Loading…'
   const itinerary = useTripStore((s) => s.itinerary)
   const tripLengthDays = useTripStore((s) => s.tripLengthDays)
   const [selectedDay, setSelectedDay] = useState(1)
+  const { data: dailyForecast } = useDailyForecast(
+    location?.lat ?? 0,
+    location?.lng ?? 0,
+    tripLengthDays ?? DEFAULT_FORECAST_DAYS,
+  )
+  const tips = dailyForecast ? packingTips(dailyForecast) : []
 
   // Only Places-sourced entries carry real per-item coordinates today —
   // Tripadvisor entries without lat/lng are left off the map.
@@ -110,6 +120,34 @@ function TripContent({ tripId, location }: { tripId: string; location: LocationR
           <p className="chronicle-weather">
             {forecast.temperatureF}°F <span className="chronicle-weather-condition">— {forecast.condition}</span>
           </p>
+        )}
+        {dailyForecast && dailyForecast.length > 0 && (
+          <div className="chronicle-forecast">
+            <ul className="chronicle-forecast-strip">
+              {dailyForecast.map((day) => (
+                <li key={day.date} className="chronicle-forecast-day">
+                  <span className="chronicle-forecast-date">
+                    {new Date(`${day.date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                  </span>
+                  <span className="chronicle-forecast-condition">{day.condition}</span>
+                  <span className="chronicle-forecast-temps">
+                    {Math.round(day.hiF)}° / {Math.round(day.loF)}°
+                  </span>
+                  {day.precipPercent != null && <span className="chronicle-forecast-precip">{day.precipPercent}% precip</span>}
+                </li>
+              ))}
+            </ul>
+            {tips.length > 0 && (
+              <div className="chronicle-packing-tips">
+                <h3>Packing</h3>
+                <ul>
+                  {tips.map((tip) => (
+                    <li key={tip}>{tip}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         )}
         {location && (
           <div className="chronicle-map-frame">

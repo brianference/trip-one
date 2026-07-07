@@ -9,6 +9,8 @@ import {
 } from '../../lib/api/client'
 import type { ItineraryItem } from '../../lib/validation/schemas'
 import { useForecast } from '../../features/weather/useForecast'
+import { useDailyForecast } from '../../features/weather/useDailyForecast'
+import { packingTips } from '../../features/weather/packingTips'
 import { useTripStore } from '../../store/tripStore'
 import { organizeItinerary } from '../../lib/itinerary/organizeItinerary'
 import { reorderItinerary } from '../../lib/itinerary/reorderItinerary'
@@ -81,12 +83,20 @@ export function TripPage({ tripId }: { tripId: string }) {
   )
 }
 
+const DEFAULT_FORECAST_DAYS = 5
+
 function TripContent({ tripId, trip, location }: { tripId: string; trip: Trip; location: LocationResult | null }) {
   const { data: forecast } = useForecast(location?.lat ?? 0, location?.lng ?? 0)
   const displayName = location?.displayName ?? trip.locationSlug
   const itinerary = useTripStore((s) => s.itinerary)
   const tripLengthDays = useTripStore((s) => s.tripLengthDays)
   const [selectedDay, setSelectedDay] = useState(1)
+  const { data: dailyForecast } = useDailyForecast(
+    location?.lat ?? 0,
+    location?.lng ?? 0,
+    tripLengthDays ?? DEFAULT_FORECAST_DAYS,
+  )
+  const tips = dailyForecast ? packingTips(dailyForecast) : []
 
   // Only Places-sourced entries carry real per-item coordinates today (see
   // ThingToDo in src/lib/api/client.ts) — Tripadvisor entries without
@@ -112,6 +122,36 @@ function TripContent({ tripId, trip, location }: { tripId: string; trip: Trip; l
           </p>
         )}
       </header>
+
+      {dailyForecast && dailyForecast.length > 0 && (
+        <section className="lg-glass-card lg-forecast-card" aria-label="Forecast">
+          <h2 className="lg-section-heading">Forecast</h2>
+          <ul className="lg-forecast-strip">
+            {dailyForecast.map((day) => (
+              <li key={day.date} className="lg-forecast-day">
+                <span className="lg-forecast-date">
+                  {new Date(`${day.date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                </span>
+                <span className="lg-forecast-condition">{day.condition}</span>
+                <span className="lg-forecast-temps">
+                  <strong>{Math.round(day.hiF)}°</strong> / {Math.round(day.loF)}°
+                </span>
+                {day.precipPercent != null && <span className="lg-forecast-precip">{day.precipPercent}% precip</span>}
+              </li>
+            ))}
+          </ul>
+          {tips.length > 0 && (
+            <div className="lg-packing-tips">
+              <h3 className="lg-packing-heading">Packing</h3>
+              <ul>
+                {tips.map((tip) => (
+                  <li key={tip}>{tip}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
 
       {location && (
         <section className="lg-glass-card lg-map-card" aria-label="Map">

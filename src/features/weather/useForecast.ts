@@ -7,7 +7,7 @@ export interface Forecast {
   isFallback: boolean
 }
 
-const WMO_CONDITIONS: Record<number, string> = {
+export const WMO_CONDITIONS: Record<number, string> = {
   0: 'Clear',
   1: 'Mostly clear',
   2: 'Partly cloudy',
