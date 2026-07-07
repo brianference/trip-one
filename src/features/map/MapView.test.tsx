@@ -123,10 +123,13 @@ describe('MapView', () => {
     )
     const leafletMocked = vi.mocked(L)
     const mapInstance = leafletMocked.map.mock.results[0].value
-    expect(mapInstance.fitBounds).toHaveBeenCalledWith([
-      [16.5899443, -78.5782366],
-      [18.7256394, -75.7541143],
-    ])
+    expect(mapInstance.fitBounds).toHaveBeenCalledWith(
+      [
+        [16.5899443, -78.5782366],
+        [18.7256394, -75.7541143],
+      ],
+      { animate: false },
+    )
   })
 
   it('ignores a near-point-sized bounding box and keeps the fixed default zoom', () => {

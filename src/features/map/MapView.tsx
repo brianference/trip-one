@@ -109,10 +109,18 @@ export function MapView({ lat, lng, label, markers, boundingBox, route }: Props)
     if (boundingBox) {
       const [south, north, west, east] = boundingBox
       if (north - south > MIN_BOUNDS_SPAN_DEGREES || east - west > MIN_BOUNDS_SPAN_DEGREES) {
-        map.fitBounds([
-          [south, west],
-          [north, east],
-        ])
+        // animate:false — an unrelated re-render (e.g. an async forecast
+        // fetch resolving) can tear this map down and recreate it while an
+        // animated fitBounds transition is still in flight, which throws
+        // inside Leaflet's zoom-transition handler. An instant jump has no
+        // transition window for that race to land in.
+        map.fitBounds(
+          [
+            [south, west],
+            [north, east],
+          ],
+          { animate: false },
+        )
       }
     }
 

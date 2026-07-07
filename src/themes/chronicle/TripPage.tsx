@@ -100,15 +100,27 @@ function TripContent({ tripId, location }: { tripId: string; location: LocationR
   const tips = dailyForecast ? packingTips(dailyForecast) : []
 
   // Only Places-sourced entries carry real per-item coordinates today —
-  // Tripadvisor entries without lat/lng are left off the map.
-  const markers = (location?.thingsToDo ?? [])
-    .filter((item) => item.lat != null && item.lng != null)
-    .map((item) => ({ lat: item.lat as number, lng: item.lng as number, label: item.name, category: item.category }))
+  // Tripadvisor entries without lat/lng are left off the map. Memoized so
+  // MapView's effect (keyed on this array's identity) doesn't tear down and
+  // recreate the whole Leaflet map on every unrelated re-render (e.g. the
+  // daily forecast landing) — recreating the map mid fitBounds animation
+  // throws inside Leaflet's zoom-transition handler.
+  const markers = useMemo(
+    () =>
+      (location?.thingsToDo ?? [])
+        .filter((item) => item.lat != null && item.lng != null)
+        .map((item) => ({ lat: item.lat as number, lng: item.lng as number, label: item.name, category: item.category })),
+    [location?.thingsToDo],
+  )
 
   const dayCount = tripLengthDays && tripLengthDays > 1 ? tripLengthDays : 1
-  const route = itinerary
-    .filter((item) => (item.day ?? 1) === selectedDay && item.lat != null && item.lng != null)
-    .map((item) => ({ lat: item.lat as number, lng: item.lng as number }))
+  const route = useMemo(
+    () =>
+      itinerary
+        .filter((item) => (item.day ?? 1) === selectedDay && item.lat != null && item.lng != null)
+        .map((item) => ({ lat: item.lat as number, lng: item.lng as number })),
+    [itinerary, selectedDay],
+  )
 
   return (
     <div className="chronicle-book">
