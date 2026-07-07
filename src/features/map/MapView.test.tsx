@@ -24,6 +24,7 @@ vi.mock('leaflet', () => {
       tileLayer: vi.fn(() => ({ addTo: vi.fn() })),
       divIcon: vi.fn(() => ({ __mockDivIcon: true })),
       marker: vi.fn(() => ({ addTo: vi.fn().mockReturnThis(), bindPopup: vi.fn().mockReturnThis() })),
+      polyline: vi.fn(() => ({ addTo: vi.fn().mockReturnThis() })),
     },
   }
 })
@@ -133,5 +134,35 @@ describe('MapView', () => {
     const leafletMocked = vi.mocked(L)
     const mapInstance = leafletMocked.map.mock.results[0].value
     expect(mapInstance.fitBounds).not.toHaveBeenCalled()
+  })
+
+  it('draws a dashed route line connecting stops in visit order', () => {
+    render(
+      <MapView
+        lat={35.68}
+        lng={139.76}
+        label="Tokyo, Japan"
+        route={[
+          { lat: 35.66, lng: 139.7 },
+          { lat: 35.7, lng: 139.77 },
+          { lat: 35.72, lng: 139.8 },
+        ]}
+      />,
+    )
+    const leafletMocked = vi.mocked(L)
+    expect(leafletMocked.polyline).toHaveBeenCalledWith(
+      [
+        [35.66, 139.7],
+        [35.7, 139.77],
+        [35.72, 139.8],
+      ],
+      expect.objectContaining({ dashArray: expect.any(String) }),
+    )
+  })
+
+  it('does not draw a route line for a single stop or no route', () => {
+    render(<MapView lat={35.68} lng={139.76} label="Tokyo, Japan" route={[{ lat: 35.66, lng: 139.7 }]} />)
+    const leafletMocked = vi.mocked(L)
+    expect(leafletMocked.polyline).not.toHaveBeenCalled()
   })
 })

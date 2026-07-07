@@ -884,6 +884,73 @@ body.theme-liquid-glass {
   }
 }
 
+/* ---------- Trip length + day organization ---------- */
+.lg-itinerary-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--lg-space-md);
+  margin-bottom: var(--lg-space-md);
+}
+
+.lg-itinerary-header .lg-section-heading {
+  margin: 0;
+}
+
+.lg-trip-length-control {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lg-space-xs);
+}
+
+.lg-select {
+  min-height: 44px;
+  padding: 0 var(--lg-space-md);
+  border-radius: var(--lg-radius-sm);
+  border: 1px solid var(--lg-glass-border);
+  background: rgba(255, 255, 255, 0.6);
+  font-family: var(--lg-font-ui);
+  font-size: 15px;
+  color: var(--lg-text-primary);
+}
+
+.lg-day-group {
+  margin-bottom: var(--lg-space-md);
+}
+
+.lg-day-heading {
+  font-family: var(--lg-font-ui);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--lg-primary-blue);
+  margin: 0 0 var(--lg-space-sm);
+}
+
+.lg-day-tabs {
+  display: flex;
+  gap: var(--lg-space-xs);
+  padding: var(--lg-space-sm) var(--lg-space-sm) 0;
+}
+
+.lg-day-tab {
+  padding: 0 var(--lg-space-md);
+  border-radius: var(--lg-radius-pill);
+  border: 1px solid var(--lg-glass-border);
+  background: rgba(255, 255, 255, 0.5);
+  font-family: var(--lg-font-ui);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--lg-text-secondary);
+  cursor: pointer;
+}
+
+.lg-day-tab--active {
+  background: var(--lg-primary-blue);
+  border-color: var(--lg-primary-blue);
+  color: var(--lg-text-on-accent);
+}
+
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   .lg-nav-link,

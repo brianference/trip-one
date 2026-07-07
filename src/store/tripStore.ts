@@ -8,11 +8,15 @@ interface TripState {
   locationSlug: string | null
   itinerary: ItineraryItem[]
   designStyle: DesignStyle
+  /** Total number of days the traveler plans for this trip, or null if not set yet. */
+  tripLengthDays: number | null
   setTrip: (tripId: string, locationSlug: string, itinerary: ItineraryItem[], designStyle: DesignStyle) => void
   addItem: (item: ItineraryItem) => void
   removeItem: (index: number) => void
   reorderItems: (fromIndex: number, toIndex: number) => void
   setDesignStyle: (style: DesignStyle) => void
+  setTripLengthDays: (days: number | null) => void
+  setItinerary: (itinerary: ItineraryItem[]) => void
 }
 
 export const useTripStore = create<TripState>((set) => ({
@@ -20,6 +24,7 @@ export const useTripStore = create<TripState>((set) => ({
   locationSlug: null,
   itinerary: [],
   designStyle: 'liquid-glass',
+  tripLengthDays: null,
   setTrip: (tripId, locationSlug, itinerary, designStyle) => set({ tripId, locationSlug, itinerary, designStyle }),
   addItem: (item) => set((s) => ({ itinerary: [...s.itinerary, item] })),
   removeItem: (index) => set((s) => ({ itinerary: s.itinerary.filter((_, i) => i !== index) })),
@@ -31,4 +36,6 @@ export const useTripStore = create<TripState>((set) => ({
       return { itinerary: next }
     }),
   setDesignStyle: (style) => set({ designStyle: style }),
+  setTripLengthDays: (days) => set({ tripLengthDays: days }),
+  setItinerary: (itinerary) => set({ itinerary }),
 }))

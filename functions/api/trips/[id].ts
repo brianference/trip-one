@@ -7,6 +7,7 @@ import { z } from 'zod'
 const patchSchema = z.object({
   itinerary: z.array(itineraryItemSchema).optional(),
   design_style: z.enum(['bento', 'chronicle', 'field-guide', 'liquid-glass', 'trail-ledger']).optional(),
+  trip_length_days: z.number().int().min(1).max(60).nullable().optional(),
 }).strict()
 
 function json(body: unknown, status: number) {
@@ -34,7 +35,7 @@ export async function onRequestGet({ env, params }: { env: Env; params: { id: st
 /**
  * PATCH /api/trips/:id
  *
- * Updates a trip's itinerary and/or design_style.
+ * Updates a trip's itinerary, design_style, and/or trip_length_days.
  * @param context - Request context with `env` (bindings/secrets), `request`, and `params` containing the trip ID
  * @returns JSON response: updated trip row on success (200), or `{ error }` with 400 (validation) or 500 (internal error)
  */

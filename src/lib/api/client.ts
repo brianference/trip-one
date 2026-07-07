@@ -39,6 +39,8 @@ export interface Trip {
   locationSlug: string
   itinerary: ItineraryItem[]
   designStyle: DesignStyle
+  /** Total number of days the traveler plans for this trip, or null/absent if not set yet. */
+  tripLengthDays?: number | null
 }
 
 function fromRow(row: {
@@ -46,8 +48,15 @@ function fromRow(row: {
   location_slug: string
   itinerary: ItineraryItem[]
   design_style: DesignStyle
+  trip_length_days?: number | null
 }): Trip {
-  return { id: row.id, locationSlug: row.location_slug, itinerary: row.itinerary, designStyle: row.design_style }
+  return {
+    id: row.id,
+    locationSlug: row.location_slug,
+    itinerary: row.itinerary,
+    designStyle: row.design_style,
+    tripLengthDays: row.trip_length_days ?? null,
+  }
 }
 
 export async function fetchLocation(query: string): Promise<LocationResult> {
@@ -102,7 +111,7 @@ export async function getTrip(id: string): Promise<Trip> {
 
 export async function updateTrip(
   id: string,
-  patch: Partial<{ itinerary: ItineraryItem[]; designStyle: DesignStyle }>,
+  patch: Partial<{ itinerary: ItineraryItem[]; designStyle: DesignStyle; tripLengthDays: number | null }>,
 ): Promise<Trip> {
   const res = await fetch(`/api/trips/${id}`, {
     method: 'PATCH',
@@ -110,6 +119,7 @@ export async function updateTrip(
     body: JSON.stringify({
       ...(patch.itinerary ? { itinerary: patch.itinerary } : {}),
       ...(patch.designStyle ? { design_style: patch.designStyle } : {}),
+      ...(patch.tripLengthDays !== undefined ? { trip_length_days: patch.tripLengthDays } : {}),
     }),
   })
   const body = await res.json()

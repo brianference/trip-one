@@ -27,6 +27,12 @@ interface Props {
    * shape rather than a tight, arbitrary crop around its center point.
    */
   boundingBox?: [number, number, number, number]
+  /**
+   * An ordered sequence of real stops (e.g. one day's itinerary items that
+   * have coordinates) to connect with a dashed route line, in visit order.
+   * Purely additive — omitting this prop draws no route.
+   */
+  route?: { lat: number; lng: number }[]
 }
 
 // Below this size (in degrees), a bounding box is treated as effectively a
@@ -84,7 +90,7 @@ function buildPopupEl(text: string): HTMLDivElement {
   return popupEl
 }
 
-export function MapView({ lat, lng, label, markers, boundingBox }: Props) {
+export function MapView({ lat, lng, label, markers, boundingBox, route }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -110,6 +116,13 @@ export function MapView({ lat, lng, label, markers, boundingBox }: Props) {
         .bindPopup(buildPopupEl(`${marker.label} (${marker.category})`))
     }
 
+    if (route && route.length > 1) {
+      L.polyline(
+        route.map((stop) => [stop.lat, stop.lng]),
+        { color: '#5ba3ff', weight: 3, dashArray: '8, 10', opacity: 0.85 },
+      ).addTo(map)
+    }
+
     if (boundingBox) {
       const [south, north, west, east] = boundingBox
       if (north - south > MIN_BOUNDS_SPAN_DEGREES || east - west > MIN_BOUNDS_SPAN_DEGREES) {
@@ -123,7 +136,7 @@ export function MapView({ lat, lng, label, markers, boundingBox }: Props) {
     return () => {
       map.remove()
     }
-  }, [lat, lng, label, markers, boundingBox])
+  }, [lat, lng, label, markers, boundingBox, route])
 
   return <div ref={containerRef} aria-label={`Map of ${label}`} style={{ height: '300px', width: '100%' }} />
 }

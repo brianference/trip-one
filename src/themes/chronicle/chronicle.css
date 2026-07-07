@@ -268,7 +268,7 @@
 
 .chronicle-stop-form {
   display: grid;
-  grid-template-columns: 1fr 2fr auto;
+  grid-template-columns: 1fr 2fr 2fr auto;
   gap: var(--chronicle-space-sm);
   align-items: end;
   background: var(--chronicle-bg-surface);
@@ -517,6 +517,84 @@ body:has(.chronicle-page) label {
   display: flex;
   flex-direction: column;
   gap: var(--chronicle-space-lg);
+}
+
+.chronicle-itinerary-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--chronicle-space-md);
+  margin-bottom: var(--chronicle-space-md);
+}
+
+.chronicle-itinerary-header .chronicle-timeline-heading {
+  margin: 0;
+}
+
+.chronicle-trip-length-control {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-xs);
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--chronicle-text-tertiary);
+}
+
+.chronicle-trip-length-control select {
+  height: 44px;
+  padding: 0 var(--chronicle-space-sm);
+  border: 1px solid var(--chronicle-border-hairline);
+  border-radius: var(--chronicle-radius-sm);
+  background: var(--chronicle-bg-surface-2);
+  color: var(--chronicle-text-primary);
+  font-family: var(--chronicle-font-body);
+  font-size: 15px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.chronicle-day-group {
+  margin-bottom: var(--chronicle-space-lg);
+}
+
+.chronicle-day-heading {
+  font-family: var(--chronicle-font-display);
+  font-weight: 700;
+  font-style: italic;
+  font-size: 20px;
+  color: var(--chronicle-teal);
+  margin: 0 0 var(--chronicle-space-sm);
+}
+
+.chronicle-day-tabs {
+  display: flex;
+  gap: var(--chronicle-space-xs);
+  margin-bottom: var(--chronicle-space-sm);
+}
+
+.chronicle-day-tab {
+  min-height: 44px;
+  padding: 0 var(--chronicle-space-md);
+  border-radius: var(--chronicle-radius-sm);
+  border: 1px solid var(--chronicle-border-hairline);
+  background: var(--chronicle-bg-surface-2);
+  font-family: var(--chronicle-font-mono);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--chronicle-text-secondary);
+  cursor: pointer;
+}
+
+.chronicle-day-tab--active {
+  background: var(--chronicle-teal);
+  border-color: var(--chronicle-teal);
+  color: var(--chronicle-bg-canvas);
 }
 
 /* ---------- Reduced motion ---------- */

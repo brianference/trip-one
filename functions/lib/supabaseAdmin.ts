@@ -20,6 +20,7 @@ export interface TripRow {
   itinerary: unknown[]
   design_style: string
   created_at: string
+  trip_length_days?: number | null
 }
 
 function headers(env: Env, extra: Record<string, string> = {}) {
@@ -111,7 +112,7 @@ export async function getTrip(env: Env, id: string): Promise<TripRow | null> {
 export async function updateTrip(
   env: Env,
   id: string,
-  patch: Partial<Pick<TripRow, 'itinerary' | 'design_style'>>,
+  patch: Partial<Pick<TripRow, 'itinerary' | 'design_style' | 'trip_length_days'>>,
 ): Promise<TripRow> {
   const res = await fetch(`${env.SUPABASE_URL}/rest/v1/trips?id=eq.${id}`, {
     method: 'PATCH',
