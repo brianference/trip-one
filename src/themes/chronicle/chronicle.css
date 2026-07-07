@@ -111,6 +111,17 @@
   text-align: center;
 }
 
+/* Shared 44px minimum touch-target utility, mirroring Liquid Glass's
+   .lg-tap-target so both themes enforce the same mobile accessibility floor
+   with the same class-naming convention. */
+.chronicle-tap-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .chronicle-kicker {
   display: block;
   font-family: var(--chronicle-font-mono);
@@ -595,6 +606,127 @@ body:has(.chronicle-page) label {
   background: var(--chronicle-teal);
   border-color: var(--chronicle-teal);
   color: var(--chronicle-bg-canvas);
+}
+
+/* ---------- Map legend ---------- */
+.chronicle-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--chronicle-space-sm) var(--chronicle-space-md);
+  list-style: none;
+  margin: 0;
+  padding: var(--chronicle-space-sm) var(--chronicle-space-sm) 0;
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--chronicle-text-tertiary);
+}
+
+.chronicle-map-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chronicle-map-legend li span[aria-hidden] {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+
+/* ---------- Itinerary badges + directions ---------- */
+.chronicle-badge {
+  font-family: var(--chronicle-font-mono);
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  flex: none;
+}
+
+.chronicle-badge--booked {
+  background: rgba(232, 184, 74, 0.18);
+  color: var(--chronicle-gold);
+}
+
+.chronicle-badge--transit {
+  background: rgba(15, 26, 43, 0.06);
+  color: var(--chronicle-text-tertiary);
+}
+
+.chronicle-badge--optional {
+  background: rgba(47, 163, 150, 0.16);
+  color: var(--chronicle-teal);
+}
+
+.chronicle-badge--dinner {
+  background: rgba(176, 73, 42, 0.16);
+  color: #b0492a;
+}
+
+.chronicle-directions-link {
+  font-family: var(--chronicle-font-mono);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--chronicle-teal);
+  text-decoration: none;
+  flex: none;
+}
+
+.chronicle-directions-link:hover,
+.chronicle-directions-link:focus-visible {
+  text-decoration: underline;
+}
+
+/* ---------- Sticky section nav ---------- */
+.chronicle-section-nav {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: var(--chronicle-space-sm);
+  margin: 0 auto var(--chronicle-space-lg);
+  max-width: 680px;
+  background: var(--chronicle-bg-surface);
+  border: 1px solid var(--chronicle-border-hairline);
+  border-radius: var(--chronicle-radius-md);
+  box-shadow: var(--chronicle-shadow-card);
+}
+
+.chronicle-section-nav-item {
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px var(--chronicle-space-sm);
+  border: none;
+  border-radius: var(--chronicle-radius-md);
+  background: none;
+  font-family: var(--chronicle-font-mono);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--chronicle-text-tertiary);
+  cursor: pointer;
+}
+
+.chronicle-section-nav-item svg {
+  width: 20px;
+  height: 20px;
+}
+
+.chronicle-section-nav-item--active {
+  background: rgba(47, 163, 150, 0.14);
+  color: var(--chronicle-teal);
 }
 
 /* ---------- Reduced motion ---------- */

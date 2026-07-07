@@ -951,6 +951,124 @@ body.theme-liquid-glass {
   color: var(--lg-text-on-accent);
 }
 
+/* ---------- Map legend ---------- */
+.lg-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lg-space-sm) var(--lg-space-md);
+  list-style: none;
+  margin: 0;
+  padding: var(--lg-space-sm) var(--lg-space-sm) 0;
+  font-family: var(--lg-font-ui);
+  font-size: 12px;
+  color: var(--lg-text-secondary);
+}
+
+.lg-map-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lg-map-legend li span[aria-hidden] {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+
+/* ---------- Itinerary badges + directions ---------- */
+.lg-badge {
+  font-family: var(--lg-font-ui);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: var(--lg-radius-pill);
+  flex: none;
+}
+
+.lg-badge--booked {
+  background: rgba(255, 149, 0, 0.16);
+  color: #b46200;
+}
+
+.lg-badge--transit {
+  background: rgba(15, 26, 43, 0.08);
+  color: var(--lg-text-secondary);
+}
+
+.lg-badge--optional {
+  background: rgba(10, 132, 255, 0.14);
+  color: var(--lg-primary-blue);
+}
+
+.lg-badge--dinner {
+  background: rgba(255, 59, 48, 0.14);
+  color: var(--lg-danger);
+}
+
+.lg-directions-link {
+  font-family: var(--lg-font-ui);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--lg-primary-blue);
+  text-decoration: none;
+  flex: none;
+  padding: 0 var(--lg-space-sm);
+}
+
+.lg-directions-link:hover,
+.lg-directions-link:focus-visible {
+  text-decoration: underline;
+}
+
+/* ---------- Sticky section nav ---------- */
+.lg-section-nav {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  justify-content: center;
+  gap: var(--lg-space-xs);
+  padding: var(--lg-space-sm);
+  margin: 0 auto var(--lg-space-md);
+  max-width: 640px;
+  backdrop-filter: blur(var(--lg-glass-blur)) saturate(var(--lg-glass-saturation));
+  -webkit-backdrop-filter: blur(var(--lg-glass-blur)) saturate(var(--lg-glass-saturation));
+  background: var(--lg-glass-bg);
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-lg);
+  box-shadow: var(--lg-shadow-card);
+}
+
+.lg-section-nav-item {
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px var(--lg-space-sm);
+  border: none;
+  border-radius: var(--lg-radius-sm);
+  background: none;
+  font-family: var(--lg-font-ui);
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--lg-text-secondary);
+  cursor: pointer;
+}
+
+.lg-section-nav-item svg {
+  width: 20px;
+  height: 20px;
+}
+
+.lg-section-nav-item--active {
+  background: rgba(10, 132, 255, 0.14);
+  color: var(--lg-primary-blue);
+}
+
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   .lg-nav-link,

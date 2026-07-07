@@ -11,10 +11,13 @@ import type { ItineraryItem } from '../../lib/validation/schemas'
 import { useForecast } from '../../features/weather/useForecast'
 import { useTripStore } from '../../store/tripStore'
 import { organizeItinerary } from '../../lib/itinerary/organizeItinerary'
+import { badgeFor, directionsUrl } from '../../lib/itinerary/badges'
 import { currencyForDisplayName } from '../../features/localinfo/currencyByCountry'
 import { useCurrencyRate } from '../../features/localinfo/useCurrencyRate'
 import { MapView } from '../../features/map/MapView'
+import { MapLegend } from '../../features/map/MapLegend'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
+import { SectionNav } from '../../components/SectionNav'
 import { logger } from '../../lib/logger'
 
 const DOT_COLOR: Record<string, string> = { fixed: '#a5d088', travel: '#ffd700', option: '#5ba3ff' }
@@ -98,7 +101,8 @@ function TripContent({ tripId, location }: { tripId: string; location: LocationR
 
   return (
     <div className="chronicle-book">
-      <article className="chronicle-chapter">
+      <SectionNav classPrefix="chronicle" />
+      <article id="trip-overview" className="chronicle-chapter">
         <span className="chronicle-kicker">Chapter one</span>
         <h1>Arrival: {displayName}</h1>
         {forecast && (
@@ -132,6 +136,7 @@ function TripContent({ tripId, location }: { tripId: string; location: LocationR
               boundingBox={location.boundingBox}
               route={route}
             />
+            {markers.length > 0 && <MapLegend className="chronicle-map-legend" />}
           </div>
         )}
       </article>
@@ -224,7 +229,7 @@ function ItineraryChapter({ tripId }: { tripId: string }) {
   }, [itinerary])
 
   return (
-    <article className="chronicle-chapter">
+    <article id="trip-itinerary" className="chronicle-chapter">
       <span className="chronicle-kicker">Chapter two</span>
       <div className="chronicle-itinerary-header">
         <h1 className="chronicle-timeline-heading">The itinerary</h1>
@@ -272,21 +277,34 @@ function ItineraryChapter({ tripId }: { tripId: string }) {
           <div key={day} className="chronicle-day-group">
             {dayGroups.length > 1 && <h2 className="chronicle-day-heading">Day {day}</h2>}
             <ol>
-              {entries.map(({ item, index }) => (
-                <li key={`${item.time}-${item.text}-${index}`} className="chronicle-entry">
-                  <span data-testid={`timeline-dot-${item.type}`} style={{ background: DOT_COLOR[item.type] }} />
-                  <span className="chronicle-entry-time">{item.time}</span>
-                  <span className="chronicle-entry-text">{item.text}</span>
-                  <button
-                    type="button"
-                    className="chronicle-entry-remove"
-                    onClick={() => handleRemove(index)}
-                    aria-label={`Remove ${item.text}`}
-                  >
-                    ×
-                  </button>
-                </li>
-              ))}
+              {entries.map(({ item, index }) => {
+                const badge = badgeFor(item)
+                return (
+                  <li key={`${item.time}-${item.text}-${index}`} className="chronicle-entry">
+                    <span data-testid={`timeline-dot-${item.type}`} style={{ background: DOT_COLOR[item.type] }} />
+                    <span className="chronicle-entry-time">{item.time}</span>
+                    <span className={`chronicle-badge chronicle-badge--${badge.tone}`}>{badge.label}</span>
+                    <span className="chronicle-entry-text">{item.text}</span>
+                    <a
+                      className="chronicle-directions-link"
+                      href={directionsUrl(item.q ?? item.text)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={`Directions to ${item.text}`}
+                    >
+                      Directions
+                    </a>
+                    <button
+                      type="button"
+                      className="chronicle-entry-remove"
+                      onClick={() => handleRemove(index)}
+                      aria-label={`Remove ${item.text}`}
+                    >
+                      ×
+                    </button>
+                  </li>
+                )
+              })}
             </ol>
           </div>
         ))
@@ -310,7 +328,7 @@ function ThingsToDoChapter({ tripId, thingsToDo }: { tripId: string; thingsToDo:
   }
 
   return (
-    <article className="chronicle-chapter">
+    <article id="trip-things-to-do" className="chronicle-chapter">
       <span className="chronicle-kicker">Chapter three</span>
       <h1>Things to do nearby</h1>
       <ol className="chronicle-suggestions">
@@ -318,6 +336,15 @@ function ThingsToDoChapter({ tripId, thingsToDo }: { tripId: string; thingsToDo:
           <li key={item.name}>
             <span className="chronicle-suggestion-category">{item.category}</span>
             <span className="chronicle-suggestion-name">{item.name}</span>
+            <a
+              className="chronicle-directions-link"
+              href={directionsUrl(item.name)}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={`Directions to ${item.name}`}
+            >
+              Directions
+            </a>
             <button type="button" className="chronicle-suggestion-add" onClick={() => handleAdd(item)}>
               Add to timeline
             </button>
@@ -335,7 +362,7 @@ function LocalInfoChapter({ displayName }: { displayName: string }) {
   const translateUrl = 'https://translate.google.com/?sl=en&tl=auto&op=translate'
 
   return (
-    <article className="chronicle-chapter">
+    <article id="trip-local-info" className="chronicle-chapter">
       <span className="chronicle-kicker">Field notes</span>
       <h1>Local info</h1>
       {!loading && rate !== null && (

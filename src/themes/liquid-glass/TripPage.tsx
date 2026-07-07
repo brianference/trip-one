@@ -11,10 +11,13 @@ import type { ItineraryItem } from '../../lib/validation/schemas'
 import { useForecast } from '../../features/weather/useForecast'
 import { useTripStore } from '../../store/tripStore'
 import { organizeItinerary } from '../../lib/itinerary/organizeItinerary'
+import { badgeFor, directionsUrl } from '../../lib/itinerary/badges'
 import { currencyForDisplayName } from '../../features/localinfo/currencyByCountry'
 import { useCurrencyRate } from '../../features/localinfo/useCurrencyRate'
 import { MapView } from '../../features/map/MapView'
+import { MapLegend } from '../../features/map/MapLegend'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
+import { SectionNav } from '../../components/SectionNav'
 import { logger } from '../../lib/logger'
 
 /**
@@ -98,7 +101,8 @@ function TripContent({ tripId, trip, location }: { tripId: string; trip: Trip; l
 
   return (
     <div className="lg-trip-page">
-      <header className="lg-glass-card lg-trip-header">
+      <SectionNav classPrefix="lg" />
+      <header id="trip-overview" className="lg-glass-card lg-trip-header">
         <h1 className="lg-title">{displayName}</h1>
         {forecast && (
           <p className="lg-weather-row">
@@ -134,6 +138,7 @@ function TripContent({ tripId, trip, location }: { tripId: string; trip: Trip; l
             boundingBox={location.boundingBox}
             route={route}
           />
+          {markers.length > 0 && <MapLegend className="lg-map-legend" />}
         </section>
       )}
 
@@ -228,7 +233,7 @@ function ItinerarySection({ tripId }: { tripId: string }) {
   }, [itinerary])
 
   return (
-    <section className="lg-glass-card lg-trip-section" aria-labelledby="lg-itinerary-heading">
+    <section id="trip-itinerary" className="lg-glass-card lg-trip-section" aria-labelledby="lg-itinerary-heading">
       <div className="lg-itinerary-header">
         <h2 id="lg-itinerary-heading" className="lg-section-heading">
           Your itinerary
@@ -295,20 +300,33 @@ function ItinerarySection({ tripId }: { tripId: string }) {
           <div key={day} className="lg-day-group">
             {dayGroups.length > 1 && <h3 className="lg-day-heading">Day {day}</h3>}
             <ul className="lg-timeline">
-              {entries.map(({ item, index }) => (
-                <li key={`${item.time}-${item.text}-${index}`} className="lg-timeline-item">
-                  <span className="lg-timeline-time">{item.time}</span>
-                  <span className="lg-timeline-text">{item.text}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemove(index)}
-                    aria-label={`Remove ${item.text}`}
-                    className="lg-tap-target lg-remove-btn"
-                  >
-                    ×
-                  </button>
-                </li>
-              ))}
+              {entries.map(({ item, index }) => {
+                const badge = badgeFor(item)
+                return (
+                  <li key={`${item.time}-${item.text}-${index}`} className="lg-timeline-item">
+                    <span className="lg-timeline-time">{item.time}</span>
+                    <span className={`lg-badge lg-badge--${badge.tone}`}>{badge.label}</span>
+                    <span className="lg-timeline-text">{item.text}</span>
+                    <a
+                      className="lg-tap-target lg-directions-link"
+                      href={directionsUrl(item.q ?? item.text)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={`Directions to ${item.text}`}
+                    >
+                      Directions
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(index)}
+                      aria-label={`Remove ${item.text}`}
+                      className="lg-tap-target lg-remove-btn"
+                    >
+                      ×
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
           </div>
         ))
@@ -332,7 +350,7 @@ function ThingsToDoSection({ tripId, thingsToDo }: { tripId: string; thingsToDo:
   }
 
   return (
-    <section className="lg-trip-section lg-things-section" aria-labelledby="lg-things-heading">
+    <section id="trip-things-to-do" className="lg-trip-section lg-things-section" aria-labelledby="lg-things-heading">
       <h2 id="lg-things-heading" className="lg-section-heading">
         Things to do nearby
       </h2>
@@ -341,6 +359,15 @@ function ThingsToDoSection({ tripId, thingsToDo }: { tripId: string; thingsToDo:
           <li key={item.name} className="lg-glass-card lg-thing-card">
             <span className="lg-thing-name">{item.name}</span>
             <span className="lg-thing-badge">({item.category})</span>
+            <a
+              className="lg-tap-target lg-directions-link"
+              href={directionsUrl(item.name)}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={`Directions to ${item.name}`}
+            >
+              Directions
+            </a>
             <button
               type="button"
               className="lg-tap-target lg-btn lg-btn-secondary lg-thing-add"
@@ -362,7 +389,7 @@ function LocalInfoSection({ displayName }: { displayName: string }) {
   const translateUrl = 'https://translate.google.com/?sl=en&tl=auto&op=translate'
 
   return (
-    <section className="lg-glass-card lg-trip-section" aria-labelledby="lg-local-info-heading">
+    <section id="trip-local-info" className="lg-glass-card lg-trip-section" aria-labelledby="lg-local-info-heading">
       <h2 id="lg-local-info-heading" className="lg-section-heading">
         Local info
       </h2>

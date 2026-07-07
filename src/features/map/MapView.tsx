@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { CATEGORY_COLORS, DEFAULT_MARKER_COLOR } from './categoryLegend'
 
 export interface MapMarker {
   lat: number
@@ -39,24 +40,6 @@ interface Props {
 // point (e.g. a single address) and the fixed default zoom is used instead —
 // fitBounds on a near-zero-size box zooms in far too tight to be useful.
 const MIN_BOUNDS_SPAN_DEGREES = 0.05
-
-// A small, fixed palette for common things-to-do categories. Anything not
-// listed here (there's no bounded category vocabulary upstream) falls back
-// to DEFAULT_MARKER_COLOR, which also matches the original single-marker red.
-const CATEGORY_COLORS: Record<string, string> = {
-  attraction: '#e2492f',
-  tourist_attraction: '#5ba3ff',
-  point_of_interest: '#5ba3ff',
-  museum: '#a5d088',
-  park: '#3fae57',
-  restaurant: '#ff8c00',
-  food: '#ff8c00',
-  cafe: '#ff8c00',
-  lodging: '#b28dff',
-  shopping_mall: '#e2b23f',
-  store: '#e2b23f',
-}
-const DEFAULT_MARKER_COLOR = '#e2492f'
 
 /**
  * Build a self-contained divIcon for a pin of the given color. Leaflet's
