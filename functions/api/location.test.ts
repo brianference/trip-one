@@ -80,6 +80,73 @@ describe('GET /api/location', () => {
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('nominatim.openstreetmap.org'))).toBe(true)
   })
 
+  it('refreshes a cached row whose places-sourced entries predate per-item coordinate capture', async () => {
+    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      if (url.includes('/rest/v1/locations') && (!init || init.method === undefined)) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => [
+            {
+              slug: 'barcelona-spain',
+              lat: 41.38,
+              lng: 2.17,
+              display_name: 'Barcelona, Spain',
+              // Real, non-empty things-to-do — but the places-sourced entry
+              // has no lat/lng, meaning it was cached before coordinate
+              // capture existed. This should still trigger a refresh.
+              things_to_do: [{ name: 'Casa Batlló', category: 'tourist_attraction', source: 'places' }],
+            },
+          ],
+        })
+      }
+      if (url.includes('/rest/v1/locations')) {
+        return Promise.resolve({ ok: true, json: async () => ({}) })
+      }
+      if (url.includes('/rest/v1/request_log')) {
+        return Promise.resolve({ ok: true, headers: new Headers({ 'content-range': '*/1' }), json: async () => [] })
+      }
+      if (url.includes('nominatim.openstreetmap.org')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => [{ lat: '41.38', lon: '2.17', display_name: 'Barcelona, Spain' }],
+        })
+      }
+      if (url.includes('tripadvisor.com')) return Promise.resolve({ ok: true, json: async () => ({ data: [] }) })
+      if (url.includes('googleapis.com')) return Promise.resolve({ ok: true, json: async () => ({ results: [] }) })
+      throw new Error(`unexpected fetch to ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const res = await onRequestGet({ env, request: req('https://x/api/location?q=Barcelona') } as never)
+    expect(res.status).toBe(200)
+    expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('nominatim.openstreetmap.org'))).toBe(true)
+  })
+
+  it('does not refresh a cached row whose places-sourced entries already have coordinates', async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (url.includes('/rest/v1/locations')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => [
+            {
+              slug: 'prague-czechia',
+              lat: 50.08,
+              lng: 14.44,
+              display_name: 'Prague, Czechia',
+              things_to_do: [
+                { name: 'Charles Bridge', category: 'tourist_attraction', source: 'places', lat: 50.09, lng: 14.41 },
+              ],
+            },
+          ],
+        })
+      }
+      throw new Error(`unexpected fetch to ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const res = await onRequestGet({ env, request: req('https://x/api/location?q=Prague') } as never)
+    expect(res.status).toBe(200)
+    expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('nominatim.openstreetmap.org'))).toBe(false)
+  })
+
   it('returns 429 when the rate limit is exceeded on a cache miss', async () => {
     vi.stubGlobal('fetch', (url: string) => {
       if (url.includes('/rest/v1/locations')) return Promise.resolve({ ok: true, json: async () => [] })

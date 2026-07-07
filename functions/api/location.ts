@@ -51,9 +51,19 @@ export async function onRequestGet({
     // refreshed below, rather than trusted forever: it's almost always a
     // location cached before the Tripadvisor/Places integration existed (or
     // one whose search legitimately failed at the time), not a real place
-    // with nothing nearby.
-    const cachedThingsToDo = Array.isArray(cached?.things_to_do) ? cached.things_to_do : []
-    if (cached && cachedThingsToDo.length > 0) {
+    // with nothing nearby. Likewise, a row whose Places-sourced entries have
+    // no lat/lng predates the per-item-coordinate capture added later in the
+    // same integration — those never self-heal on their own since they do
+    // have real, non-empty things-to-do, just missing a field added after
+    // they were cached — so a places-sourced item lacking lat/lng also
+    // triggers a refresh.
+    const cachedThingsToDo = Array.isArray(cached?.things_to_do)
+      ? (cached.things_to_do as Array<{ source?: string; lat?: number }>)
+      : []
+    const placesEntriesLackCoordinates =
+      cachedThingsToDo.some((item) => item.source === 'places') &&
+      !cachedThingsToDo.some((item) => item.source === 'places' && item.lat != null)
+    if (cached && cachedThingsToDo.length > 0 && !placesEntriesLackCoordinates) {
       // The dedicated weather_baseline column has never stored weather data
       // (see supabaseAdmin.ts) — it's repurposed here to carry the geocoded
       // bounding box so a fresh Nominatim call isn't needed just to zoom the
