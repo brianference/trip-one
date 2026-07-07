@@ -69,9 +69,33 @@ describe('SearchScreen', () => {
     await waitFor(() =>
       expect(updateTripSpy).toHaveBeenCalledWith('t1', {
         itinerary: [
-          { time: '', text: 'Guinness Storehouse', type: 'option', q: 'Guinness Storehouse' },
-          { time: '', text: 'Low rated pub', type: 'option', q: 'Low rated pub' },
-          { time: '', text: 'No rating cafe', type: 'option', q: 'No rating cafe' },
+          {
+            time: '',
+            text: 'Guinness Storehouse',
+            type: 'option',
+            q: 'Guinness Storehouse',
+            category: 'attraction',
+            lat: undefined,
+            lng: undefined,
+          },
+          {
+            time: '',
+            text: 'Low rated pub',
+            type: 'option',
+            q: 'Low rated pub',
+            category: 'food',
+            lat: undefined,
+            lng: undefined,
+          },
+          {
+            time: '',
+            text: 'No rating cafe',
+            type: 'option',
+            q: 'No rating cafe',
+            category: 'food',
+            lat: undefined,
+            lng: undefined,
+          },
         ],
       }),
     )

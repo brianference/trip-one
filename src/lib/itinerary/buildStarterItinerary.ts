@@ -15,5 +15,13 @@ export function buildStarterItinerary(thingsToDo: ThingToDo[]): ItineraryItem[] 
   return [...thingsToDo]
     .sort((a, b) => (b.rating ?? -Infinity) - (a.rating ?? -Infinity))
     .slice(0, STARTER_ITEM_COUNT)
-    .map((item) => ({ time: '', text: item.name, type: 'option', q: item.name }))
+    .map((item) => ({
+      time: '',
+      text: item.name,
+      type: 'option',
+      q: item.name,
+      lat: item.lat,
+      lng: item.lng,
+      category: item.category,
+    }))
 }
