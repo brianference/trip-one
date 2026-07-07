@@ -125,4 +125,28 @@ describe('Liquid Glass TripPage', () => {
     expect(screen.getByRole('tab', { name: 'Day 1' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Day 2' })).toBeInTheDocument()
   })
+
+  it('moving a stop down persists the new order without re-running smart clustering', async () => {
+    mockTripAndLocation({
+      itinerary: [
+        { time: '', text: 'Stop A', type: 'option', day: 1 },
+        { time: '', text: 'Stop B', type: 'option', day: 1 },
+      ],
+    })
+    const updateSpy = vi.spyOn(client, 'updateTrip').mockResolvedValue({
+      id: 't1',
+      locationSlug: 'lisbon-portugal',
+      itinerary: [],
+      designStyle: 'liquid-glass',
+      tripLengthDays: null,
+    })
+    render(<TripPage tripId="t1" />)
+    await waitFor(() => expect(screen.getByText('Stop A')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByRole('button', { name: /move stop a later/i }))
+
+    await waitFor(() => expect(updateSpy).toHaveBeenCalled())
+    const persisted = updateSpy.mock.calls[0][1].itinerary as Array<{ text: string }>
+    expect(persisted.map((i) => i.text)).toEqual(['Stop B', 'Stop A'])
+  })
 })

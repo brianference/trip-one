@@ -11,6 +11,7 @@ import type { ItineraryItem } from '../../lib/validation/schemas'
 import { useForecast } from '../../features/weather/useForecast'
 import { useTripStore } from '../../store/tripStore'
 import { organizeItinerary } from '../../lib/itinerary/organizeItinerary'
+import { reorderItinerary } from '../../lib/itinerary/reorderItinerary'
 import { badgeFor, directionsUrl } from '../../lib/itinerary/badges'
 import { currencyForDisplayName } from '../../features/localinfo/currencyByCountry'
 import { useCurrencyRate } from '../../features/localinfo/useCurrencyRate'
@@ -202,6 +203,26 @@ function ItineraryChapter({ tripId }: { tripId: string }) {
     )
   }
 
+  /**
+   * Persists a manual reorder directly, bypassing organizeAndPersist — a
+   * manual move is a deliberate override of the smart day/meal ordering, so
+   * re-running that algorithm here would immediately undo what the user
+   * just did.
+   */
+  function persistReorder(fromIndex: number, toIndex: number, targetDay: number) {
+    const reordered = reorderItinerary(itinerary, fromIndex, toIndex, targetDay)
+    useTripStore.getState().setItinerary(reordered)
+    updateTrip(tripId, { itinerary: reordered }).catch((err) => {
+      logger.error('failed to persist manual reorder', err)
+    })
+  }
+
+  function handleMove(entries: { item: ItineraryItem; index: number }[], entryPos: number, direction: -1 | 1) {
+    const targetPos = entryPos + direction
+    if (targetPos < 0 || targetPos >= entries.length) return
+    persistReorder(entries[entryPos].index, entries[targetPos].index, entries[entryPos].item.day ?? 1)
+  }
+
   async function handleTripLengthChange(newLength: number | null) {
     // Changing the trip length re-clusters everything from scratch (day
     // assignments are stripped first) rather than only fitting new stops
@@ -277,7 +298,7 @@ function ItineraryChapter({ tripId }: { tripId: string }) {
           <div key={day} className="chronicle-day-group">
             {dayGroups.length > 1 && <h2 className="chronicle-day-heading">Day {day}</h2>}
             <ol>
-              {entries.map(({ item, index }) => {
+              {entries.map(({ item, index }, entryPos) => {
                 const badge = badgeFor(item)
                 return (
                   <li key={`${item.time}-${item.text}-${index}`} className="chronicle-entry">
@@ -294,6 +315,26 @@ function ItineraryChapter({ tripId }: { tripId: string }) {
                     >
                       Directions
                     </a>
+                    <div className="chronicle-move-btns">
+                      <button
+                        type="button"
+                        onClick={() => handleMove(entries, entryPos, -1)}
+                        disabled={entryPos === 0}
+                        aria-label={`Move ${item.text} earlier`}
+                        className="chronicle-move-btn"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMove(entries, entryPos, 1)}
+                        disabled={entryPos === entries.length - 1}
+                        aria-label={`Move ${item.text} later`}
+                        className="chronicle-move-btn"
+                      >
+                        ↓
+                      </button>
+                    </div>
                     <button
                       type="button"
                       className="chronicle-entry-remove"

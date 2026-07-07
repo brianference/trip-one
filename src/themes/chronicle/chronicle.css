@@ -411,6 +411,37 @@
   border-color: var(--chronicle-danger);
 }
 
+.chronicle-move-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: none;
+}
+
+.chronicle-move-btn {
+  flex: none;
+  min-height: 22px;
+  min-width: 44px;
+  border-radius: var(--chronicle-radius-md);
+  border: 1px solid var(--chronicle-border-hairline);
+  background: var(--chronicle-bg-surface-2);
+  color: var(--chronicle-text-tertiary);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.chronicle-move-btn:hover:not(:disabled),
+.chronicle-move-btn:focus-visible:not(:disabled) {
+  color: var(--chronicle-teal);
+  border-color: var(--chronicle-teal);
+}
+
+.chronicle-move-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 /* ---------- Things to do ---------- */
 .chronicle-suggestions {
   max-width: 680px;

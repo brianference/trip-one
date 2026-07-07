@@ -345,6 +345,37 @@ body.theme-liquid-glass {
   background: rgba(255, 59, 48, 0.18);
 }
 
+.lg-move-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: none;
+}
+
+.lg-move-btn {
+  flex: none;
+  min-height: 22px;
+  min-width: 44px;
+  border-radius: var(--lg-radius-sm);
+  border: 1px solid var(--lg-glass-border);
+  background: rgba(15, 26, 43, 0.04);
+  color: var(--lg-text-secondary);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lg-move-btn:hover:not(:disabled),
+.lg-move-btn:focus-visible:not(:disabled) {
+  background: rgba(10, 132, 255, 0.14);
+  color: var(--lg-primary-blue);
+}
+
+.lg-move-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 /* ---------- Things to do ---------- */
 .lg-things-list {
   list-style: none;
