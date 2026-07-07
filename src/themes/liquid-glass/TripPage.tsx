@@ -15,7 +15,7 @@ import { logger } from '../../lib/logger'
  * separate routes for each section.
  */
 export function TripPage({ tripId }: { tripId: string }) {
-  const [trip, setTrip] = useState<Trip | null>(null)
+  const [trip, setLocalTrip] = useState<Trip | null>(null)
   const [location, setLocation] = useState<LocationResult | null>(null)
 
   useEffect(() => {
@@ -23,7 +23,21 @@ export function TripPage({ tripId }: { tripId: string }) {
     getTrip(tripId)
       .then((loadedTrip) => {
         if (cancelled) return
-        setTrip(loadedTrip)
+        setLocalTrip(loadedTrip)
+        // Rehydrates the itinerary into the shared store on every load —
+        // without this, revisiting/reloading a trip URL directly (rather
+        // than arriving straight from the search flow that already calls
+        // setTrip) would show an empty itinerary even though stops were
+        // saved, since the store resets on every fresh page load. A partial
+        // update (not the full setTrip action) deliberately leaves
+        // designStyle alone: overwriting it here could race with an
+        // in-progress ThemeSwitcher change and revert it back to whatever
+        // was last persisted.
+        useTripStore.setState({
+          tripId: loadedTrip.id,
+          locationSlug: loadedTrip.locationSlug,
+          itinerary: loadedTrip.itinerary,
+        })
         return fetchLocation(loadedTrip.locationSlug).then((loc) => {
           if (!cancelled) setLocation(loc)
         })

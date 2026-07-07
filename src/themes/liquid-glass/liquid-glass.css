@@ -119,6 +119,11 @@ body.theme-liquid-glass {
   padding: var(--lg-space-lg);
   margin: 0 auto var(--lg-space-md);
   max-width: 640px;
+  /* As a flex item (e.g. inside .lg-trip-page), margin:auto centering alone
+     lets the box shrink to its content's min-content width instead of
+     filling up to max-width — width:100% plus the max-width cap gives the
+     same centered-block look in both flex and non-flex contexts. */
+  width: 100%;
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
