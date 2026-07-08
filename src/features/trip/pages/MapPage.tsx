@@ -10,9 +10,9 @@ export function MapPage() {
   if (!location) return <p>Loading map…</p>
 
   return (
-    <article className="chronicle-chapter">
+    <article className="chronicle-chapter chronicle-chapter--wide">
       <h1>Map</h1>
-      <TripMap location={location} itinerary={itinerary} tripLengthDays={tripLengthDays} />
+      <TripMap location={location} itinerary={itinerary} tripLengthDays={tripLengthDays} height={520} />
     </article>
   )
 }

@@ -135,13 +135,20 @@
 
 /* ---------- Chapter (Overview / Local info) ---------- */
 .chronicle-chapter {
-  max-width: 680px;
+  max-width: 760px;
   margin: 0 auto;
   background: var(--chronicle-bg-surface);
   border: 1px solid var(--chronicle-border-hairline);
   border-radius: var(--chronicle-radius-lg);
   padding: var(--chronicle-space-xl) var(--chronicle-space-lg);
   box-shadow: var(--chronicle-shadow-card);
+}
+
+/* The map benefits from real horizontal room in a way reading text doesn't --
+   this variant widens just the Map page rather than bumping every page to
+   the same width map-sized text would feel sparse at. */
+.chronicle-chapter--wide {
+  max-width: 1040px;
 }
 
 .chronicle-chapter h1 {
@@ -260,6 +267,72 @@
 .chronicle-link-list a:focus-visible {
   color: var(--chronicle-teal-hover);
   text-decoration: underline;
+}
+
+/* ---------- Phrasebook ---------- */
+.chronicle-phrasebook {
+  margin-top: var(--chronicle-space-md);
+}
+
+.chronicle-phrasebook h3 {
+  font-family: var(--chronicle-font-display);
+  font-size: 18px;
+  margin: 0 0 var(--chronicle-space-sm);
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-phrasebook dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--chronicle-space-sm) var(--chronicle-space-md);
+}
+
+.chronicle-phrase-row {
+  display: contents;
+}
+
+.chronicle-phrase-row dt {
+  font-family: var(--chronicle-font-mono);
+  font-size: 13px;
+  color: var(--chronicle-text-tertiary);
+}
+
+.chronicle-phrase-row dd {
+  margin: 0;
+  font-family: var(--chronicle-font-body);
+  font-size: 15px;
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-phrasebook-fallback-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: var(--chronicle-space-md);
+  font-family: var(--chronicle-font-body);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--chronicle-teal);
+  text-decoration: none;
+}
+
+.chronicle-phrasebook-fallback-link::before {
+  content: '→';
+  margin-right: var(--chronicle-space-sm);
+  color: var(--chronicle-gold);
+}
+
+.chronicle-phrasebook-fallback-link:hover,
+.chronicle-phrasebook-fallback-link:focus-visible {
+  color: var(--chronicle-teal-hover);
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .chronicle-phrasebook dl {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ---------- Vertical timeline (Itinerary) ---------- */

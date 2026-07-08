@@ -17,10 +17,12 @@ export function TripMap({
   location,
   itinerary,
   tripLengthDays,
+  height,
 }: {
   location: LocationResult
   itinerary: ItineraryItem[]
   tripLengthDays: number | null
+  height?: number
 }) {
   const [selectedDay, setSelectedDay] = useState(1)
   const dayCount = tripLengthDays && tripLengthDays > 1 ? tripLengthDays : 1
@@ -47,7 +49,15 @@ export function TripMap({
   return (
     <div className="chronicle-map-frame">
       <DayTabs dayCount={dayCount} selectedDay={selectedDay} onSelect={setSelectedDay} />
-      <MapView lat={location.lat} lng={location.lng} label={location.displayName} markers={markers} boundingBox={location.boundingBox} route={route} />
+      <MapView
+        lat={location.lat}
+        lng={location.lng}
+        label={location.displayName}
+        markers={markers}
+        boundingBox={location.boundingBox}
+        route={route}
+        height={height}
+      />
       {markers.length > 0 && <MapLegend className="chronicle-map-legend" />}
     </div>
   )

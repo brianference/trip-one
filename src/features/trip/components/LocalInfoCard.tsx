@@ -1,12 +1,15 @@
 import { currencyForDisplayName } from '../../localinfo/currencyByCountry'
 import { useCurrencyRate } from '../../localinfo/useCurrencyRate'
+import { languageForDisplayName } from '../../localinfo/languageByCountry'
+import { phrasesForLanguage } from '../../localinfo/phrasebook'
+import { Phrasebook } from './Phrasebook'
 
-/** Currency rate, transit directions, and phrasebook links for the destination. */
+/** Currency rate, transit directions, and a real phrasebook for the destination. */
 export function LocalInfoCard({ displayName }: { displayName: string }) {
   const targetCurrency = currencyForDisplayName(displayName)
   const { rate, loading } = useCurrencyRate(targetCurrency)
   const transitUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`public transit in ${displayName}`)}`
-  const translateUrl = 'https://translate.google.com/?sl=en&tl=auto&op=translate'
+  const phrases = phrasesForLanguage(languageForDisplayName(displayName))
 
   return (
     <>
@@ -22,12 +25,8 @@ export function LocalInfoCard({ displayName }: { displayName: string }) {
             Transit directions
           </a>
         </li>
-        <li>
-          <a href={translateUrl} target="_blank" rel="noopener noreferrer">
-            Phrasebook
-          </a>
-        </li>
       </ul>
+      <Phrasebook phrases={phrases} />
     </>
   )
 }

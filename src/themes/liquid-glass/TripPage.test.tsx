@@ -7,9 +7,10 @@ import * as forecastHook from '../../features/weather/useForecast'
 
 vi.mock('leaflet', () => {
   const createMapMock = () => {
-    const mapMock: { remove: ReturnType<typeof vi.fn>; setView: ReturnType<typeof vi.fn> } = {
+    const mapMock: { remove: ReturnType<typeof vi.fn>; setView: ReturnType<typeof vi.fn>; fitBounds: ReturnType<typeof vi.fn> } = {
       remove: vi.fn(),
       setView: vi.fn(),
+      fitBounds: vi.fn(),
     }
     mapMock.setView = vi.fn(() => mapMock)
     return mapMock

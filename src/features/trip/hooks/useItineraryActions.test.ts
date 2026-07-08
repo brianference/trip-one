@@ -134,6 +134,27 @@ describe('useItineraryActions', () => {
       await result.current.setTripLength(1)
     })
     await waitFor(() => expect(updateSpy).toHaveBeenCalled())
+  })
+
+  it('adds real nearby suggestions when growing the trip length past the current pace', async () => {
+    resetStore([{ time: '', text: 'Stop A', type: 'option' }])
+    const updateSpy = vi.spyOn(client, 'updateTrip').mockResolvedValue({
+      id: 't1',
+      locationSlug: 'lisbon-portugal',
+      itinerary: [],
+      designStyle: 'chronicle',
+    })
+    const { result } = renderHook(() => useItineraryActions('t1'))
+    await act(async () => {
+      await result.current.setTripLength(1, [
+        { name: 'Belem Tower', category: 'tourist_attraction', source: 'places', rating: 4.8 },
+        { name: 'Alfama Walk', category: 'attraction', source: 'tripadvisor', rating: 4.5 },
+      ])
+    })
+    await waitFor(() => expect(updateSpy).toHaveBeenCalled())
+    const persisted = updateSpy.mock.calls[0][1].itinerary as Array<{ text: string }>
+    expect(persisted.map((i) => i.text)).toContain('Belem Tower')
+    expect(persisted.map((i) => i.text)).toContain('Alfama Walk')
     expect(updateSpy.mock.calls[0][1].tripLengthDays).toBe(1)
   })
 })

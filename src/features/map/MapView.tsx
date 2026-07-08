@@ -34,6 +34,8 @@ interface Props {
    * Purely additive — omitting this prop draws no route.
    */
   route?: { lat: number; lng: number }[]
+  /** Map height in pixels. Defaults to 300 (a compact embedded card); the dedicated Map page uses a taller value. */
+  height?: number
 }
 
 // Below this size (in degrees), a bounding box is treated as effectively a
@@ -73,7 +75,7 @@ function buildPopupEl(text: string): HTMLDivElement {
   return popupEl
 }
 
-export function MapView({ lat, lng, label, markers, boundingBox, route }: Props) {
+export function MapView({ lat, lng, label, markers, boundingBox, route, height = 300 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -114,7 +116,18 @@ export function MapView({ lat, lng, label, markers, boundingBox, route }: Props)
       ).addTo(map)
     }
 
-    if (boundingBox) {
+    // Zoom priority: a selected day's route is the most specific, relevant
+    // thing to show zoomed in on (that's what "show me my itinerary on the
+    // map" means) — fit tightly to just those stops. Failing that, fit to
+    // every plotted marker plus the main pin so nearby things-to-do aren't
+    // scattered outside the visible frame. Only fall back to the location's
+    // whole bounding box (its real shape, e.g. a country/island) when there
+    // are no real stops yet to zoom in on.
+    if (route && route.length > 1) {
+      map.fitBounds(route.map((stop) => [stop.lat, stop.lng]))
+    } else if (markers && markers.length > 0) {
+      map.fitBounds([[lat, lng], ...markers.map((marker) => [marker.lat, marker.lng] as [number, number])])
+    } else if (boundingBox) {
       const [south, north, west, east] = boundingBox
       if (north - south > MIN_BOUNDS_SPAN_DEGREES || east - west > MIN_BOUNDS_SPAN_DEGREES) {
         map.fitBounds([
@@ -129,5 +142,5 @@ export function MapView({ lat, lng, label, markers, boundingBox, route }: Props)
     }
   }, [lat, lng, label, markers, boundingBox, route])
 
-  return <div ref={containerRef} aria-label={`Map of ${label}`} style={{ height: '300px', width: '100%' }} />
+  return <div ref={containerRef} aria-label={`Map of ${label}`} style={{ height: `${height}px`, width: '100%' }} />
 }

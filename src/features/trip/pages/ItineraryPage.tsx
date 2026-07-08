@@ -8,8 +8,12 @@ import { ItineraryDayGroup } from '../components/ItineraryDayGroup'
 const TRIP_LENGTH_OPTIONS = Array.from({ length: 14 }, (_, i) => i + 1)
 
 export function ItineraryPage() {
-  const { trip } = useTripContext()
+  const { trip, location } = useTripContext()
   const { itinerary, tripLengthDays, adding, addStop, removeStop, moveStop, setTripLength } = useItineraryActions(trip.id)
+
+  function handleTripLengthChange(newLength: number | null) {
+    setTripLength(newLength, location?.thingsToDo ?? [])
+  }
 
   const dayGroups = useMemo(() => {
     const groups = new Map<number, { item: ItineraryItem; index: number }[]>()
@@ -29,7 +33,7 @@ export function ItineraryPage() {
           <span>Trip length</span>
           <select
             value={tripLengthDays ?? ''}
-            onChange={(e) => setTripLength(e.target.value ? Number(e.target.value) : null)}
+            onChange={(e) => handleTripLengthChange(e.target.value ? Number(e.target.value) : null)}
           >
             <option value="">Not set</option>
             {TRIP_LENGTH_OPTIONS.map((n) => (

@@ -4,6 +4,7 @@ import type { ItineraryItem } from '../../../lib/validation/schemas'
 import { useTripStore } from '../../../store/tripStore'
 import { organizeItinerary } from '../../../lib/itinerary/organizeItinerary'
 import { reorderItinerary } from '../../../lib/itinerary/reorderItinerary'
+import { adjustItineraryForTripLength } from '../../../lib/itinerary/adjustItineraryForTripLength'
 import { logger } from '../../../lib/logger'
 
 /**
@@ -97,11 +98,17 @@ export function useItineraryActions(tripId: string) {
    * Changing the trip length re-clusters everything from scratch (day
    * assignments are stripped first) rather than only fitting new stops
    * around whatever the previous day count happened to place — a day count
-   * change is a deliberate re-plan, not an incremental addition.
+   * change is a deliberate re-plan, not an incremental addition. It also
+   * adjusts the stop COUNT to a reasonable pace for the new length: more
+   * days pulls in real nearby suggestions to fill them out, fewer days
+   * trims down rather than cramming everything into a shorter trip.
+   * @param newLength - The newly-selected trip length, or null to clear it
+   * @param availableThingsToDo - Real nearby suggestions to draw additions from when growing the trip
    */
-  async function setTripLength(newLength: number | null) {
+  async function setTripLength(newLength: number | null, availableThingsToDo: ThingToDo[] = []) {
     const stripped = itinerary.map((item) => ({ ...item, day: undefined }))
-    const organized = organizeItinerary(stripped, newLength)
+    const adjusted = adjustItineraryForTripLength(stripped, newLength, availableThingsToDo)
+    const organized = organizeItinerary(adjusted, newLength)
     useTripStore.getState().setItinerary(organized)
     useTripStore.getState().setTripLengthDays(newLength)
     try {

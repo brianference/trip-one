@@ -174,4 +174,49 @@ describe('MapView', () => {
     const leafletMocked = vi.mocked(L)
     expect(leafletMocked.polyline).not.toHaveBeenCalled()
   })
+
+  it('zooms to fit a selected day route in preference to the location bounding box', () => {
+    render(
+      <MapView
+        lat={35.68}
+        lng={139.76}
+        label="Tokyo, Japan"
+        boundingBox={[35.5, 35.8, 139.6, 139.9]}
+        route={[
+          { lat: 35.66, lng: 139.7 },
+          { lat: 35.7, lng: 139.77 },
+        ]}
+      />,
+    )
+    const leafletMocked = vi.mocked(L)
+    const mapInstance = leafletMocked.map.mock.results[0].value
+    expect(mapInstance.fitBounds).toHaveBeenCalledWith([
+      [35.66, 139.7],
+      [35.7, 139.77],
+    ])
+  })
+
+  it('zooms to fit all markers plus the main pin when there is no route', () => {
+    render(
+      <MapView
+        lat={35.68}
+        lng={139.76}
+        label="Tokyo, Japan"
+        markers={[{ lat: 35.6595, lng: 139.7005, label: 'Shibuya Crossing', category: 'tourist_attraction' }]}
+      />,
+    )
+    const leafletMocked = vi.mocked(L)
+    const mapInstance = leafletMocked.map.mock.results[0].value
+    expect(mapInstance.fitBounds).toHaveBeenCalledWith([
+      [35.68, 139.76],
+      [35.6595, 139.7005],
+    ])
+  })
+
+  it('accepts a custom height, defaulting to 300px', () => {
+    const { container, rerender } = render(<MapView lat={35.68} lng={139.76} label="Tokyo, Japan" />)
+    expect(container.querySelector('div[aria-label]')).toHaveStyle({ height: '300px' })
+    rerender(<MapView lat={35.68} lng={139.76} label="Tokyo, Japan" height={520} />)
+    expect(container.querySelector('div[aria-label]')).toHaveStyle({ height: '520px' })
+  })
 })
