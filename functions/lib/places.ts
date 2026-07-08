@@ -30,10 +30,19 @@ interface PlacesResult {
   geometry?: { location?: { lat?: number; lng?: number } }
 }
 
-/** Pick the most useful category from a Places result's types, favoring food types. */
-function pickCategory(types: string[]): string {
-  const food = FOOD_TYPES.find((t) => types.includes(t))
-  return food ?? types[0] ?? 'attraction'
+/**
+ * Category for a result, given which search it came from. For the restaurant
+ * search we promote any food type to the front (a real eatery often lists
+ * `bar`/`point_of_interest` before `restaurant`), defaulting to `restaurant`
+ * since that's what we asked for. For the attraction search we keep `types[0]`
+ * as-is — otherwise a hotel or museum that merely HAS a restaurant would get
+ * mislabeled as food.
+ */
+function pickCategory(types: string[], searchType: string): string {
+  if (searchType === 'restaurant') {
+    return FOOD_TYPES.find((t) => types.includes(t)) ?? 'restaurant'
+  }
+  return types[0] ?? 'attraction'
 }
 
 async function searchPlacesByType(lat: number, lng: number, type: string, apiKey: string): Promise<ThingToDo[]> {
@@ -46,7 +55,7 @@ async function searchPlacesByType(lat: number, lng: number, type: string, apiKey
   const body = (await res.json()) as { results?: PlacesResult[] }
   return (body.results ?? []).map((item) => ({
     name: item.name,
-    category: pickCategory(item.types ?? []),
+    category: pickCategory(item.types ?? [], type),
     source: 'places' as const,
     rating: item.rating,
     address: item.vicinity,

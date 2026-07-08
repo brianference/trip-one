@@ -55,16 +55,23 @@ describe('places searchPlaces', () => {
     expect(results.find((r) => r.name === 'Museum')?.placeId).toBe('p1')
   })
 
-  it('promotes a food type to the category even when it is not first in the types array', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
+  it('categorizes restaurant-search results as food even when a food type is not first', async () => {
+    const fetchMock = vi
+      .fn()
+      // tourist_attraction search: keep types[0] as-is (a hotel stays lodging)
+      .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ results: [{ place_id: 'p', name: "Joe's Stone Crab", types: ['bar', 'restaurant', 'point_of_interest'] }] }),
-      }),
-    )
+        json: async () => ({ results: [{ place_id: 'h', name: 'Grand Hotel', types: ['lodging', 'restaurant'] }] }),
+      })
+      // restaurant search: promote the food type even though 'bar' is first
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ results: [{ place_id: 'j', name: "Joe's Stone Crab", types: ['bar', 'restaurant', 'point_of_interest'] }] }),
+      })
+    vi.stubGlobal('fetch', fetchMock)
     const results = await searchPlaces(25.77, -80.13, 'k')
-    expect(results[0].category).toBe('restaurant')
+    expect(results.find((r) => r.name === 'Grand Hotel')?.category).toBe('lodging')
+    expect(results.find((r) => r.name === "Joe's Stone Crab")?.category).toBe('restaurant')
   })
 
   it('dedupes a place that appears in both type searches (keeps one)', async () => {
