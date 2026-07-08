@@ -53,16 +53,24 @@ async function searchPlacesByType(lat: number, lng: number, type: string, apiKey
     return []
   }
   const body = (await res.json()) as { results?: PlacesResult[] }
-  return (body.results ?? []).map((item) => ({
-    name: item.name,
-    category: pickCategory(item.types ?? [], type),
-    source: 'places' as const,
-    rating: item.rating,
-    address: item.vicinity,
-    lat: item.geometry?.location?.lat,
-    lng: item.geometry?.location?.lng,
-    placeId: item.place_id,
-  }))
+  return (body.results ?? [])
+    .filter((item) => {
+      // A hotel with a notable restaurant can surface in a type=restaurant
+      // search. It's not somewhere a traveler plans a meal, so drop
+      // lodging-typed results from the restaurant search.
+      if (type === 'restaurant' && (item.types ?? []).includes('lodging')) return false
+      return true
+    })
+    .map((item) => ({
+      name: item.name,
+      category: pickCategory(item.types ?? [], type),
+      source: 'places' as const,
+      rating: item.rating,
+      address: item.vicinity,
+      lat: item.geometry?.location?.lat,
+      lng: item.geometry?.location?.lng,
+      placeId: item.place_id,
+    }))
 }
 
 /**

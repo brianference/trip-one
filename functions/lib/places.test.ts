@@ -74,6 +74,24 @@ describe('places searchPlaces', () => {
     expect(results.find((r) => r.name === "Joe's Stone Crab")?.category).toBe('restaurant')
   })
 
+  it('drops hotels that surface in the restaurant search (they are not meal stops)', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ results: [] }) }) // attraction search
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          results: [
+            { place_id: 'h', name: 'Grand Hotel Majestic', types: ['restaurant', 'lodging'] },
+            { place_id: 'r', name: 'Trattoria Rossa', types: ['restaurant'] },
+          ],
+        }),
+      })
+    vi.stubGlobal('fetch', fetchMock)
+    const results = await searchPlaces(44.5, 11.3, 'k')
+    expect(results.map((r) => r.name)).toEqual(['Trattoria Rossa'])
+  })
+
   it('dedupes a place that appears in both type searches (keeps one)', async () => {
     const dup = { ok: true, json: async () => ({ results: [{ place_id: 'p9', name: 'Central Market', types: ['restaurant'] }] }) }
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(dup))
