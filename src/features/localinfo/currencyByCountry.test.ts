@@ -17,4 +17,15 @@ describe('currencyForDisplayName', () => {
   it('falls back to USD for an unrecognized country', () => {
     expect(currencyForDisplayName('Somewhere, Neverland')).toBe('USD')
   })
+
+  it('maps common tourist-destination countries missing from the original curated list', () => {
+    expect(currencyForDisplayName('Marrakesh, Marrakesh-Safi, Morocco')).toBe('MAD')
+    expect(currencyForDisplayName('Bangkok, Thailand')).toBe('THB')
+    expect(currencyForDisplayName('Istanbul, Türkiye')).toBe('TRY')
+    expect(currencyForDisplayName('Cairo, Egypt')).toBe('EGP')
+  })
+
+  it('maps a euro-adopting country not in the original EU list', () => {
+    expect(currencyForDisplayName('Dubrovnik, Croatia')).toBe('EUR')
+  })
 })

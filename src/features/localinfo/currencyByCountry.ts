@@ -1,14 +1,12 @@
 const FRANKFURTER_BASE_CURRENCY = 'USD'
 
 /**
- * Minimal country-name → ISO 4217 currency-code lookup, keyed by the
- * lowercased trailing country segment of a Nominatim `display_name` (e.g.
- * "Tokyo, Japan" → "japan" → "JPY").
- *
- * Scoping decision: this covers the major currencies a demo/user is likely
- * to hit rather than a full ISO-3166 country-to-currency database — see
- * task-map-currency-report.md for the rationale. Anything not listed here
- * falls back to `FRANKFURTER_BASE_CURRENCY` (USD).
+ * Country-name → ISO 4217 currency-code lookup, keyed by the lowercased
+ * trailing country segment of a Nominatim `display_name` (e.g.
+ * "Tokyo, Japan" → "japan" → "JPY"). Covers common tourist-destination
+ * countries with their real currency, rather than a full ISO-3166 database —
+ * anything genuinely obscure falls back to `FRANKFURTER_BASE_CURRENCY`
+ * (USD), which is an honest "unknown," not a wrong currency guess.
  */
 const CURRENCY_BY_COUNTRY: Record<string, string> = {
   'united states': 'USD',
@@ -29,8 +27,18 @@ const CURRENCY_BY_COUNTRY: Record<string, string> = {
   austria: 'EUR',
   greece: 'EUR',
   finland: 'EUR',
+  croatia: 'EUR',
+  slovenia: 'EUR',
+  slovakia: 'EUR',
+  estonia: 'EUR',
+  latvia: 'EUR',
+  lithuania: 'EUR',
+  malta: 'EUR',
+  cyprus: 'EUR',
+  luxembourg: 'EUR',
   canada: 'CAD',
   australia: 'AUD',
+  'new zealand': 'NZD',
   switzerland: 'CHF',
   iceland: 'ISK',
   china: 'CNY',
@@ -40,6 +48,40 @@ const CURRENCY_BY_COUNTRY: Record<string, string> = {
   brazil: 'BRL',
   'south korea': 'KRW',
   'republic of korea': 'KRW',
+  morocco: 'MAD',
+  egypt: 'EGP',
+  'south africa': 'ZAR',
+  turkey: 'TRY',
+  türkiye: 'TRY',
+  thailand: 'THB',
+  vietnam: 'VND',
+  indonesia: 'IDR',
+  malaysia: 'MYR',
+  singapore: 'SGD',
+  philippines: 'PHP',
+  'united arab emirates': 'AED',
+  uae: 'AED',
+  'saudi arabia': 'SAR',
+  israel: 'ILS',
+  jordan: 'JOD',
+  argentina: 'ARS',
+  chile: 'CLP',
+  colombia: 'COP',
+  peru: 'PEN',
+  poland: 'PLN',
+  czechia: 'CZK',
+  'czech republic': 'CZK',
+  hungary: 'HUF',
+  romania: 'RON',
+  norway: 'NOK',
+  sweden: 'SEK',
+  denmark: 'DKK',
+  russia: 'RUB',
+  ukraine: 'UAH',
+  kenya: 'KES',
+  tanzania: 'TZS',
+  nepal: 'NPR',
+  'sri lanka': 'LKR',
 }
 
 /**
