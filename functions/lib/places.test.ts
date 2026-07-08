@@ -55,6 +55,18 @@ describe('places searchPlaces', () => {
     expect(results.find((r) => r.name === 'Museum')?.placeId).toBe('p1')
   })
 
+  it('promotes a food type to the category even when it is not first in the types array', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ results: [{ place_id: 'p', name: "Joe's Stone Crab", types: ['bar', 'restaurant', 'point_of_interest'] }] }),
+      }),
+    )
+    const results = await searchPlaces(25.77, -80.13, 'k')
+    expect(results[0].category).toBe('restaurant')
+  })
+
   it('dedupes a place that appears in both type searches (keeps one)', async () => {
     const dup = { ok: true, json: async () => ({ results: [{ place_id: 'p9', name: 'Central Market', types: ['restaurant'] }] }) }
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(dup))

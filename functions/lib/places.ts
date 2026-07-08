@@ -14,6 +14,13 @@ const SEARCH_RADIUS_M = 50000
 // the extra call is paid once per location, not per visit.
 const SEARCH_TYPES = ['tourist_attraction', 'restaurant'] as const
 
+// Food-serving place types, in priority order. A restaurant's Places `types`
+// array often leads with something unhelpful (e.g. `bar`, `casino`, `lodging`)
+// even when `restaurant` is present, so picking `types[0]` blindly mislabels
+// real eateries and the itinerary's meal-slot detector then misses them. We
+// promote any food type to the front so meals get scheduled.
+const FOOD_TYPES = ['restaurant', 'cafe', 'bakery', 'meal_takeaway', 'meal_delivery', 'food'] as const
+
 interface PlacesResult {
   place_id?: string
   name: string
@@ -21,6 +28,12 @@ interface PlacesResult {
   rating?: number
   vicinity?: string
   geometry?: { location?: { lat?: number; lng?: number } }
+}
+
+/** Pick the most useful category from a Places result's types, favoring food types. */
+function pickCategory(types: string[]): string {
+  const food = FOOD_TYPES.find((t) => types.includes(t))
+  return food ?? types[0] ?? 'attraction'
 }
 
 async function searchPlacesByType(lat: number, lng: number, type: string, apiKey: string): Promise<ThingToDo[]> {
@@ -33,7 +46,7 @@ async function searchPlacesByType(lat: number, lng: number, type: string, apiKey
   const body = (await res.json()) as { results?: PlacesResult[] }
   return (body.results ?? []).map((item) => ({
     name: item.name,
-    category: item.types[0] ?? 'attraction',
+    category: pickCategory(item.types ?? []),
     source: 'places' as const,
     rating: item.rating,
     address: item.vicinity,
