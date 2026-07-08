@@ -78,7 +78,15 @@ export function MapView({ lat, lng, label, markers, boundingBox, route }: Props)
 
   useEffect(() => {
     if (!containerRef.current) return
-    const map = L.map(containerRef.current).setView([lat, lng], 12)
+    // zoomAnimation:false — the earlier fix only disabled animation on the
+    // initial fitBounds call, but a live audit found the same
+    // _onZoomTransitionEnd crash still reachable via the map's own +/- zoom
+    // control buttons (Leaflet's default zoomAnimation uses a CSS
+    // transition keyed to internal pane state that goes stale if the
+    // container is ever resized/recreated mid-transition). Disabling zoom
+    // animation entirely removes every code path that can reach that
+    // handler, not just the one this app's own code triggers.
+    const map = L.map(containerRef.current, { zoomAnimation: false }).setView([lat, lng], 12)
     // CartoDB's free Voyager tiles (no API key required) render cleaner
     // typography and a lighter, less visually noisy basemap than raw OSM
     // tiles, while still crediting OpenStreetMap as the underlying data.
@@ -109,18 +117,10 @@ export function MapView({ lat, lng, label, markers, boundingBox, route }: Props)
     if (boundingBox) {
       const [south, north, west, east] = boundingBox
       if (north - south > MIN_BOUNDS_SPAN_DEGREES || east - west > MIN_BOUNDS_SPAN_DEGREES) {
-        // animate:false — an unrelated re-render (e.g. an async forecast
-        // fetch resolving) can tear this map down and recreate it while an
-        // animated fitBounds transition is still in flight, which throws
-        // inside Leaflet's zoom-transition handler. An instant jump has no
-        // transition window for that race to land in.
-        map.fitBounds(
-          [
-            [south, west],
-            [north, east],
-          ],
-          { animate: false },
-        )
+        map.fitBounds([
+          [south, west],
+          [north, east],
+        ])
       }
     }
 

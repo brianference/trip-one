@@ -23,7 +23,7 @@ export const useTripStore = create<TripState>((set) => ({
   tripId: null,
   locationSlug: null,
   itinerary: [],
-  designStyle: 'liquid-glass',
+  designStyle: 'chronicle',
   tripLengthDays: null,
   setTrip: (tripId, locationSlug, itinerary, designStyle) => set({ tripId, locationSlug, itinerary, designStyle }),
   addItem: (item) => set((s) => ({ itinerary: [...s.itinerary, item] })),

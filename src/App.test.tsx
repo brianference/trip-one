@@ -1,26 +1,26 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
 import App from './App'
-import { useTripStore, type DesignStyle } from './store/tripStore'
+import { useTripStore } from './store/tripStore'
 import * as client from './lib/api/client'
-import * as forecastHook from './features/weather/useForecast'
 
 vi.mock('leaflet', () => {
   const createMapMock = () => {
-    const mapMock: { remove: ReturnType<typeof vi.fn>; setView: ReturnType<typeof vi.fn> } = {
+    const mapMock: { remove: ReturnType<typeof vi.fn>; setView: ReturnType<typeof vi.fn>; fitBounds: ReturnType<typeof vi.fn> } = {
       remove: vi.fn(),
       setView: vi.fn(),
+      fitBounds: vi.fn(),
     }
     mapMock.setView = vi.fn(() => mapMock)
     return mapMock
   }
-
   return {
     default: {
       map: vi.fn(createMapMock),
       tileLayer: vi.fn(() => ({ addTo: vi.fn() })),
       divIcon: vi.fn(() => ({})),
       marker: vi.fn(() => ({ addTo: vi.fn().mockReturnThis(), bindPopup: vi.fn().mockReturnThis() })),
+      polyline: vi.fn(() => ({ addTo: vi.fn().mockReturnThis() })),
     },
   }
 })
@@ -30,151 +30,75 @@ function navigateTo(path: string) {
   window.history.pushState({}, '', path)
 }
 
-// Liquid Glass and Chronicle now render one unified page rather than a
-// standalone itinerary-only screen, so their markers target a class that's
-// present somewhere in that unified page rather than an itinerary-specific
-// wrapper that no longer exists.
-const ITINERARY_MARKER_BY_THEME: Record<DesignStyle, string> = {
-  bento: 'bento-itinerary',
-  chronicle: 'chronicle-chapter',
-  'field-guide': 'field-guide-postcards',
-  'liquid-glass': 'lg-glass-card',
-  'trail-ledger': 'tl-ledger',
+function mockTripAndLocation() {
+  vi.spyOn(client, 'getTrip').mockResolvedValue({
+    id: 't1',
+    locationSlug: 'dublin-ireland',
+    itinerary: [{ time: '09:00', text: 'Guinness Storehouse', type: 'option' }],
+    designStyle: 'chronicle',
+    tripLengthDays: null,
+  })
+  vi.spyOn(client, 'fetchLocation').mockResolvedValue({
+    slug: 'dublin-ireland',
+    lat: 53.35,
+    lng: -6.26,
+    displayName: 'Dublin, Ireland',
+    thingsToDo: [],
+  })
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rate: 0.92 }) }))
 }
 
+// Chronicle is the app's only theme now — every trip route renders through
+// it via real nested routes regardless of a trip's stored design_style
+// (a leftover API field, no longer read for rendering decisions). There is
+// no theme switcher anymore.
 describe('App', () => {
   beforeEach(() => {
-    useTripStore.setState({ tripId: null, locationSlug: null, itinerary: [], designStyle: 'bento' })
+    useTripStore.setState({ tripId: null, locationSlug: null, itinerary: [], designStyle: 'chronicle', tripLengthDays: null })
     navigateTo('/')
   })
 
-  it('renders the search screen at the root route', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('renders the Chronicle landing page at the root route, with no theme switcher', () => {
     render(<App />)
     expect(screen.getByLabelText(/where to/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/design/i)).not.toBeInTheDocument()
   })
 
-  it.each(Object.entries(ITINERARY_MARKER_BY_THEME))(
-    'renders the %s theme at /trip/:id/itinerary',
-    async (style, marker) => {
-      useTripStore.setState({
-        tripId: 't1',
-        locationSlug: 'dublin-ireland',
-        itinerary: [{ time: '09:00', text: 'Guinness Storehouse', type: 'option' }],
-        designStyle: style as DesignStyle,
-      })
-      // Liquid Glass and Chronicle render one unified page that fetches the
-      // trip/location itself (rather than trusting only pre-set store
-      // state, like the other themes' standalone Itinerary screen does).
-      vi.spyOn(client, 'getTrip').mockResolvedValue({
-        id: 't1',
-        locationSlug: 'dublin-ireland',
-        itinerary: [{ time: '09:00', text: 'Guinness Storehouse', type: 'option' }],
-        designStyle: style as DesignStyle,
-      })
-      vi.spyOn(client, 'fetchLocation').mockResolvedValue({
-        slug: 'dublin-ireland',
-        lat: 53.35,
-        lng: -6.26,
-        displayName: 'Dublin, Ireland',
-        thingsToDo: [],
-      })
-      navigateTo('/trip/t1/itinerary')
-      const { container } = render(<App />)
-      await waitFor(() => expect(container.querySelector(`.${marker}`)).toBeInTheDocument())
-      // Some themes split item text across sibling text nodes rather than a
-      // single element, so assert on rendered text content directly instead
-      // of `getByText`, which only matches a single node's own text.
-      expect(container.textContent).toContain('Guinness Storehouse')
-    },
-  )
-
-  it.each(Object.keys(ITINERARY_MARKER_BY_THEME) as DesignStyle[])(
-    'renders the %s theme LocalInfoScreen at /trip/:id/local-info',
-    async (style) => {
-      useTripStore.setState({ tripId: 't1', locationSlug: 'dublin-ireland', itinerary: [], designStyle: style })
-      vi.spyOn(client, 'getTrip').mockResolvedValue({
-        id: 't1',
-        locationSlug: 'dublin-ireland',
-        itinerary: [],
-        designStyle: style,
-      })
-      vi.spyOn(client, 'fetchLocation').mockResolvedValue({
-        slug: 'dublin-ireland',
-        lat: 53.35,
-        lng: -6.26,
-        displayName: 'Dublin, Ireland',
-        thingsToDo: [],
-      })
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rate: 0.92 }) }))
-      navigateTo('/trip/t1/local-info')
-      render(<App />)
-      await waitFor(() => expect(screen.getByRole('link', { name: /transit directions/i })).toBeInTheDocument())
-      expect(screen.getByRole('link', { name: /phrasebook/i })).toBeInTheDocument()
-      vi.unstubAllGlobals()
-    },
-  )
-
-  it('renders the ThemeSwitcher alongside the matching theme Overview at /trip/:id', async () => {
-    useTripStore.setState({ tripId: 't1', locationSlug: 'dublin-ireland', itinerary: [], designStyle: 'trail-ledger' })
-    vi.spyOn(client, 'getTrip').mockResolvedValue({
-      id: 't1',
-      locationSlug: 'dublin-ireland',
-      itinerary: [],
-      designStyle: 'trail-ledger',
-    })
-    vi.spyOn(client, 'fetchLocation').mockResolvedValue({
-      slug: 'dublin-ireland',
-      lat: 53.35,
-      lng: -6.26,
-      displayName: 'Dublin, Ireland',
-      thingsToDo: [],
-    })
-    vi.spyOn(forecastHook, 'useForecast').mockReturnValue({
-      data: { temperatureF: 57, condition: 'Overcast', isFallback: false },
-      error: null,
-      loading: false,
-    })
+  it('renders the Overview page at /trip/:id', async () => {
+    mockTripAndLocation()
     navigateTo('/trip/t1')
     render(<App />)
-    expect(screen.getByLabelText(/design/i)).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByRole('cell', { name: 'Dublin, Ireland' })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Dublin, Ireland' })).toBeInTheDocument())
   })
 
-  it('switching the ThemeSwitcher swaps the rendered Overview screen for a sibling theme', async () => {
-    useTripStore.setState({ tripId: 't1', locationSlug: 'dublin-ireland', itinerary: [], designStyle: 'bento' })
-    vi.spyOn(client, 'getTrip').mockResolvedValue({
-      id: 't1',
-      locationSlug: 'dublin-ireland',
-      itinerary: [],
-      designStyle: 'bento',
-    })
-    vi.spyOn(client, 'fetchLocation').mockResolvedValue({
-      slug: 'dublin-ireland',
-      lat: 53.35,
-      lng: -6.26,
-      displayName: 'Dublin, Ireland',
-      thingsToDo: [],
-    })
-    vi.spyOn(client, 'updateTrip').mockResolvedValue({
-      id: 't1',
-      locationSlug: 'dublin-ireland',
-      itinerary: [],
-      designStyle: 'chronicle',
-    })
-    vi.spyOn(forecastHook, 'useForecast').mockReturnValue({
-      data: { temperatureF: 57, condition: 'Overcast', isFallback: false },
-      error: null,
-      loading: false,
-    })
-    navigateTo('/trip/t1')
-    const { container } = render(<App />)
+  it('renders the Itinerary page at /trip/:id/itinerary', async () => {
+    mockTripAndLocation()
+    navigateTo('/trip/t1/itinerary')
+    render(<App />)
+    await waitFor(() => expect(screen.getByText('Guinness Storehouse')).toBeInTheDocument())
+  })
 
-    await waitFor(() => expect(container.querySelector('.bento-grid')).toBeInTheDocument())
+  it('renders the Map page at /trip/:id/map', async () => {
+    mockTripAndLocation()
+    navigateTo('/trip/t1/map')
+    render(<App />)
+    await waitFor(() => expect(screen.getByLabelText(/map of dublin/i)).toBeInTheDocument())
+  })
 
-    fireEvent.change(screen.getByLabelText(/design/i), { target: { value: 'chronicle' } })
+  it('renders the Things to Do page at /trip/:id/things-to-do', async () => {
+    mockTripAndLocation()
+    navigateTo('/trip/t1/things-to-do')
+    render(<App />)
+    await waitFor(() => expect(screen.getByRole('heading', { name: /things to do nearby/i })).toBeInTheDocument())
+  })
 
-    await waitFor(() => expect(container.querySelector('.chronicle-chapter')).toBeInTheDocument())
-    expect(container.querySelector('.bento-grid')).not.toBeInTheDocument()
-    expect(client.updateTrip).toHaveBeenCalledWith('t1', { designStyle: 'chronicle' })
+  it('renders the Local Info page at /trip/:id/local-info', async () => {
+    mockTripAndLocation()
+    navigateTo('/trip/t1/local-info')
+    render(<App />)
+    await waitFor(() => expect(screen.getByRole('link', { name: /transit directions/i })).toBeInTheDocument())
+    expect(screen.getByRole('link', { name: /phrasebook/i })).toBeInTheDocument()
   })
 })

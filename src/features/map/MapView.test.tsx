@@ -123,13 +123,19 @@ describe('MapView', () => {
     )
     const leafletMocked = vi.mocked(L)
     const mapInstance = leafletMocked.map.mock.results[0].value
-    expect(mapInstance.fitBounds).toHaveBeenCalledWith(
-      [
-        [16.5899443, -78.5782366],
-        [18.7256394, -75.7541143],
-      ],
-      { animate: false },
-    )
+    expect(mapInstance.fitBounds).toHaveBeenCalledWith([
+      [16.5899443, -78.5782366],
+      [18.7256394, -75.7541143],
+    ])
+  })
+
+  it('disables zoom animation on the map instance to avoid a real Leaflet crash on the zoom controls', () => {
+    // Live audit confirmed `_onZoomTransitionEnd` throwing when a user
+    // clicks the built-in +/- zoom buttons — the earlier fix (animate:false
+    // on fitBounds) only covered the initial-load animation, not this path.
+    render(<MapView lat={53.35} lng={-6.26} label="Dublin, Ireland" />)
+    const leafletMocked = vi.mocked(L)
+    expect(leafletMocked.map).toHaveBeenCalledWith(expect.anything(), { zoomAnimation: false })
   })
 
   it('ignores a near-point-sized bounding box and keeps the fixed default zoom', () => {

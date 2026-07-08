@@ -27,7 +27,7 @@ export async function onRequestPost({ env, request }: { env: Env; request: Reque
     const trip = await createTrip(env, {
       location_slug: parsed.data.location_slug,
       itinerary: [],
-      design_style: parsed.data.design_style ?? 'liquid-glass',
+      design_style: parsed.data.design_style ?? 'chronicle',
     })
     return json(trip, 201)
   } catch (err) {
