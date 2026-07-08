@@ -99,6 +99,7 @@ describe('App', () => {
     navigateTo('/trip/t1/local-info')
     render(<App />)
     await waitFor(() => expect(screen.getByRole('link', { name: /transit directions/i })).toBeInTheDocument())
-    expect(screen.getByRole('link', { name: /phrasebook/i })).toBeInTheDocument()
+    // Dublin is English-speaking, so there's no phrasebook (and never a Google Translate link).
+    expect(screen.queryByText(/phrasebook/i)).not.toBeInTheDocument()
   })
 })

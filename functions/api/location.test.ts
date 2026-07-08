@@ -33,7 +33,10 @@ describe('GET /api/location', () => {
               lat: 53.35,
               lng: -6.26,
               display_name: 'Dublin, Ireland',
-              things_to_do: [{ name: 'Trinity College', category: 'attraction', source: 'tripadvisor' }],
+              things_to_do: [
+                { name: 'Trinity College', category: 'attraction', source: 'tripadvisor' },
+                { name: 'The Ivy', category: 'restaurant', source: 'places', lat: 53.34, lng: -6.26 },
+              ],
             },
           ],
         })
@@ -121,6 +124,41 @@ describe('GET /api/location', () => {
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('nominatim.openstreetmap.org'))).toBe(true)
   })
 
+  it('refreshes a cached row that has no restaurant (predates the restaurant search) so meals can be scheduled', async () => {
+    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      if (url.includes('/rest/v1/locations') && (!init || init.method === undefined)) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => [
+            {
+              slug: 'rome-italy',
+              lat: 41.9,
+              lng: 12.5,
+              display_name: 'Rome, Italy',
+              // Attractions only, all with coords — but no restaurant, so it
+              // predates the restaurant search and should refresh.
+              things_to_do: [{ name: 'Colosseum', category: 'tourist_attraction', source: 'places', lat: 41.89, lng: 12.49 }],
+            },
+          ],
+        })
+      }
+      if (url.includes('/rest/v1/locations')) return Promise.resolve({ ok: true, json: async () => ({}) })
+      if (url.includes('/rest/v1/request_log')) {
+        return Promise.resolve({ ok: true, headers: new Headers({ 'content-range': '*/1' }), json: async () => [] })
+      }
+      if (url.includes('nominatim.openstreetmap.org')) {
+        return Promise.resolve({ ok: true, json: async () => [{ lat: '41.9', lon: '12.5', display_name: 'Rome, Italy' }] })
+      }
+      if (url.includes('tripadvisor.com')) return Promise.resolve({ ok: true, json: async () => ({ data: [] }) })
+      if (url.includes('googleapis.com')) return Promise.resolve({ ok: true, json: async () => ({ results: [] }) })
+      throw new Error(`unexpected fetch to ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const res = await onRequestGet({ env, request: req('https://x/api/location?q=Rome') } as never)
+    expect(res.status).toBe(200)
+    expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('nominatim.openstreetmap.org'))).toBe(true)
+  })
+
   it('does not refresh a cached row whose places-sourced entries already have coordinates', async () => {
     const fetchMock = vi.fn((url: string) => {
       if (url.includes('/rest/v1/locations')) {
@@ -134,6 +172,7 @@ describe('GET /api/location', () => {
               display_name: 'Prague, Czechia',
               things_to_do: [
                 { name: 'Charles Bridge', category: 'tourist_attraction', source: 'places', lat: 50.09, lng: 14.41 },
+                { name: 'Lokal', category: 'restaurant', source: 'places', lat: 50.09, lng: 14.42 },
               ],
             },
           ],

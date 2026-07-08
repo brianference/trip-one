@@ -1,20 +1,14 @@
 import type { Phrase } from '../../localinfo/phrasebook'
 
-const TRANSLATE_URL = 'https://translate.google.com/?sl=en&tl=auto&op=translate'
-
 /**
- * Shows a real, curated phrase list when the destination's language is
- * covered; otherwise falls back to a plain Google Translate link so there's
- * still something useful for languages this app doesn't have phrases for.
+ * Shows a real, curated phrase list for a foreign, non-English destination.
+ * Renders nothing when there are no phrases — that means the destination is
+ * English-speaking (or the US) and a phrasebook is just noise, or its
+ * language isn't one we curate. A generic Google Translate link added no real
+ * value, so there's no fallback.
  */
 export function Phrasebook({ phrases }: { phrases: Phrase[] | null }) {
-  if (!phrases) {
-    return (
-      <a href={TRANSLATE_URL} target="_blank" rel="noopener noreferrer" className="chronicle-phrasebook-fallback-link">
-        Phrasebook (Google Translate)
-      </a>
-    )
-  }
+  if (!phrases || phrases.length === 0) return null
 
   return (
     <div className="chronicle-phrasebook">

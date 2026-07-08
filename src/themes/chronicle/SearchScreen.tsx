@@ -40,8 +40,15 @@ export function SearchScreen() {
   const navigate = useNavigate()
   const setTrip = useTripStore((s) => s.setTrip)
   const containerRef = useRef<HTMLDivElement>(null)
+  // Autocomplete should only fire from real typing. When we set the query
+  // programmatically (selecting a suggestion, or submitting), this suppresses
+  // the debounced re-fetch — otherwise the dropdown re-opened ~300ms after a
+  // selection while the trip was still being created, which read as "my click
+  // did nothing" and made people click a second time.
+  const suppressAutocompleteRef = useRef(false)
 
   useEffect(() => {
+    if (suppressAutocompleteRef.current) return
     if (query.trim().length < AUTOCOMPLETE_MIN_LENGTH) {
       setSuggestions([])
       return
@@ -71,6 +78,8 @@ export function SearchScreen() {
     // hit the API with an invalid/duplicate query and left a stale error
     // banner on screen that a later, valid query never cleared.
     if (!locationQuery.trim() || busy) return
+    suppressAutocompleteRef.current = true
+    setShowSuggestions(false)
     setBusy(true)
     setError(null)
     try {
@@ -94,6 +103,7 @@ export function SearchScreen() {
   }
 
   async function handleSelectSuggestion(suggestion: AutocompleteSuggestion) {
+    suppressAutocompleteRef.current = true
     setQuery(suggestion.displayName)
     setShowSuggestions(false)
     setSuggestions([])
@@ -123,6 +133,7 @@ export function SearchScreen() {
               id="chronicle-location-query"
               value={query}
               onChange={(e) => {
+                suppressAutocompleteRef.current = false
                 setQuery(e.target.value)
                 setError(null)
               }}

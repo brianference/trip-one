@@ -12,7 +12,7 @@ describe('LocalInfoCard', () => {
     expect(screen.getByText(/EUR/)).toBeInTheDocument()
   })
 
-  it('renders real transit and phrasebook links', async () => {
+  it('renders a transit link and no phrasebook for an English-speaking destination', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rate: 0.92 }) }))
     render(<LocalInfoCard displayName="Dublin, Ireland" />)
     await waitFor(() => expect(screen.getByText(/0.92/)).toBeInTheDocument())
@@ -20,7 +20,8 @@ describe('LocalInfoCard', () => {
       'href',
       expect.stringContaining('public%20transit%20in%20Dublin'),
     )
-    expect(screen.getByRole('link', { name: /phrasebook/i })).toHaveAttribute('href', expect.stringContaining('translate.google.com'))
+    // English-speaking country: no phrasebook at all (and never a Google Translate link)
+    expect(screen.queryByText(/phrasebook/i)).not.toBeInTheDocument()
   })
 
   it('shows a real phrase list for a destination whose language is covered', async () => {

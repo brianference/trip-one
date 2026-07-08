@@ -9,8 +9,8 @@ describe('Phrasebook', () => {
     expect(screen.getByText('Bonjour')).toBeInTheDocument()
   })
 
-  it('falls back to a Google Translate link when no phrases are covered', () => {
-    render(<Phrasebook phrases={null} />)
-    expect(screen.getByRole('link', { name: /phrasebook/i })).toHaveAttribute('href', expect.stringContaining('translate.google.com'))
+  it('renders nothing when there are no phrases (English/US destinations get no phrasebook)', () => {
+    const { container } = render(<Phrasebook phrases={null} />)
+    expect(container).toBeEmptyDOMElement()
   })
 })

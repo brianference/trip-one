@@ -15,6 +15,12 @@ export interface ThingToDo {
    */
   lat?: number
   lng?: number
+  /**
+   * Google Places place_id, when the entry came from Places. Used to fetch
+   * full place details (reviews, summary, hours, a Maps link) on demand.
+   * Absent for Tripadvisor entries.
+   */
+  placeId?: string
 }
 
 /**

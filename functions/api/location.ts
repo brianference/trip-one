@@ -58,12 +58,16 @@ export async function onRequestGet({
     // they were cached — so a places-sourced item lacking lat/lng also
     // triggers a refresh.
     const cachedThingsToDo = Array.isArray(cached?.things_to_do)
-      ? (cached.things_to_do as Array<{ source?: string; lat?: number }>)
+      ? (cached.things_to_do as Array<{ source?: string; lat?: number; category?: string }>)
       : []
     const placesEntriesLackCoordinates =
       cachedThingsToDo.some((item) => item.source === 'places') &&
       !cachedThingsToDo.some((item) => item.source === 'places' && item.lat != null)
-    if (cached && cachedThingsToDo.length > 0 && !placesEntriesLackCoordinates) {
+    // A row with no restaurant/food entry predates adding the restaurant
+    // search to Google Places — refresh it so the itinerary can schedule
+    // real meals, the same way the coordinate self-heal above works.
+    const hasNoRestaurant = !cachedThingsToDo.some((item) => /restaurant|cafe|food|dining|bakery|bar/i.test(item.category ?? ''))
+    if (cached && cachedThingsToDo.length > 0 && !placesEntriesLackCoordinates && !hasNoRestaurant) {
       // The dedicated weather_baseline column has never stored weather data
       // (see supabaseAdmin.ts) — it's repurposed here to carry the geocoded
       // bounding box so a fresh Nominatim call isn't needed just to zoom the

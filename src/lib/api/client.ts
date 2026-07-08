@@ -1,6 +1,7 @@
 import type { ItineraryItem } from '../validation/schemas'
 import type { DesignStyle } from '../../store/tripStore'
 import { logger } from '../logger'
+import { cleanDisplayName } from '../location/displayName'
 
 export interface ThingToDo {
   name: string
@@ -63,7 +64,10 @@ export async function fetchLocation(query: string): Promise<LocationResult> {
   const res = await fetch(`/api/location?q=${encodeURIComponent(query)}`)
   const body = await res.json()
   if (!res.ok) throw new Error(body.error ?? 'failed to fetch location')
-  return body
+  // Trim the geocoder's full admin chain to a clean "City, Region" here, at
+  // the one boundary every display path flows through, so it applies to
+  // cached and new locations alike without a data migration.
+  return { ...body, displayName: cleanDisplayName(body.displayName) }
 }
 
 export interface AutocompleteSuggestion {
@@ -84,7 +88,8 @@ export async function fetchAutocomplete(query: string): Promise<AutocompleteSugg
     const res = await fetch(`/api/autocomplete?q=${encodeURIComponent(query)}`)
     if (!res.ok) return []
     const body = await res.json()
-    return body.suggestions ?? []
+    const suggestions: AutocompleteSuggestion[] = body.suggestions ?? []
+    return suggestions.map((s) => ({ ...s, displayName: cleanDisplayName(s.displayName) }))
   } catch (err) {
     logger.error('fetchAutocomplete failed', err)
     return []
