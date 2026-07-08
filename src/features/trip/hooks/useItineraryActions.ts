@@ -1,11 +1,22 @@
 import { useState } from 'react'
-import { fetchLocation, updateTrip, type ThingToDo } from '../../../lib/api/client'
+import { fetchLocation, type ThingToDo, type PlanDay } from '../../../lib/api/client'
 import type { ItineraryItem } from '../../../lib/validation/schemas'
 import { useTripStore } from '../../../store/tripStore'
+import { queueTripWrite } from '../../../lib/api/tripWriteQueue'
 import { organizeItinerary } from '../../../lib/itinerary/organizeItinerary'
 import { reorderItinerary } from '../../../lib/itinerary/reorderItinerary'
 import { adjustItineraryForTripLength } from '../../../lib/itinerary/adjustItineraryForTripLength'
 import { logger } from '../../../lib/logger'
+
+/**
+ * Persists a trip patch through the serialized write queue so rapid edits
+ * can't race and overwrite each other, and a failed save flips the store's
+ * `saveError` flag (cleared optimistically here) so the UI can show it.
+ */
+function persist(tripId: string, patch: { itinerary?: ItineraryItem[]; tripLengthDays?: number | null }) {
+  useTripStore.getState().setSaveError(false)
+  queueTripWrite(tripId, patch, () => useTripStore.getState().setSaveError(true))
+}
 
 /**
  * Re-organizes the itinerary (day clustering + meal-slot ordering) and
@@ -16,9 +27,7 @@ import { logger } from '../../../lib/logger'
 function organizeAndPersist(items: ItineraryItem[], tripLengthDays: number | null, tripId: string) {
   const organized = organizeItinerary(items, tripLengthDays)
   useTripStore.getState().setItinerary(organized)
-  updateTrip(tripId, { itinerary: organized }).catch((err) => {
-    logger.error('failed to persist organized itinerary', err)
-  })
+  persist(tripId, { itinerary: organized })
 }
 
 /**
@@ -89,9 +98,7 @@ export function useItineraryActions(tripId: string) {
     if (targetPos < 0 || targetPos >= entries.length) return
     const reordered = reorderItinerary(itinerary, entries[entryPos].index, entries[targetPos].index, entries[entryPos].item.day ?? 1)
     useTripStore.getState().setItinerary(reordered)
-    updateTrip(tripId, { itinerary: reordered }).catch((err) => {
-      logger.error('failed to persist manual reorder', err)
-    })
+    persist(tripId, { itinerary: reordered })
   }
 
   /**
@@ -105,18 +112,47 @@ export function useItineraryActions(tripId: string) {
    * @param newLength - The newly-selected trip length, or null to clear it
    * @param availableThingsToDo - Real nearby suggestions to draw additions from when growing the trip
    */
-  async function setTripLength(newLength: number | null, availableThingsToDo: ThingToDo[] = []) {
+  function setTripLength(newLength: number | null, availableThingsToDo: ThingToDo[] = []) {
     const stripped = itinerary.map((item) => ({ ...item, day: undefined }))
     const adjusted = adjustItineraryForTripLength(stripped, newLength, availableThingsToDo)
     const organized = organizeItinerary(adjusted, newLength)
     useTripStore.getState().setItinerary(organized)
     useTripStore.getState().setTripLengthDays(newLength)
-    try {
-      await updateTrip(tripId, { itinerary: organized, tripLengthDays: newLength })
-    } catch (err) {
-      logger.error('failed to persist trip length change', err)
-    }
+    persist(tripId, { itinerary: organized, tripLengthDays: newLength })
   }
 
-  return { itinerary, tripLengthDays, adding, addStop, addFromThingToDo, removeStop, moveStop, setTripLength }
+  /**
+   * Replaces the itinerary with a grounded AI plan. Each `placeIndexes` entry
+   * maps back into the real `places` list, so only actual nearby places land
+   * in the itinerary (their coordinates/category are carried through for the
+   * map and clustering). The AI already assigned days and ordering, so this
+   * does NOT re-run organizeItinerary — that would undo the model's sequencing.
+   * @param plan - Day-grouped indices from the planner
+   * @param places - The real candidate places the indices refer to
+   * @param days - Trip length the plan was built for
+   */
+  function applyPlan(plan: PlanDay[], places: ThingToDo[], days: number) {
+    const items: ItineraryItem[] = []
+    for (const dayPlan of plan) {
+      for (const idx of dayPlan.placeIndexes) {
+        const place = places[idx]
+        if (!place) continue
+        items.push({
+          time: '',
+          text: place.name,
+          type: 'option',
+          q: place.name,
+          lat: place.lat,
+          lng: place.lng,
+          category: place.category,
+          day: dayPlan.day,
+        })
+      }
+    }
+    useTripStore.getState().setItinerary(items)
+    useTripStore.getState().setTripLengthDays(days)
+    persist(tripId, { itinerary: items, tripLengthDays: days })
+  }
+
+  return { itinerary, tripLengthDays, adding, addStop, addFromThingToDo, removeStop, moveStop, setTripLength, applyPlan }
 }

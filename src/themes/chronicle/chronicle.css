@@ -135,8 +135,17 @@
 
 /* ---------- Chapter (Overview / Local info) ---------- */
 .chronicle-chapter {
+  /* width:100% + min-width:0 are load-bearing: this element is a flex item
+     (child of the .chronicle-book column). Without them its default
+     min-width:auto lets inner content (the horizontal forecast strip) force
+     it far wider than the viewport on mobile, overflowing the page. With
+     them it fills the column up to max-width and can shrink so inner
+     scroll-containers (the forecast strip) actually scroll instead. */
+  width: 100%;
+  min-width: 0;
   max-width: 760px;
   margin: 0 auto;
+  box-sizing: border-box;
   background: var(--chronicle-bg-surface);
   border: 1px solid var(--chronicle-border-hairline);
   border-radius: var(--chronicle-radius-lg);
@@ -981,6 +990,147 @@ body:has(.chronicle-page) label {
   padding-top: var(--chronicle-space-lg);
   border-top: 1px solid var(--chronicle-border-hairline);
   text-align: center;
+}
+
+/* ---------- AI planner ---------- */
+.chronicle-ai-planner {
+  margin: 0 auto var(--chronicle-space-lg);
+  padding: var(--chronicle-space-md);
+  background: var(--chronicle-bg-surface-2);
+  border: 1px solid var(--chronicle-teal);
+  border-radius: var(--chronicle-radius-lg);
+}
+
+.chronicle-ai-heading {
+  font-family: var(--chronicle-font-display);
+  font-weight: 900;
+  font-style: italic;
+  font-size: 22px;
+  margin: 0 0 4px;
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-ai-sub {
+  margin: 0 0 var(--chronicle-space-md);
+  font-family: var(--chronicle-font-body);
+  font-size: 14px;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-ai-input {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  padding: var(--chronicle-space-sm);
+  border: 1px solid var(--chronicle-border-hairline);
+  border-radius: var(--chronicle-radius-sm);
+  background: var(--chronicle-bg-surface);
+  color: var(--chronicle-text-primary);
+  font-family: var(--chronicle-font-body);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.chronicle-ai-input:focus {
+  outline: none;
+  border-color: var(--chronicle-teal);
+}
+
+.chronicle-ai-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--chronicle-space-md);
+  margin-top: var(--chronicle-space-sm);
+}
+
+.chronicle-ai-days {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--chronicle-text-tertiary);
+}
+
+.chronicle-ai-submit {
+  flex: 1;
+  min-height: 44px;
+  padding: 0 var(--chronicle-space-lg);
+  border: none;
+  border-radius: var(--chronicle-radius-pill);
+  background: var(--chronicle-teal);
+  color: var(--chronicle-bg-canvas);
+  font-family: var(--chronicle-font-mono);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.chronicle-ai-submit:hover:not(:disabled) {
+  background: var(--chronicle-teal-hover);
+}
+
+.chronicle-ai-submit:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.chronicle-ai-note,
+.chronicle-ai-error {
+  margin: var(--chronicle-space-sm) 0 0;
+  font-family: var(--chronicle-font-body);
+  font-size: 14px;
+}
+
+.chronicle-ai-note {
+  color: var(--chronicle-text-tertiary);
+}
+
+.chronicle-ai-error {
+  color: var(--chronicle-danger);
+}
+
+/* ---------- Save-error banner ---------- */
+.chronicle-save-error {
+  max-width: 760px;
+  margin: 0 auto var(--chronicle-space-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--chronicle-space-md);
+  padding: var(--chronicle-space-sm) var(--chronicle-space-md);
+  background: rgba(217, 99, 90, 0.12);
+  border: 1px solid var(--chronicle-danger);
+  border-radius: var(--chronicle-radius-md);
+  font-family: var(--chronicle-font-body);
+  font-size: 15px;
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-save-error-retry {
+  flex: none;
+  min-height: 40px;
+  padding: 0 var(--chronicle-space-md);
+  border: 1px solid var(--chronicle-danger);
+  border-radius: var(--chronicle-radius-pill);
+  background: none;
+  color: var(--chronicle-danger);
+  font-family: var(--chronicle-font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.chronicle-save-error-retry:hover,
+.chronicle-save-error-retry:focus-visible {
+  background: rgba(217, 99, 90, 0.16);
 }
 
 .chronicle-footer-links {

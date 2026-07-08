@@ -91,6 +91,37 @@ export async function fetchAutocomplete(query: string): Promise<AutocompleteSugg
   }
 }
 
+export interface PlanDay {
+  day: number
+  placeIndexes: number[]
+}
+
+/**
+ * Ask the grounded AI planner to build a day-by-day plan from the trip's real
+ * nearby places. The backend LLM may only reference indices into `places`, so
+ * the returned plan can only contain places that actually exist.
+ * @param intent - Free-text traveler request, e.g. "3 relaxed days, love food"
+ * @param days - Trip length to plan for
+ * @param places - The real candidate places (index order is meaningful — the
+ * returned `placeIndexes` map back into this array)
+ * @returns Day-grouped indices into `places`
+ * @throws If the request is invalid, rate limited, or the planner fails
+ */
+export async function generatePlan(
+  intent: string,
+  days: number,
+  places: { name: string; category: string; rating?: number }[],
+): Promise<PlanDay[]> {
+  const res = await fetch('/api/plan', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ intent, days, places }),
+  })
+  const body = await res.json()
+  if (!res.ok) throw new Error(body.error ?? 'failed to generate a plan')
+  return body.days
+}
+
 export async function createTrip(locationSlug: string, designStyle?: DesignStyle): Promise<Trip> {
   const res = await fetch('/api/trips', {
     method: 'POST',

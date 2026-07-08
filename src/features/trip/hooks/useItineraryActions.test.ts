@@ -157,4 +157,33 @@ describe('useItineraryActions', () => {
     expect(persisted.map((i) => i.text)).toContain('Alfama Walk')
     expect(updateSpy.mock.calls[0][1].tripLengthDays).toBe(1)
   })
+
+  it('applyPlan maps grounded indices to real places, carrying coords/category and the AI day/order', async () => {
+    resetStore([{ time: '', text: 'Old plan', type: 'option' }], 2)
+    const updateSpy = vi.spyOn(client, 'updateTrip').mockResolvedValue({
+      id: 't1',
+      locationSlug: 'lisbon-portugal',
+      itinerary: [],
+      designStyle: 'chronicle',
+    })
+    const places = [
+      { name: 'Belem Tower', category: 'tourist_attraction', source: 'places' as const, lat: 38.69, lng: -9.21 },
+      { name: 'War Museum', category: 'museum', source: 'places' as const, lat: 38.71, lng: -9.13 },
+      { name: 'Time Out Market', category: 'restaurant', source: 'places' as const, lat: 38.71, lng: -9.14 },
+    ]
+    const { result } = renderHook(() => useItineraryActions('t1'))
+    act(() => {
+      // day 1 = [market(2), tower(0)], day 2 = [museum(1)] — AI order preserved, no re-clustering
+      result.current.applyPlan([{ day: 1, placeIndexes: [2, 0] }, { day: 2, placeIndexes: [1] }], places, 2)
+    })
+    await waitFor(() => expect(updateSpy).toHaveBeenCalled())
+    const persisted = updateSpy.mock.calls[0][1].itinerary as Array<{ text: string; day?: number; lat?: number; category?: string }>
+    expect(persisted.map((i) => i.text)).toEqual(['Time Out Market', 'Belem Tower', 'War Museum'])
+    expect(persisted.map((i) => i.day)).toEqual([1, 1, 2])
+    expect(persisted[1].lat).toBe(38.69)
+    expect(persisted[1].category).toBe('tourist_attraction')
+    expect(updateSpy.mock.calls[0][1].tripLengthDays).toBe(2)
+    // old itinerary was fully replaced, not appended
+    expect(persisted.map((i) => i.text)).not.toContain('Old plan')
+  })
 })

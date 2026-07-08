@@ -1,7 +1,9 @@
 import { useMemo } from 'react'
 import type { ItineraryItem } from '../../../lib/validation/schemas'
+import type { PlanDay } from '../../../lib/api/client'
 import { useTripContext } from '../useTripContext'
 import { useItineraryActions } from '../hooks/useItineraryActions'
+import { AiPlanner } from '../components/AiPlanner'
 import { ItineraryStopForm } from '../components/ItineraryStopForm'
 import { ItineraryDayGroup } from '../components/ItineraryDayGroup'
 
@@ -9,10 +11,14 @@ const TRIP_LENGTH_OPTIONS = Array.from({ length: 14 }, (_, i) => i + 1)
 
 export function ItineraryPage() {
   const { trip, location } = useTripContext()
-  const { itinerary, tripLengthDays, adding, addStop, removeStop, moveStop, setTripLength } = useItineraryActions(trip.id)
+  const { itinerary, tripLengthDays, adding, addStop, removeStop, moveStop, setTripLength, applyPlan } = useItineraryActions(trip.id)
 
   function handleTripLengthChange(newLength: number | null) {
     setTripLength(newLength, location?.thingsToDo ?? [])
+  }
+
+  function handleAiPlan(plan: PlanDay[], days: number) {
+    applyPlan(plan, location?.thingsToDo ?? [], days)
   }
 
   const dayGroups = useMemo(() => {
@@ -44,6 +50,8 @@ export function ItineraryPage() {
           </select>
         </label>
       </div>
+
+      <AiPlanner places={location?.thingsToDo ?? []} defaultDays={tripLengthDays ?? 3} onPlan={handleAiPlan} />
 
       <ItineraryStopForm onSubmit={addStop} submitting={adding} />
 

@@ -61,4 +61,25 @@ describe('useTripData', () => {
     expect(result.current.trip).toBeNull()
     expect(result.current.location).toBeNull()
   })
+
+  it('sets error=true when the trip fetch fails (so the shell can show a real error state)', async () => {
+    vi.spyOn(client, 'getTrip').mockRejectedValue(new Error('not found'))
+    const { result } = renderHook(() => useTripData('missing'))
+    await waitFor(() => expect(result.current.error).toBe(true))
+  })
+
+  it('does NOT set error when only the location fetch fails (trip is still usable)', async () => {
+    vi.spyOn(client, 'getTrip').mockResolvedValue({
+      id: 't1',
+      locationSlug: 'oslo-norway',
+      itinerary: [],
+      designStyle: 'chronicle',
+      tripLengthDays: null,
+    })
+    vi.spyOn(client, 'fetchLocation').mockRejectedValue(new Error('geocode down'))
+    const { result } = renderHook(() => useTripData('t1'))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.trip?.id).toBe('t1')
+    expect(result.current.error).toBe(false)
+  })
 })

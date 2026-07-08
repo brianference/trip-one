@@ -10,6 +10,8 @@ interface TripState {
   designStyle: DesignStyle
   /** Total number of days the traveler plans for this trip, or null if not set yet. */
   tripLengthDays: number | null
+  /** True when the most recent save to the backend failed, so the UI can surface it and offer a retry. */
+  saveError: boolean
   setTrip: (tripId: string, locationSlug: string, itinerary: ItineraryItem[], designStyle: DesignStyle) => void
   addItem: (item: ItineraryItem) => void
   removeItem: (index: number) => void
@@ -17,6 +19,7 @@ interface TripState {
   setDesignStyle: (style: DesignStyle) => void
   setTripLengthDays: (days: number | null) => void
   setItinerary: (itinerary: ItineraryItem[]) => void
+  setSaveError: (saveError: boolean) => void
 }
 
 export const useTripStore = create<TripState>((set) => ({
@@ -25,6 +28,7 @@ export const useTripStore = create<TripState>((set) => ({
   itinerary: [],
   designStyle: 'chronicle',
   tripLengthDays: null,
+  saveError: false,
   setTrip: (tripId, locationSlug, itinerary, designStyle) => set({ tripId, locationSlug, itinerary, designStyle }),
   addItem: (item) => set((s) => ({ itinerary: [...s.itinerary, item] })),
   removeItem: (index) => set((s) => ({ itinerary: s.itinerary.filter((_, i) => i !== index) })),
@@ -38,4 +42,5 @@ export const useTripStore = create<TripState>((set) => ({
   setDesignStyle: (style) => set({ designStyle: style }),
   setTripLengthDays: (days) => set({ tripLengthDays: days }),
   setItinerary: (itinerary) => set({ itinerary }),
+  setSaveError: (saveError) => set({ saveError }),
 }))
