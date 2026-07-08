@@ -10,7 +10,9 @@ export function MapLegend({ className }: { className: string }) {
     <ul className={className} aria-label="Map pin colors">
       {LEGEND_ENTRIES.map((entry) => (
         <li key={entry.label}>
-          <span aria-hidden style={{ background: entry.color }} />
+          <span aria-hidden style={{ background: entry.color }}>
+            {entry.icon}
+          </span>
           {entry.label}
         </li>
       ))}

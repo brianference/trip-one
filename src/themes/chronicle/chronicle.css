@@ -743,11 +743,16 @@ body:has(.chronicle-page) label {
 }
 
 .chronicle-map-legend li span[aria-hidden] {
-  display: block;
-  width: 10px;
-  height: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
   flex: none;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.5);
 }
 
 /* ---------- Itinerary badges + directions ---------- */

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { CATEGORY_COLORS, DEFAULT_MARKER_COLOR } from './categoryLegend'
+import { CATEGORY_COLORS, DEFAULT_MARKER_COLOR, DEFAULT_MARKER_ICON, iconForCategory } from './categoryLegend'
 
 export interface MapMarker {
   lat: number
@@ -44,23 +44,27 @@ interface Props {
 const MIN_BOUNDS_SPAN_DEGREES = 0.05
 
 /**
- * Build a self-contained divIcon for a pin of the given color. Leaflet's
- * default marker icon requests marker-icon.png/marker-shadow.png relative to
- * the current page path. Under this app's SPA catch-all routing those paths
- * 404 and silently resolve to index.html, so the browser tries to render
- * HTML as an image and shows a broken-image icon — this avoids that
- * entirely by never depending on external image assets.
+ * Build a self-contained divIcon: a colored teardrop with a category glyph
+ * centered on it. Leaflet's default marker icon requests
+ * marker-icon.png/marker-shadow.png relative to the current page path; under
+ * this app's SPA catch-all routing those 404 and silently resolve to
+ * index.html, so the browser tries to render HTML as an image and shows a
+ * broken-image icon. This avoids that entirely by never depending on external
+ * image assets. The glyph makes pins distinguishable beyond color alone.
  */
-function buildPinIcon(color: string): L.DivIcon {
+function buildPinIcon(color: string, glyph: string): L.DivIcon {
   return L.divIcon({
     className: 'trip-one-map-marker',
     html:
-      `<span style="display:block;width:20px;height:20px;border-radius:50% 50% 50% 0;` +
-      `background:${color};border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.4);` +
-      `transform:rotate(-45deg);"></span>`,
-    iconSize: [26, 26],
-    iconAnchor: [13, 26],
-    popupAnchor: [0, -26],
+      `<div style="position:relative;width:28px;height:36px;">` +
+      `<span style="position:absolute;left:0;top:0;width:28px;height:28px;border-radius:50% 50% 50% 0;` +
+      `background:${color};border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.4);transform:rotate(-45deg);"></span>` +
+      `<span style="position:absolute;left:0;top:3px;width:28px;height:24px;display:flex;align-items:center;` +
+      `justify-content:center;font-size:14px;line-height:1;">${glyph}</span>` +
+      `</div>`,
+    iconSize: [28, 36],
+    iconAnchor: [14, 36],
+    popupAnchor: [0, -34],
   })
 }
 
@@ -98,12 +102,12 @@ export function MapView({ lat, lng, label, markers, boundingBox, route, height =
       maxZoom: 20,
     }).addTo(map)
 
-    const icon = buildPinIcon(DEFAULT_MARKER_COLOR)
+    const icon = buildPinIcon(DEFAULT_MARKER_COLOR, DEFAULT_MARKER_ICON)
     L.marker([lat, lng], { icon }).addTo(map).bindPopup(buildPopupEl(label))
 
     for (const marker of markers ?? []) {
       const color = CATEGORY_COLORS[marker.category] ?? DEFAULT_MARKER_COLOR
-      const markerIcon = buildPinIcon(color)
+      const markerIcon = buildPinIcon(color, iconForCategory(marker.category))
       L.marker([marker.lat, marker.lng], { icon: markerIcon })
         .addTo(map)
         .bindPopup(buildPopupEl(`${marker.label} (${marker.category})`))
