@@ -44,5 +44,20 @@ describe('AiPlanner', () => {
     render(<AiPlanner places={[]} defaultDays={3} onPlan={vi.fn()} />)
     expect(screen.getByText(/nothing to plan from/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /build my itinerary/i })).toBeDisabled()
+    // no suggested prompts when there's nothing to ground on
+    expect(screen.queryByText(/or try one of these/i)).not.toBeInTheDocument()
+  })
+
+  it('running a suggested prompt sends that prompt to the planner', async () => {
+    const plan = [{ day: 1, placeIndexes: [0] }]
+    const genSpy = vi.spyOn(client, 'generatePlan').mockResolvedValue(plan)
+    const onPlan = vi.fn()
+    render(<AiPlanner places={places} defaultDays={2} onPlan={onPlan} />)
+
+    const suggestion = screen.getByRole('button', { name: /foodie trip/i })
+    fireEvent.click(suggestion)
+
+    await waitFor(() => expect(onPlan).toHaveBeenCalledWith(plan, 2))
+    expect(genSpy.mock.calls[0][0]).toMatch(/foodie trip/i)
   })
 })

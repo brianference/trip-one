@@ -1,8 +1,12 @@
+import { useNavigate } from 'react-router-dom'
+import type { PlanDay } from '../../../lib/api/client'
 import { useTripContext } from '../useTripContext'
 import { useTripStore } from '../../../store/tripStore'
+import { useItineraryActions } from '../hooks/useItineraryActions'
 import { useForecast } from '../../weather/useForecast'
 import { useDailyForecast } from '../../weather/useDailyForecast'
 import { packingTips } from '../../weather/packingTips'
+import { AiPlanner } from '../components/AiPlanner'
 import { WeatherNow } from '../components/WeatherNow'
 import { ForecastStrip } from '../components/ForecastStrip'
 import { PackingTips } from '../components/PackingTips'
@@ -27,6 +31,8 @@ export function OverviewPage() {
   const itinerary = useTripStore((s) => s.itinerary)
   const tripLengthDays = useTripStore((s) => s.tripLengthDays)
   const displayName = location?.displayName ?? trip.locationSlug
+  const navigate = useNavigate()
+  const { applyPlan } = useItineraryActions(trip.id)
 
   const { data: forecast } = useForecast(location?.lat ?? 0, location?.lng ?? 0)
   const { data: dailyForecast } = useDailyForecast(location?.lat ?? 0, location?.lng ?? 0, tripLengthDays ?? DEFAULT_FORECAST_DAYS)
@@ -34,6 +40,11 @@ export function OverviewPage() {
 
   const nextStops = itinerary.slice(0, NEXT_UP_COUNT)
   const nearby = location?.thingsToDo.slice(0, NEARBY_PREVIEW_COUNT) ?? []
+
+  function handleAiPlan(plan: PlanDay[], days: number) {
+    applyPlan(plan, location?.thingsToDo ?? [], days)
+    navigate(`/trip/${trip.id}/itinerary`)
+  }
 
   return (
     <article className="chronicle-chapter">
@@ -45,6 +56,8 @@ export function OverviewPage() {
           <PackingTips tips={tips} />
         </>
       )}
+
+      {location && <AiPlanner places={location.thingsToDo} defaultDays={tripLengthDays ?? 3} onPlan={handleAiPlan} />}
 
       <ul className="chronicle-quick-stats">
         <li>

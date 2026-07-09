@@ -4,12 +4,24 @@ import { logger } from '../../../lib/logger'
 
 const DAY_OPTIONS = Array.from({ length: 14 }, (_, i) => i + 1)
 
+// Ready-made prompts a traveler can tap instead of typing — the "Or ask
+// anything" pattern. Each is intent-driven (pace + interests), which is
+// exactly what the grounded planner reasons over against the real nearby
+// places, so any of them works for any destination.
+const SUGGESTED_PROMPTS = [
+  'A relaxed trip with the best food and history',
+  'Kid-friendly, easy walking, one museum a day',
+  'A foodie trip — top-rated restaurants and cafés',
+  'Outdoors and scenic views, with minimal indoor time',
+  'A packed sightseeing trip hitting the top-rated spots',
+]
+
 /**
- * The grounded natural-language planner UI. The traveler describes the trip
- * they want in plain English; on submit it asks the backend to build a
- * day-by-day plan from the real nearby places (`places`) and hands the result
- * back via `onPlan`. The model can only pick from `places`, so nothing it
- * returns is fabricated.
+ * The grounded natural-language planner UI, styled after the "Plan with AI"
+ * pattern: a free-text box plus tappable suggested prompts. The traveler
+ * describes (or picks) the trip they want; the backend builds a day-by-day
+ * plan from the real nearby places (`places`) and it's handed back via
+ * `onPlan`. The model can only pick from `places`, so nothing is fabricated.
  */
 export function AiPlanner({
   places,
@@ -27,14 +39,13 @@ export function AiPlanner({
 
   const disabled = busy || places.length === 0
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!intent.trim() || disabled) return
+  async function runPlan(text: string) {
+    if (!text.trim() || disabled) return
     setBusy(true)
     setError(null)
     try {
       const candidates = places.map((p) => ({ name: p.name, category: p.category, rating: p.rating }))
-      const plan = await generatePlan(intent.trim(), days, candidates)
+      const plan = await generatePlan(text.trim(), days, candidates)
       onPlan(plan, days)
       setIntent('')
     } catch (err) {
@@ -45,13 +56,24 @@ export function AiPlanner({
     }
   }
 
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    void runPlan(intent)
+  }
+
+  function handleSuggestion(prompt: string) {
+    setIntent(prompt)
+    void runPlan(prompt)
+  }
+
   return (
     <form className="chronicle-ai-planner" onSubmit={handleSubmit} aria-labelledby="chronicle-ai-heading">
+      <p className="chronicle-ai-kicker">✨ Plan with AI</p>
       <h2 id="chronicle-ai-heading" className="chronicle-ai-heading">
-        Plan it for me
+        Tell me the trip you want
       </h2>
       <p className="chronicle-ai-sub">
-        Describe the trip you want. Every stop is picked from real places nearby — nothing invented.
+        Describe it in a sentence, or tap an idea below. Every stop is picked from real places nearby — nothing invented.
       </p>
       <textarea
         className="chronicle-ai-input"
@@ -79,6 +101,22 @@ export function AiPlanner({
           {busy ? 'Building…' : 'Build my itinerary'}
         </button>
       </div>
+
+      {places.length > 0 && (
+        <div className="chronicle-ai-suggestions" aria-label="Suggested prompts">
+          <span className="chronicle-ai-suggestions-label">Or try one of these</span>
+          <ul>
+            {SUGGESTED_PROMPTS.map((prompt) => (
+              <li key={prompt}>
+                <button type="button" className="chronicle-ai-suggestion" onClick={() => handleSuggestion(prompt)} disabled={disabled}>
+                  {prompt}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {places.length === 0 && <p className="chronicle-ai-note">No nearby places found yet, so there’s nothing to plan from.</p>}
       {error && (
         <p role="alert" className="chronicle-ai-error">

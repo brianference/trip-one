@@ -1006,6 +1006,16 @@ body:has(.chronicle-page) label {
   border-radius: var(--chronicle-radius-lg);
 }
 
+.chronicle-ai-kicker {
+  margin: 0 0 4px;
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chronicle-teal);
+}
+
 .chronicle-ai-heading {
   font-family: var(--chronicle-font-display);
   font-weight: 900;
@@ -1098,6 +1108,53 @@ body:has(.chronicle-page) label {
 
 .chronicle-ai-error {
   color: var(--chronicle-danger);
+}
+
+.chronicle-ai-suggestions {
+  margin-top: var(--chronicle-space-md);
+}
+
+.chronicle-ai-suggestions-label {
+  display: block;
+  margin-bottom: var(--chronicle-space-sm);
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--chronicle-text-tertiary);
+}
+
+.chronicle-ai-suggestions ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--chronicle-space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chronicle-ai-suggestion {
+  min-height: 40px;
+  padding: 6px var(--chronicle-space-md);
+  border: 1px solid var(--chronicle-border-subtle);
+  border-radius: var(--chronicle-radius-pill);
+  background: var(--chronicle-bg-surface);
+  color: var(--chronicle-text-secondary);
+  font-family: var(--chronicle-font-body);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chronicle-ai-suggestion:hover:not(:disabled),
+.chronicle-ai-suggestion:focus-visible:not(:disabled) {
+  border-color: var(--chronicle-teal);
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-ai-suggestion:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 /* ---------- Save-error banner ---------- */
