@@ -1,12 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { extractTripIntent, fetchLocation, createTrip, updateTrip, generatePlan } from '../../../lib/api/client'
-import { planToItinerary } from '../../../lib/itinerary/planToItinerary'
+import { extractTripIntent } from '../../../lib/api/client'
+import { createTripForDestination } from '../planning/createTripForDestination'
 import { stashOpeningChat } from '../chat/chatHandoff'
 import { logger } from '../../../lib/logger'
-
-const MAX_CANDIDATES = 40
-const DEFAULT_DAYS = 3
 
 // Full-sentence prompts (destination included) — tapping one plans a whole
 // trip end to end, the "Plan with AI" pattern.
@@ -45,39 +42,20 @@ export function HomeAiPlanner() {
       }
 
       setStatus(`Finding real places in ${intent.destination}…`)
-      const location = await fetchLocation(intent.destination)
-      if (location.thingsToDo.length === 0) {
-        setError(`I couldn’t find things to do in ${intent.destination}. Try a nearby city.`)
-        return
-      }
-
-      const trip = await createTrip(location.slug, 'chronicle')
-      const days = intent.days ?? DEFAULT_DAYS
-      const candidatePlaces = [...location.thingsToDo]
-        .sort((a, b) => (b.rating ?? -Infinity) - (a.rating ?? -Infinity))
-        .slice(0, MAX_CANDIDATES)
-
-      setStatus('Building your itinerary…')
-      const plan = await generatePlan(
-        intent.interests,
-        days,
-        candidatePlaces.map((p) => ({ name: p.name, category: p.category, rating: p.rating })),
-      )
-      const itinerary = planToItinerary(plan.days, candidatePlaces)
-      await updateTrip(trip.id, { itinerary, tripLengthDays: days })
+      const built = await createTripForDestination(intent.destination, intent.interests, intent.days)
       // Seed the itinerary chat with this opening exchange so refining feels
       // continuous — the traveler's sentence, then the planner's first reply.
       const now = Date.now()
-      stashOpeningChat(trip.id, [
+      stashOpeningChat(built.tripId, [
         { id: `open-user-${now}`, role: 'user', text: request.trim(), ts: now },
         {
           id: `open-ai-${now}`,
           role: 'assistant',
-          text: plan.message || `Here’s a ${days}-day trip to ${intent.destination}. Tell me what to change.`,
+          text: built.message || `Here’s a ${built.days}-day trip to ${built.destinationName}. Tell me what to change.`,
           ts: now + 1,
         },
       ])
-      navigate(`/trip/${trip.id}/itinerary`)
+      navigate(`/trip/${built.tripId}/itinerary`)
     } catch (err) {
       logger.error('home AI trip planning failed', err)
       setError(err instanceof Error ? err.message : 'Something went wrong. Try again.')

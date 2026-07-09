@@ -14,9 +14,10 @@ export function getStoredTheme(): ThemeChoice | null {
 
 /** What the OS currently prefers, used as the starting point before any explicit choice. */
 export function systemTheme(): ThemeChoice {
+  // Light is the app default; only go dark when the OS explicitly prefers it.
   // Guard matchMedia — it's absent in some environments (e.g. jsdom under test).
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return 'dark'
-  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return 'light'
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
 /**

@@ -10,14 +10,14 @@ describe('ThemeToggle', () => {
 
   it('toggles the document theme and persists the choice', () => {
     render(<ThemeToggle />)
-    // jsdom has no matchMedia → systemTheme() defaults to dark, so first click goes to light.
-    fireEvent.click(screen.getByRole('button', { name: /switch to light mode/i }))
-    expect(document.documentElement.getAttribute('data-theme')).toBe('light')
-    expect(localStorage.getItem('trip-one-theme')).toBe('light')
-
+    // jsdom has no matchMedia → systemTheme() defaults to light, so first click goes to dark.
     fireEvent.click(screen.getByRole('button', { name: /switch to dark mode/i }))
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
     expect(localStorage.getItem('trip-one-theme')).toBe('dark')
+
+    fireEvent.click(screen.getByRole('button', { name: /switch to light mode/i }))
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light')
+    expect(localStorage.getItem('trip-one-theme')).toBe('light')
   })
 
   it('starts from the saved choice', () => {

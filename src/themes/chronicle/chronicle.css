@@ -13,31 +13,31 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300&display=swap');
 
 :root {
-  /* ---- Surfaces (dark, default) ---- */
-  --chronicle-bg-canvas: #1a1a1a;
-  --chronicle-bg-surface: #232323;
-  --chronicle-bg-surface-2: #2b2b2b;
+  /* ---- Surfaces (light, default) ---- */
+  --chronicle-bg-canvas: #f7f2e7;
+  --chronicle-bg-surface: #fffdf8;
+  --chronicle-bg-surface-2: #f0e9d8;
 
   /* ---- Borders ---- */
-  --chronicle-border-hairline: rgba(245, 240, 230, 0.1);
-  --chronicle-border-subtle: rgba(245, 240, 230, 0.18);
-  --chronicle-spine: #3a3a3a;
+  --chronicle-border-hairline: rgba(26, 26, 26, 0.1);
+  --chronicle-border-subtle: rgba(26, 26, 26, 0.18);
+  --chronicle-spine: #d8cfba;
 
   /* ---- Accents ---- */
-  --chronicle-teal: #2fa396;
-  --chronicle-teal-hover: #3ebdae;
-  --chronicle-gold: #e8b84a;
-  --chronicle-gold-hover: #f0c55e;
-  --chronicle-muted: #8b8b83;
+  --chronicle-teal: #1d8a7d;
+  --chronicle-teal-hover: #166f64;
+  --chronicle-gold: #b8912e;
+  --chronicle-gold-hover: #967520;
+  --chronicle-muted: #8a8370;
 
   /* ---- Text ---- */
-  --chronicle-text-primary: #f5f0e6;
-  --chronicle-text-secondary: #c9c3b4;
-  --chronicle-text-tertiary: #8f8a7c;
-  --chronicle-text-on-gold: #1a1a1a;
+  --chronicle-text-primary: #1a1a1a;
+  --chronicle-text-secondary: #4a4438;
+  --chronicle-text-tertiary: #746c5a;
+  --chronicle-text-on-gold: #fffdf8;
 
   /* ---- Semantic ---- */
-  --chronicle-danger: #d9635a;
+  --chronicle-danger: #c0483f;
 
   /* ---- Typography ---- */
   --chronicle-font-display: 'Playfair Display', Georgia, serif;
@@ -60,61 +60,63 @@
   --chronicle-radius-pill: 999px;
 
   /* ---- Shadow ---- */
-  --chronicle-shadow-card: 0 1px 0 rgba(0, 0, 0, 0.5), 0 12px 24px -14px rgba(0, 0, 0, 0.6);
+  --chronicle-shadow-card: 0 1px 2px rgba(26, 26, 26, 0.06), 0 8px 20px -12px rgba(26, 26, 26, 0.16);
   --chronicle-shadow-focus: 0 0 0 2px var(--chronicle-bg-canvas), 0 0 0 4px var(--chronicle-teal);
 }
 
-/* Light palette. Applied two ways: automatically when the OS prefers light AND
-   the user hasn't picked a theme (`:root:not([data-theme])`), or explicitly
-   when they toggle to light (`:root[data-theme='light']`). An explicit
-   `data-theme='dark'` matches neither, so it falls back to the dark `:root`
-   defaults above — that's how the toggle overrides the system setting. */
-@media (prefers-color-scheme: light) {
+/* Dark palette. Light is the default (above). Dark applies two ways: when the
+   OS prefers dark AND the user hasn't picked a theme (`:root:not([data-theme])`),
+   or explicitly when they toggle to dark (`:root[data-theme='dark']`). An
+   explicit `data-theme='light'` matches neither, so it keeps the light `:root`
+   defaults — that's how the toggle overrides the system setting. */
+@media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --chronicle-bg-canvas: #f7f2e7;
-    --chronicle-bg-surface: #fffdf8;
-    --chronicle-bg-surface-2: #f0e9d8;
+    --chronicle-bg-canvas: #1a1a1a;
+    --chronicle-bg-surface: #232323;
+    --chronicle-bg-surface-2: #2b2b2b;
 
-    --chronicle-border-hairline: rgba(26, 26, 26, 0.1);
-    --chronicle-border-subtle: rgba(26, 26, 26, 0.18);
-    --chronicle-spine: #d8cfba;
+    --chronicle-border-hairline: rgba(245, 240, 230, 0.1);
+    --chronicle-border-subtle: rgba(245, 240, 230, 0.18);
+    --chronicle-spine: #3a3a3a;
 
-    --chronicle-teal: #1d8a7d;
-    --chronicle-teal-hover: #166f64;
-    --chronicle-gold: #b8912e;
-    --chronicle-gold-hover: #967520;
-    --chronicle-muted: #8a8370;
+    --chronicle-teal: #2fa396;
+    --chronicle-teal-hover: #3ebdae;
+    --chronicle-gold: #e8b84a;
+    --chronicle-gold-hover: #f0c55e;
+    --chronicle-muted: #8b8b83;
 
-    --chronicle-text-primary: #1a1a1a;
-    --chronicle-text-secondary: #4a4438;
-    --chronicle-text-tertiary: #746c5a;
-    --chronicle-text-on-gold: #fffdf8;
+    --chronicle-text-primary: #f5f0e6;
+    --chronicle-text-secondary: #c9c3b4;
+    --chronicle-text-tertiary: #8f8a7c;
+    --chronicle-text-on-gold: #1a1a1a;
 
-    --chronicle-shadow-card: 0 1px 2px rgba(26, 26, 26, 0.06), 0 8px 20px -12px rgba(26, 26, 26, 0.16);
+    --chronicle-danger: #d9635a;
+    --chronicle-shadow-card: 0 1px 0 rgba(0, 0, 0, 0.5), 0 12px 24px -14px rgba(0, 0, 0, 0.6);
   }
 }
 
-:root[data-theme='light'] {
-  --chronicle-bg-canvas: #f7f2e7;
-  --chronicle-bg-surface: #fffdf8;
-  --chronicle-bg-surface-2: #f0e9d8;
+:root[data-theme='dark'] {
+  --chronicle-bg-canvas: #1a1a1a;
+  --chronicle-bg-surface: #232323;
+  --chronicle-bg-surface-2: #2b2b2b;
 
-  --chronicle-border-hairline: rgba(26, 26, 26, 0.1);
-  --chronicle-border-subtle: rgba(26, 26, 26, 0.18);
-  --chronicle-spine: #d8cfba;
+  --chronicle-border-hairline: rgba(245, 240, 230, 0.1);
+  --chronicle-border-subtle: rgba(245, 240, 230, 0.18);
+  --chronicle-spine: #3a3a3a;
 
-  --chronicle-teal: #1d8a7d;
-  --chronicle-teal-hover: #166f64;
-  --chronicle-gold: #b8912e;
-  --chronicle-gold-hover: #967520;
-  --chronicle-muted: #8a8370;
+  --chronicle-teal: #2fa396;
+  --chronicle-teal-hover: #3ebdae;
+  --chronicle-gold: #e8b84a;
+  --chronicle-gold-hover: #f0c55e;
+  --chronicle-muted: #8b8b83;
 
-  --chronicle-text-primary: #1a1a1a;
-  --chronicle-text-secondary: #4a4438;
-  --chronicle-text-tertiary: #746c5a;
-  --chronicle-text-on-gold: #fffdf8;
+  --chronicle-text-primary: #f5f0e6;
+  --chronicle-text-secondary: #c9c3b4;
+  --chronicle-text-tertiary: #8f8a7c;
+  --chronicle-text-on-gold: #1a1a1a;
 
-  --chronicle-shadow-card: 0 1px 2px rgba(26, 26, 26, 0.06), 0 8px 20px -12px rgba(26, 26, 26, 0.16);
+  --chronicle-danger: #d9635a;
+  --chronicle-shadow-card: 0 1px 0 rgba(0, 0, 0, 0.5), 0 12px 24px -14px rgba(0, 0, 0, 0.6);
 }
 
 /* ---------- Theme toggle (fixed, top-right, every page) ---------- */

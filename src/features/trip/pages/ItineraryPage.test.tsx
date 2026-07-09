@@ -12,6 +12,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
       trip: { id: 't1', locationSlug: 'lisbon-portugal', itinerary: [], designStyle: 'chronicle', tripLengthDays: null },
       location: null,
     }),
+    useNavigate: () => vi.fn(),
   }
 })
 

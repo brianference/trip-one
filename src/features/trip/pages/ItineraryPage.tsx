@@ -1,9 +1,12 @@
 import { useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { ItineraryItem } from '../../../lib/validation/schemas'
 import { useTripContext } from '../useTripContext'
 import { useItineraryActions } from '../hooks/useItineraryActions'
 import { useTripChat } from '../chat/useTripChat'
 import { TripChatPanel } from '../chat/TripChatPanel'
+import { createTripForDestination } from '../planning/createTripForDestination'
+import { stashOpeningChat } from '../chat/chatHandoff'
 import { ItineraryStopForm } from '../components/ItineraryStopForm'
 import { ItineraryDayGroup } from '../components/ItineraryDayGroup'
 
@@ -17,10 +20,29 @@ const TRIP_LENGTH_OPTIONS = Array.from({ length: 14 }, (_, i) => i + 1)
  */
 export function ItineraryPage() {
   const { trip, location } = useTripContext()
+  const navigate = useNavigate()
   const { itinerary, tripLengthDays, adding, addStop, removeStop, moveStop, setTripLength, applyPlan } = useItineraryActions(trip.id)
 
   const places = location?.thingsToDo ?? []
-  const chat = useTripChat(trip.id, places, tripLengthDays ?? 3, applyPlan)
+
+  // When the chat detects a different destination, build a fresh trip there and
+  // navigate to it, seeding its chat with the acknowledgement so the switch is
+  // continuous.
+  async function handleRelocate(destination: string, interests: string) {
+    const built = await createTripForDestination(destination, interests, tripLengthDays)
+    const now = Date.now()
+    stashOpeningChat(built.tripId, [
+      {
+        id: `open-ai-${now}`,
+        role: 'assistant',
+        text: built.message || `Here’s a ${built.days}-day trip to ${built.destinationName}. Tell me what to change.`,
+        ts: now,
+      },
+    ])
+    navigate(`/trip/${built.tripId}/itinerary`)
+  }
+
+  const chat = useTripChat(trip.id, places, tripLengthDays ?? 3, location?.displayName, applyPlan, handleRelocate)
 
   function handleTripLengthChange(newLength: number | null) {
     setTripLength(newLength, places)

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
-import { generatePlan, type ThingToDo, type PlanDay, type PlanTurn, type CurrentPlanDay } from '../../../lib/api/client'
+import { sendChat, type ThingToDo, type PlanDay, type PlanTurn, type CurrentPlanDay } from '../../../lib/api/client'
 import type { ItineraryItem } from '../../../lib/validation/schemas'
+import { MIN_TRIP_DAYS } from '../planning/createTripForDestination'
 import { logger } from '../../../lib/logger'
 import { CHAT_GREETING, type ChatMessage } from './chatTypes'
 import { takeOpeningChat } from './chatHandoff'
@@ -39,16 +40,24 @@ function summarizeItinerary(itinerary: ItineraryItem[]): CurrentPlanDay[] {
  * replies in natural language. Nothing is invented — the planner may only pick
  * from the trip's real nearby places.
  *
+ * The assistant routes each message: a plan edit re-plans the itinerary, a
+ * question is answered from the real trip data (no plan change), and naming a
+ * different destination relocates the trip (via `onRelocate`).
+ *
  * @param tripId - The trip being planned (also used to consume the homepage handoff)
  * @param places - The trip's real nearby places (the grounding pool)
- * @param days - Current trip length, used as the plan target
+ * @param days - Current trip length, used as the plan target (clamped to the minimum)
+ * @param locationName - The current destination name, so the assistant can detect a switch
  * @param onApplyPlan - Applies a new grounded plan to the itinerary (and persists it)
+ * @param onRelocate - Rebuilds the trip around a new destination and navigates to it
  */
 export function useTripChat(
   tripId: string,
   places: ThingToDo[],
   days: number,
+  locationName: string | undefined,
   onApplyPlan: (plan: PlanDay[], candidatePlaces: ThingToDo[], days: number) => void,
+  onRelocate: (destination: string, interests: string) => Promise<void>,
 ) {
   // Seed from the homepage handoff if present, else a single greeting bubble.
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
@@ -82,16 +91,28 @@ export function useTripChat(
           .slice(0, MAX_CANDIDATES)
         const candidates = candidatePlaces.map((p) => ({ name: p.name, category: p.category, rating: p.rating }))
         const currentPlan = summarizeItinerary(currentItinerary)
+        const planDays = Math.max(days, MIN_TRIP_DAYS)
 
-        const result = await generatePlan(trimmed, days, candidates, {
+        const result = await sendChat(trimmed, planDays, candidates, {
+          locationName,
           conversation: priorTurns,
-          currentPlan: currentPlan.length > 0 ? currentPlan : undefined,
+          itinerary: currentPlan.length > 0 ? currentPlan : undefined,
         })
 
-        onApplyPlan(result.days, candidatePlaces, days)
+        if (result.action === 'relocate' && result.destination) {
+          // Show the assistant's acknowledgement, then rebuild the trip around
+          // the new destination and navigate there.
+          if (result.message) setMessages((prev) => [...prev, makeMessage('assistant', result.message)])
+          await onRelocate(result.destination, trimmed)
+          return
+        }
+
+        if (result.action === 'plan' && result.days) {
+          onApplyPlan(result.days, candidatePlaces, planDays)
+        }
         setMessages((prev) => [...prev, makeMessage('assistant', result.message || 'Done — your itinerary is updated.')])
       } catch (err) {
-        logger.error('itinerary chat planning failed', err)
+        logger.error('itinerary chat turn failed', err)
         // Backend messages (rate limit, planner unavailable) are already
         // traveler-friendly — show them as-is. Anything else (network/parse) is
         // technical, so replace it with a plain retry prompt.
@@ -104,7 +125,7 @@ export function useTripChat(
         setIsThinking(false)
       }
     },
-    [messages, isThinking, places, days, onApplyPlan],
+    [messages, isThinking, places, days, locationName, onApplyPlan, onRelocate],
   )
 
   return { messages, isThinking, error, send }

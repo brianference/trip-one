@@ -125,6 +125,44 @@ export interface PlanResult {
   message: string
 }
 
+/** One conversational turn: a re-plan, a plain answer, or a request to switch destination. */
+export interface ChatResult {
+  action: 'plan' | 'answer' | 'relocate'
+  message: string
+  days: PlanDay[] | null
+  /** For `relocate`: the new destination to switch the trip to. */
+  destination: string | null
+}
+
+/**
+ * Send one conversational turn to the trip assistant. The backend decides
+ * whether the message is a plan edit, a question, or a request to visit a
+ * different destination: for a plan it returns grounded `days` to apply; for a
+ * question it returns only a `message`; for a relocate it returns a
+ * `destination` to rebuild the trip around.
+ * @param message - The traveler's latest message
+ * @param days - Trip length to plan for
+ * @param places - The real candidate places (index order maps to returned `days`)
+ * @param opts - Current destination name, itinerary (by day), and prior conversation
+ * @throws If the request is invalid, rate limited, or the assistant fails
+ */
+export async function sendChat(
+  message: string,
+  days: number,
+  places: { name: string; category: string; rating?: number }[],
+  opts?: { locationName?: string; itinerary?: CurrentPlanDay[]; conversation?: PlanTurn[] },
+): Promise<ChatResult> {
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, days, places, locationName: opts?.locationName, itinerary: opts?.itinerary, conversation: opts?.conversation }),
+  })
+  const body = await res.json()
+  if (!res.ok) throw new Error(body.error ?? 'failed to reach the assistant')
+  const action = body.action === 'plan' || body.action === 'relocate' ? body.action : 'answer'
+  return { action, message: typeof body.message === 'string' ? body.message : '', days: body.days ?? null, destination: body.destination ?? null }
+}
+
 export interface TripIntent {
   /** The destination named in the request, or null if none could be found. */
   destination: string | null
