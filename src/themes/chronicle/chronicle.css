@@ -1429,6 +1429,48 @@ body:has(.chronicle-page) label {
   margin: 0;
 }
 
+.chronicle-hero-ready-label {
+  margin-top: var(--chronicle-space-lg);
+}
+
+.chronicle-ready-trips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-sm);
+}
+
+.chronicle-ready-trip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  border: 1px solid var(--chronicle-border-hairline);
+  border-radius: var(--chronicle-radius-md);
+  background: var(--chronicle-bg-surface-2);
+  text-decoration: none;
+  transition: border-color 0.15s ease;
+}
+
+.chronicle-ready-trip:hover {
+  border-color: var(--chronicle-teal);
+}
+
+.chronicle-ready-trip-city {
+  font-family: var(--chronicle-font-display);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-ready-trip-blurb {
+  font-family: var(--chronicle-font-body);
+  font-size: 13px;
+  color: var(--chronicle-text-secondary);
+}
+
 @media (max-width: 860px) {
   .chronicle-hero-cols {
     flex-direction: column;

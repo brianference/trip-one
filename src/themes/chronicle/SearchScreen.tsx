@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { fetchLocation, createTrip, updateTrip, fetchAutocomplete, type AutocompleteSuggestion } from '../../lib/api/client'
 import { useTripStore } from '../../store/tripStore'
 import { logger } from '../../lib/logger'
-import { DEMO_TRIP_IDS } from '../../lib/api/demoIds'
+import { DEMO_TRIPS } from '../../lib/api/demoIds'
 import { buildStarterItinerary } from '../../lib/itinerary/buildStarterItinerary'
 import { HomeAiPlanner } from '../../features/trip/components/HomeAiPlanner'
 
@@ -16,17 +16,6 @@ const FEATURES = [
   { title: 'Real things to do', description: 'Tripadvisor and Google Places, ranked by rating and how close they are.' },
   { title: 'Starts pre-planned', description: 'Your itinerary auto-fills with the top-rated nearby spots the moment you search.' },
 ]
-
-function DemoCard({ eyebrow, title, description, cta, to }: { eyebrow: string; title: string; description: string; cta: string; to: string }) {
-  return (
-    <Link to={to} className="chronicle-demo-card">
-      <p className="chronicle-demo-eyebrow">{eyebrow}</p>
-      <h3>{title}</h3>
-      <p>{description}</p>
-      <span className="chronicle-demo-cta">{cta} →</span>
-    </Link>
-  )
-}
 
 /**
  * Landing page for Trip One — Chronicle is the only theme, so this screen is
@@ -174,6 +163,18 @@ export function SearchScreen() {
             </ul>
           )}
             </div>
+
+            <p className="chronicle-hero-col-label chronicle-hero-ready-label">Or start from a ready trip</p>
+            <ul className="chronicle-ready-trips">
+              {DEMO_TRIPS.map((trip) => (
+                <li key={trip.id}>
+                  <Link to={`/trip/${trip.id}`} className="chronicle-ready-trip">
+                    <span className="chronicle-ready-trip-city">{trip.city}</span>
+                    <span className="chronicle-ready-trip-blurb">{trip.blurb}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
@@ -189,28 +190,6 @@ export function SearchScreen() {
               <p>{feature.description}</p>
             </div>
           ))}
-        </div>
-      </section>
-
-      <section className="chronicle-demos" aria-labelledby="chronicle-demos-heading">
-        <p className="chronicle-kicker">See it live</p>
-        <h2 id="chronicle-demos-heading">Two trips, already built.</h2>
-        <p className="chronicle-section-sub">Poke around before you plan your own. No signup required.</p>
-        <div className="chronicle-demo-grid">
-          <DemoCard
-            eyebrow="Demo trip"
-            title="Yellowstone in 3 days"
-            description="Geysers, wolves, and Old Faithful at 6am."
-            cta="Explore Yellowstone"
-            to={`/trip/${DEMO_TRIP_IDS.yellowstone}`}
-          />
-          <DemoCard
-            eyebrow="Demo trip"
-            title="Tokyo in 5 days"
-            description="Ramen in Shinjuku, gardens in Meguro, Shibuya at dusk."
-            cta="Explore Tokyo"
-            to={`/trip/${DEMO_TRIP_IDS.tokyo}`}
-          />
         </div>
       </section>
 

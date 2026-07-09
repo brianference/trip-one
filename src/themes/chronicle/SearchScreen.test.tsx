@@ -66,14 +66,16 @@ describe('Chronicle SearchScreen', () => {
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/location not found/i))
   })
 
-  it('links to both real demo trips', () => {
+  it('links to the pre-created trips (Tokyo, Yellowstone, Dublin, Beijing)', () => {
     render(
       <MemoryRouter>
         <SearchScreen />
       </MemoryRouter>,
     )
-    expect(screen.getByRole('link', { name: /explore yellowstone/i })).toHaveAttribute('href', `/trip/${DEMO_TRIP_IDS.yellowstone}`)
-    expect(screen.getByRole('link', { name: /explore tokyo/i })).toHaveAttribute('href', `/trip/${DEMO_TRIP_IDS.tokyo}`)
+    expect(screen.getByRole('link', { name: /yellowstone/i })).toHaveAttribute('href', `/trip/${DEMO_TRIP_IDS.yellowstone}`)
+    expect(screen.getByRole('link', { name: /tokyo/i })).toHaveAttribute('href', `/trip/${DEMO_TRIP_IDS.tokyo}`)
+    expect(screen.getByRole('link', { name: /dublin/i })).toHaveAttribute('href', `/trip/${DEMO_TRIP_IDS.dublin}`)
+    expect(screen.getByRole('link', { name: /beijing/i })).toHaveAttribute('href', `/trip/${DEMO_TRIP_IDS.beijing}`)
   })
 
   it('renders the feature grid and hero content', () => {
