@@ -2011,35 +2011,85 @@ body:has(.chronicle-page) label {
   font-size: 18px;
 }
 
-/* ---------- Itinerary chat (left rail) ---------- */
-/* Two columns on desktop: a sticky AI chat rail on the left, the day-by-day
-   itinerary on the right. Stacks to one column on mobile with the chat first. */
-.chronicle-itinerary-layout {
-  display: flex;
-  gap: var(--chronicle-space-lg);
-  align-items: flex-start;
+/* ---------- Trip assistant dock (every page) ---------- */
+/* A persistent chat panel that slides in from the left on every trip page.
+   Open by default on desktop (content is offset so it isn't covered); a FAB
+   opens it when collapsed and on mobile, where it slides over the page. */
+.chronicle-chat-dock {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 360px;
+  max-width: 88vw;
+  z-index: 850;
+  box-sizing: border-box;
+  padding: var(--chronicle-space-sm);
+  transform: translateX(-100%);
+  transition: transform 0.25s ease;
 }
 
-.chronicle-itinerary-chat-col {
-  position: sticky;
-  top: var(--chronicle-space-md);
-  flex: 0 0 360px;
-  align-self: flex-start;
+.chronicle-chat-dock--open {
+  transform: translateX(0);
 }
 
-.chronicle-itinerary-main {
-  flex: 1;
-  min-width: 0;
+/* When the dock is open on wide screens, push page content right so the dock
+   sits beside it rather than over it. */
+@media (min-width: 1024px) {
+  .chronicle-trip-page--chat-open {
+    padding-left: 376px;
+  }
+}
+
+.chronicle-chat-fab {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 840;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: none;
+  border-radius: var(--chronicle-radius-pill);
+  background: var(--chronicle-teal);
+  color: var(--chronicle-bg-canvas);
+  font-family: var(--chronicle-font-mono);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow: var(--chronicle-shadow-card);
+}
+
+.chronicle-chat-fab:hover {
+  background: var(--chronicle-teal-hover);
+}
+
+.chronicle-chat-collapse {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: var(--chronicle-bg-surface);
+  color: var(--chronicle-text-primary);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .chronicle-chat {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 160px);
-  max-height: 660px;
+  height: 100%;
   background: var(--chronicle-bg-surface-2);
   border: 1px solid var(--chronicle-teal);
   border-radius: var(--chronicle-radius-lg);
+  box-shadow: var(--chronicle-shadow-card);
   overflow: hidden;
 }
 
@@ -2232,34 +2282,6 @@ body:has(.chronicle-page) label {
   30% {
     transform: translateY(-5px);
     opacity: 1;
-  }
-}
-
-/* Tablet: narrow the rail so the itinerary keeps enough room before stacking. */
-@media (min-width: 861px) and (max-width: 1024px) {
-  .chronicle-itinerary-chat-col {
-    flex: 0 0 300px;
-  }
-}
-
-@media (max-width: 860px) {
-  .chronicle-itinerary-layout {
-    flex-direction: column;
-  }
-
-  .chronicle-itinerary-chat-col {
-    position: static;
-    flex: 1 1 auto;
-    width: 100%;
-  }
-
-  .chronicle-chat {
-    height: auto;
-    max-height: none;
-  }
-
-  .chronicle-chat-messages {
-    max-height: 340px;
   }
 }
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useTripChat } from './useTripChat'
 import { stashOpeningChat } from './chatHandoff'
@@ -16,6 +16,7 @@ function hook(onApply = vi.fn(), onRelocate = vi.fn().mockResolvedValue(undefine
 }
 
 describe('useTripChat', () => {
+  beforeEach(() => localStorage.clear())
   afterEach(() => vi.restoreAllMocks())
 
   it('opens with a greeting when there is no handoff', () => {

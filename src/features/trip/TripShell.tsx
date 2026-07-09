@@ -1,8 +1,15 @@
+import { useState } from 'react'
 import { useParams, Outlet, Link } from 'react-router-dom'
 import { useTripData } from './hooks/useTripData'
 import { TripNav } from './TripNav'
+import { TripChatDock } from './chat/TripChatDock'
 import { SaveErrorBanner } from './components/SaveErrorBanner'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
+
+/** Start with the dock open on desktop-width screens, collapsed on mobile. */
+function initialChatOpen(): boolean {
+  return typeof window !== 'undefined' && window.innerWidth >= 1024
+}
 
 /**
  * Persistent shell for every page under `/trip/:id/*`: loads the trip and
@@ -14,6 +21,7 @@ import { ErrorBoundary } from '../../components/ErrorBoundary'
 export function TripShell() {
   const { id } = useParams<{ id: string }>()
   const { trip, location, loading, error } = useTripData(id ?? '')
+  const [chatOpen, setChatOpen] = useState(initialChatOpen)
 
   if (!id) return null
 
@@ -42,7 +50,8 @@ export function TripShell() {
   }
 
   return (
-    <div className="chronicle-page">
+    <div className={`chronicle-page chronicle-trip-page${chatOpen ? ' chronicle-trip-page--chat-open' : ''}`}>
+      <TripChatDock trip={trip} location={location} open={chatOpen} onOpenChange={setChatOpen} />
       <TripNav tripId={id} variant="pill" />
       <SaveErrorBanner />
       <main className="chronicle-book">

@@ -1,10 +1,11 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { sendChat, type ThingToDo, type PlanDay, type PlanTurn, type CurrentPlanDay } from '../../../lib/api/client'
 import type { ItineraryItem } from '../../../lib/validation/schemas'
 import { MIN_TRIP_DAYS } from '../planning/createTripForDestination'
 import { logger } from '../../../lib/logger'
 import { CHAT_GREETING, type ChatMessage } from './chatTypes'
 import { takeOpeningChat } from './chatHandoff'
+import { loadChat, saveChat } from './chatStorage'
 
 // Match AiPlanner: send only the top-rated N so the request stays under the
 // backend candidate cap, and the plan's indices map into exactly this subset.
@@ -59,13 +60,21 @@ export function useTripChat(
   onApplyPlan: (plan: PlanDay[], candidatePlaces: ThingToDo[], days: number) => void,
   onRelocate: (destination: string, interests: string) => Promise<void>,
 ) {
-  // Seed from the homepage handoff if present, else a single greeting bubble.
+  // Seed from the homepage handoff, else a saved conversation, else a greeting.
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     const handed = takeOpeningChat(tripId)
-    return handed && handed.length > 0 ? handed : [makeMessage('assistant', CHAT_GREETING)]
+    if (handed && handed.length > 0) return handed
+    const saved = loadChat(tripId)
+    if (saved && saved.length > 0) return saved
+    return [makeMessage('assistant', CHAT_GREETING)]
   })
   const [isThinking, setIsThinking] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Persist the conversation per trip so it survives reloads and page switches.
+  useEffect(() => {
+    saveChat(tripId, messages)
+  }, [tripId, messages])
 
   const send = useCallback(
     async (text: string, currentItinerary: ItineraryItem[]) => {

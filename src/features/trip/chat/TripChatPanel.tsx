@@ -18,6 +18,7 @@ export function TripChatPanel({
   disabled,
   onSend,
   locationName,
+  onClose,
 }: {
   messages: ChatMessage[]
   isThinking: boolean
@@ -26,6 +27,8 @@ export function TripChatPanel({
   onSend: (text: string) => void
   /** Destination display name, used to make the starter prompts place-aware. */
   locationName?: string
+  /** When provided, shows a collapse button (the panel is a toggleable rail/drawer). */
+  onClose?: () => void
 }) {
   const [draft, setDraft] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
@@ -63,6 +66,11 @@ export function TripChatPanel({
   return (
     <section className="chronicle-chat" aria-label="Trip planner chat">
       <header className="chronicle-chat-header">
+        {onClose && (
+          <button type="button" className="chronicle-chat-collapse" onClick={onClose} aria-label="Hide chat">
+            ×
+          </button>
+        )}
         <p className="chronicle-ai-kicker">✨ Your AI Trip</p>
         <h2 className="chronicle-chat-title">Plan by chat</h2>
         <p className="chronicle-chat-subtitle">Refine your trip in plain language — every stop stays a real place nearby.</p>
