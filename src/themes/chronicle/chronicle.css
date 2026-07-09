@@ -2092,6 +2092,56 @@ body:has(.chronicle-page) label {
   margin-top: var(--chronicle-space-lg);
 }
 
+/* Hourly forecast strip (next 12 hours) */
+.chronicle-hourly-strip {
+  display: flex;
+  gap: var(--chronicle-space-sm);
+  overflow-x: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 4px;
+}
+
+.chronicle-hourly-hour {
+  flex: none;
+  width: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: var(--chronicle-space-sm);
+  background: var(--chronicle-bg-surface);
+  border: 1px solid var(--chronicle-border-hairline);
+  border-radius: var(--chronicle-radius-md);
+  text-align: center;
+}
+
+.chronicle-hourly-time {
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  color: var(--chronicle-text-tertiary);
+}
+
+.chronicle-hourly-temp {
+  font-family: var(--chronicle-font-display);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-hourly-condition {
+  font-family: var(--chronicle-font-body);
+  font-size: 11px;
+  color: var(--chronicle-text-secondary);
+  line-height: 1.2;
+}
+
+.chronicle-hourly-precip {
+  font-family: var(--chronicle-font-mono);
+  font-size: 10px;
+  color: var(--chronicle-teal);
+}
+
 /* Transit presented as a card (not a bare link) */
 .chronicle-transit-card {
   display: flex;

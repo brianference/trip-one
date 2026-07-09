@@ -2,9 +2,11 @@ import { useTripContext } from '../useTripContext'
 import { useTripStore } from '../../../store/tripStore'
 import { useForecast } from '../../weather/useForecast'
 import { useDailyForecast } from '../../weather/useDailyForecast'
+import { useHourlyForecast } from '../../weather/useHourlyForecast'
 import { packingTips } from '../../weather/packingTips'
 import { WeatherNow } from '../components/WeatherNow'
 import { ForecastStrip } from '../components/ForecastStrip'
+import { HourlyForecast } from '../components/HourlyForecast'
 import { PackingTips } from '../components/PackingTips'
 import { LocalInfoCard } from '../components/LocalInfoCard'
 
@@ -27,6 +29,7 @@ export function WeatherPage() {
 
   const forecastDays = Math.min(Math.max(tripLengthDays ?? MIN_FORECAST_DAYS, MIN_FORECAST_DAYS), MAX_FORECAST_DAYS)
   const { data: forecast, loading: nowLoading } = useForecast(location?.lat ?? 0, location?.lng ?? 0)
+  const { data: hourly } = useHourlyForecast(location?.lat ?? 0, location?.lng ?? 0, 12)
   const { data: dailyForecast, loading: dailyLoading } = useDailyForecast(location?.lat ?? 0, location?.lng ?? 0, forecastDays)
   const tips = dailyForecast ? packingTips(dailyForecast) : []
 
@@ -40,6 +43,13 @@ export function WeatherPage() {
           <p className="chronicle-weather-fallback">Live data is unavailable right now, so this is a seasonal estimate.</p>
         )}
       </section>
+
+      {hourly && hourly.length > 0 && (
+        <section aria-label="Hourly forecast">
+          <h2 className="chronicle-weather-section-heading">Next 12 hours</h2>
+          <HourlyForecast hours={hourly} />
+        </section>
+      )}
 
       <section aria-label="Forecast">
         <h2 className="chronicle-weather-section-heading">Next {forecastDays} days</h2>

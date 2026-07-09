@@ -103,6 +103,29 @@ describe('api client', () => {
     expect(result[0].displayName).toBe('Dublin, Ireland')
   })
 
+  it('fetchAutocomplete de-duplicates entries that clean to the same name (e.g. "hawaii" ×5)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          suggestions: [
+            { displayName: 'Hawaii, United States', lat: 19.6, lng: -155.5 },
+            { displayName: 'Hawaii County, Hawaii, United States', lat: 19.7, lng: -155.6 },
+            { displayName: 'Hawaii, Hawaii, United States', lat: 19.5, lng: -155.4 },
+            { displayName: 'Honolulu, Hawaii, United States', lat: 21.3, lng: -157.8 },
+          ],
+        }),
+      }),
+    )
+    const result = await fetchAutocomplete('hawaii')
+    const names = result.map((r) => r.displayName)
+    // no duplicates, and the distinct city survives
+    expect(new Set(names).size).toBe(names.length)
+    expect(names).toContain('Honolulu, Hawaii')
+    expect(names.filter((n) => n === 'Hawaii')).toHaveLength(1)
+  })
+
   it('fetchAutocomplete returns an empty array (not a throw) on a non-ok response', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => ({ error: 'invalid query' }) }))
     expect(await fetchAutocomplete('d')).toEqual([])

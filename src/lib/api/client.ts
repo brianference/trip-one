@@ -95,7 +95,20 @@ export async function fetchAutocomplete(query: string): Promise<AutocompleteSugg
     if (!res.ok) return []
     const body = await res.json()
     const suggestions: AutocompleteSuggestion[] = body.suggestions ?? []
-    return suggestions.map((s) => ({ ...s, displayName: cleanDisplayName(s.displayName) }))
+    // Clean each label, then drop duplicates. The geocoder often returns
+    // several admin entries for a query like "hawaii" (the state, the county,
+    // the island) that all clean to the same "Hawaii" — showing it five times
+    // is useless, so keep only the first (highest-importance) of each name.
+    const seen = new Set<string>()
+    const cleaned: AutocompleteSuggestion[] = []
+    for (const s of suggestions) {
+      const displayName = cleanDisplayName(s.displayName)
+      const key = displayName.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      cleaned.push({ ...s, displayName })
+    }
+    return cleaned
   } catch (err) {
     logger.error('fetchAutocomplete failed', err)
     return []
