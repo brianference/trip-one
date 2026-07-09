@@ -18,6 +18,8 @@ export interface ThingToDo {
    */
   lat?: number
   lng?: number
+  /** Google Places place_id, present for `places`-sourced entries. Used to fetch rich detail. */
+  placeId?: string
 }
 
 export interface LocationResult {
@@ -105,6 +107,24 @@ export interface PlanDay {
   placeIndexes: number[]
 }
 
+/** One turn of the itinerary planning conversation. */
+export interface PlanTurn {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+/** The current itinerary summarized for the planner, so chat edits build on it. */
+export interface CurrentPlanDay {
+  day: number
+  placeNames: string[]
+}
+
+/** A grounded plan plus the planner's friendly natural-language reply. */
+export interface PlanResult {
+  days: PlanDay[]
+  message: string
+}
+
 export interface TripIntent {
   /** The destination named in the request, or null if none could be found. */
   destination: string | null
@@ -133,29 +153,82 @@ export async function extractTripIntent(text: string): Promise<TripIntent> {
 }
 
 /**
- * Ask the grounded AI planner to build a day-by-day plan from the trip's real
- * nearby places. The backend LLM may only reference indices into `places`, so
- * the returned plan can only contain places that actually exist.
+ * Ask the grounded AI planner to build (or, with conversation/currentPlan,
+ * revise) a day-by-day plan from the trip's real nearby places. The backend
+ * LLM may only reference indices into `places`, so the returned plan can only
+ * contain places that actually exist. It also returns a friendly reply.
  * @param intent - Free-text traveler request, e.g. "3 relaxed days, love food"
  * @param days - Trip length to plan for
  * @param places - The real candidate places (index order is meaningful — the
  * returned `placeIndexes` map back into this array)
- * @returns Day-grouped indices into `places`
+ * @param opts - Optional conversation history and current itinerary for
+ * conversational edits (the itinerary chat)
+ * @returns The grounded plan and the planner's message
  * @throws If the request is invalid, rate limited, or the planner fails
  */
 export async function generatePlan(
   intent: string,
   days: number,
   places: { name: string; category: string; rating?: number }[],
-): Promise<PlanDay[]> {
+  opts?: { conversation?: PlanTurn[]; currentPlan?: CurrentPlanDay[] },
+): Promise<PlanResult> {
   const res = await fetch('/api/plan', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ intent, days, places }),
+    body: JSON.stringify({ intent, days, places, ...opts }),
   })
   const body = await res.json()
   if (!res.ok) throw new Error(body.error ?? 'failed to generate a plan')
-  return body.days
+  return { days: body.days, message: typeof body.message === 'string' ? body.message : '' }
+}
+
+export interface PlaceReview {
+  author: string
+  rating: number | null
+  text: string
+  relativeTime: string
+}
+
+/** Rich, real detail for a place (from Google Place Details, server-cached). */
+export interface PlaceDetail {
+  placeId: string
+  name: string
+  address: string | null
+  phone: string | null
+  rating: number | null
+  reviewCount: number | null
+  priceLevel: number | null
+  website: string | null
+  mapsUrl: string | null
+  openNow: boolean | null
+  hours: string[]
+  summary: string | null
+  reviews: PlaceReview[]
+  photoRefs: string[]
+  serves: string[]
+  types: string[]
+}
+
+/** URL for a place photo, proxied through the backend so the API key stays server-side. */
+export function placePhotoUrl(ref: string, width = 400): string {
+  return `/api/place-photo?ref=${encodeURIComponent(ref)}&w=${width}`
+}
+
+/**
+ * Fetch rich detail for a place — by `placeId` when known (Places-sourced
+ * suggestions carry one), else by `name` + coordinates (itinerary stops).
+ * @throws If the place can't be found or the request fails
+ */
+export async function fetchPlaceDetails(params: { placeId?: string; name?: string; lat?: number; lng?: number }): Promise<PlaceDetail> {
+  const qs = new URLSearchParams()
+  if (params.placeId) qs.set('placeId', params.placeId)
+  if (params.name) qs.set('name', params.name)
+  if (params.lat != null) qs.set('lat', String(params.lat))
+  if (params.lng != null) qs.set('lng', String(params.lng))
+  const res = await fetch(`/api/place-details?${qs.toString()}`)
+  const body = await res.json()
+  if (!res.ok) throw new Error(body.error ?? 'failed to load place details')
+  return body
 }
 
 export async function createTrip(locationSlug: string, designStyle?: DesignStyle): Promise<Trip> {

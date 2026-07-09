@@ -43,7 +43,7 @@ describe('HomeAiPlanner', () => {
     const createSpy = vi
       .spyOn(client, 'createTrip')
       .mockResolvedValue({ id: 'trip-1', locationSlug: 'san-diego-california', itinerary: [], designStyle: 'chronicle' })
-    const genSpy = vi.spyOn(client, 'generatePlan').mockResolvedValue([{ day: 1, placeIndexes: [0] }])
+    const genSpy = vi.spyOn(client, 'generatePlan').mockResolvedValue({ days: [{ day: 1, placeIndexes: [0] }], message: 'ok' })
     const updateSpy = vi
       .spyOn(client, 'updateTrip')
       .mockResolvedValue({ id: 'trip-1', locationSlug: 'san-diego-california', itinerary: [], designStyle: 'chronicle' })
@@ -86,7 +86,7 @@ describe('HomeAiPlanner', () => {
       thingsToDo: [{ name: 'Belem Tower', category: 'tourist_attraction', source: 'places', rating: 4.6 }],
     })
     vi.spyOn(client, 'createTrip').mockResolvedValue({ id: 't', locationSlug: 'lisbon-portugal', itinerary: [], designStyle: 'chronicle' })
-    const genSpy = vi.spyOn(client, 'generatePlan').mockResolvedValue([{ day: 1, placeIndexes: [0] }])
+    const genSpy = vi.spyOn(client, 'generatePlan').mockResolvedValue({ days: [{ day: 1, placeIndexes: [0] }], message: 'ok' })
     vi.spyOn(client, 'updateTrip').mockResolvedValue({ id: 't', locationSlug: 'lisbon-portugal', itinerary: [], designStyle: 'chronicle' })
 
     renderPlanner()

@@ -13,7 +13,7 @@ describe('AiPlanner', () => {
 
   it('sends the request and hands the returned plan back via onPlan', async () => {
     const plan = [{ day: 1, placeIndexes: [0] }, { day: 2, placeIndexes: [1] }]
-    const genSpy = vi.spyOn(client, 'generatePlan').mockResolvedValue(plan)
+    const genSpy = vi.spyOn(client, 'generatePlan').mockResolvedValue({ days: plan, message: 'Built it.' })
     const onPlan = vi.fn()
     render(<AiPlanner places={places} defaultDays={2} onPlan={onPlan} />)
 
@@ -35,7 +35,7 @@ describe('AiPlanner', () => {
       source: 'places' as const,
       rating: i, // Place 49 is highest-rated
     }))
-    const genSpy = vi.spyOn(client, 'generatePlan').mockResolvedValue([{ day: 1, placeIndexes: [0] }])
+    const genSpy = vi.spyOn(client, 'generatePlan').mockResolvedValue({ days: [{ day: 1, placeIndexes: [0] }], message: 'ok' })
     const onPlan = vi.fn()
     render(<AiPlanner places={many} defaultDays={2} onPlan={onPlan} />)
     fireEvent.change(screen.getByPlaceholderText(/relaxed days/i), { target: { value: 'anything' } })
@@ -73,7 +73,7 @@ describe('AiPlanner', () => {
 
   it('running a suggested prompt sends that prompt to the planner', async () => {
     const plan = [{ day: 1, placeIndexes: [0] }]
-    const genSpy = vi.spyOn(client, 'generatePlan').mockResolvedValue(plan)
+    const genSpy = vi.spyOn(client, 'generatePlan').mockResolvedValue({ days: plan, message: 'Built it.' })
     const onPlan = vi.fn()
     render(<AiPlanner places={places} defaultDays={2} onPlan={onPlan} />)
 

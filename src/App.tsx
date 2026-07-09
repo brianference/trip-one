@@ -6,7 +6,7 @@ import { OverviewPage } from './features/trip/pages/OverviewPage'
 import { ItineraryPage } from './features/trip/pages/ItineraryPage'
 import { MapPage } from './features/trip/pages/MapPage'
 import { ThingsToDoPage } from './features/trip/pages/ThingsToDoPage'
-import { LocalInfoPage } from './features/trip/pages/LocalInfoPage'
+import { WeatherPage } from './features/trip/pages/WeatherPage'
 import './themes/chronicle/chronicle.css'
 
 // Chronicle is the app's only theme: the homepage and every trip page render
@@ -38,7 +38,9 @@ export default function App() {
           <Route path="itinerary" element={<ItineraryPage />} />
           <Route path="map" element={<MapPage />} />
           <Route path="things-to-do" element={<ThingsToDoPage />} />
-          <Route path="local-info" element={<LocalInfoPage />} />
+          <Route path="weather" element={<WeatherPage />} />
+          {/* Alias: older links/bookmarks to the former Info page still resolve. */}
+          <Route path="local-info" element={<WeatherPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

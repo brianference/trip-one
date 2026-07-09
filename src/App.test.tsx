@@ -94,12 +94,21 @@ describe('App', () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: /things to do nearby/i })).toBeInTheDocument())
   })
 
-  it('renders the Local Info page at /trip/:id/local-info', async () => {
+  it('renders the Weather page at /trip/:id/weather with local info folded in', async () => {
+    mockTripAndLocation()
+    navigateTo('/trip/t1/weather')
+    render(<App />)
+    await waitFor(() => expect(screen.getByRole('heading', { name: /weather in/i })).toBeInTheDocument())
+    // The still-useful local info (transit link) lives on the weather page now.
+    expect(screen.getByRole('link', { name: /transit directions/i })).toBeInTheDocument()
+    // Dublin is English-speaking, so there's no phrasebook (and never a Google Translate link).
+    expect(screen.queryByText(/phrasebook/i)).not.toBeInTheDocument()
+  })
+
+  it('keeps the old /local-info link working as a weather alias', async () => {
     mockTripAndLocation()
     navigateTo('/trip/t1/local-info')
     render(<App />)
-    await waitFor(() => expect(screen.getByRole('link', { name: /transit directions/i })).toBeInTheDocument())
-    // Dublin is English-speaking, so there's no phrasebook (and never a Google Translate link).
-    expect(screen.queryByText(/phrasebook/i)).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('heading', { name: /weather in/i })).toBeInTheDocument())
   })
 })

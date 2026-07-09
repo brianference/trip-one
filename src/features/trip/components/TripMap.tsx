@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { LocationResult } from '../../../lib/api/client'
 import type { ItineraryItem } from '../../../lib/validation/schemas'
-import { MapView } from '../../map/MapView'
+import { MapView, type MapMarker } from '../../map/MapView'
 import { MapLegend } from '../../map/MapLegend'
 import { DayTabs } from './DayTabs'
 
@@ -18,11 +18,14 @@ export function TripMap({
   itinerary,
   tripLengthDays,
   height,
+  onSelectMarker,
 }: {
   location: LocationResult
   itinerary: ItineraryItem[]
   tripLengthDays: number | null
   height?: number
+  /** Clicking a things-to-do pin calls this (e.g. to open the place detail panel). */
+  onSelectMarker?: (marker: MapMarker) => void
 }) {
   const [selectedDay, setSelectedDay] = useState(1)
   const dayCount = tripLengthDays && tripLengthDays > 1 ? tripLengthDays : 1
@@ -34,7 +37,7 @@ export function TripMap({
     () =>
       location.thingsToDo
         .filter((item) => item.lat != null && item.lng != null)
-        .map((item) => ({ lat: item.lat as number, lng: item.lng as number, label: item.name, category: item.category })),
+        .map((item) => ({ lat: item.lat as number, lng: item.lng as number, label: item.name, category: item.category, placeId: item.placeId })),
     [location.thingsToDo],
   )
 
@@ -57,6 +60,7 @@ export function TripMap({
         boundingBox={location.boundingBox}
         route={route}
         height={height}
+        onSelectMarker={onSelectMarker}
       />
       {markers.length > 0 && <MapLegend className="chronicle-map-legend" />}
     </div>

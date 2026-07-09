@@ -125,13 +125,14 @@ export function SearchScreen() {
           made from actual places there. No account, no signup.
         </p>
 
-        <HomeAiPlanner />
+        <div className="chronicle-hero-cols">
+          <div className="chronicle-hero-col-ai">
+            <HomeAiPlanner />
+          </div>
 
-        <div className="chronicle-hero-or">
-          <span>or just browse a place</span>
-        </div>
-
-        <div ref={containerRef} onKeyDown={handleKeyDown} className="chronicle-search-wrap">
+          <div className="chronicle-hero-col-browse">
+            <p className="chronicle-hero-col-label">Or just browse a place</p>
+            <div ref={containerRef} onKeyDown={handleKeyDown} className="chronicle-search-wrap">
           <form onSubmit={handleSubmit} className="chronicle-search-bar">
             <label htmlFor="chronicle-location-query" className="chronicle-sr-only">
               Where to?
@@ -172,6 +173,8 @@ export function SearchScreen() {
               ))}
             </ul>
           )}
+            </div>
+          </div>
         </div>
         <p className="chronicle-trust-line">No account. No tracking. Powered by Tripadvisor + Google Places.</p>
       </section>

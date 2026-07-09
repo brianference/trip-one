@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { extractTripIntent, fetchLocation, createTrip, updateTrip, generatePlan } from '../../../lib/api/client'
 import { planToItinerary } from '../../../lib/itinerary/planToItinerary'
+import { stashOpeningChat } from '../chat/chatHandoff'
 import { logger } from '../../../lib/logger'
 
 const MAX_CANDIDATES = 40
@@ -62,8 +63,20 @@ export function HomeAiPlanner() {
         days,
         candidatePlaces.map((p) => ({ name: p.name, category: p.category, rating: p.rating })),
       )
-      const itinerary = planToItinerary(plan, candidatePlaces)
+      const itinerary = planToItinerary(plan.days, candidatePlaces)
       await updateTrip(trip.id, { itinerary, tripLengthDays: days })
+      // Seed the itinerary chat with this opening exchange so refining feels
+      // continuous — the traveler's sentence, then the planner's first reply.
+      const now = Date.now()
+      stashOpeningChat(trip.id, [
+        { id: `open-user-${now}`, role: 'user', text: request.trim(), ts: now },
+        {
+          id: `open-ai-${now}`,
+          role: 'assistant',
+          text: plan.message || `Here’s a ${days}-day trip to ${intent.destination}. Tell me what to change.`,
+          ts: now + 1,
+        },
+      ])
       navigate(`/trip/${trip.id}/itinerary`)
     } catch (err) {
       logger.error('home AI trip planning failed', err)

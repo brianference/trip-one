@@ -23,7 +23,7 @@ vi.mock('leaflet', () => {
       map: vi.fn(createMapMock),
       tileLayer: vi.fn(() => ({ addTo: vi.fn() })),
       divIcon: vi.fn(() => ({ __mockDivIcon: true })),
-      marker: vi.fn(() => ({ addTo: vi.fn().mockReturnThis(), bindPopup: vi.fn().mockReturnThis() })),
+      marker: vi.fn(() => ({ addTo: vi.fn().mockReturnThis(), bindPopup: vi.fn().mockReturnThis(), on: vi.fn().mockReturnThis() })),
       polyline: vi.fn(() => ({ addTo: vi.fn().mockReturnThis() })),
     },
   }

@@ -61,6 +61,33 @@ export async function upsertLocation(env: Env, row: LocationRow): Promise<void> 
   await assertOk(res, 'upsertLocation')
 }
 
+export interface PlaceDetailRow {
+  place_id: string
+  detail: unknown
+  last_refreshed?: string
+}
+
+/** Reads a cached Place Details row (null if not cached yet). */
+export async function getPlaceDetailCache(env: Env, placeId: string): Promise<PlaceDetailRow | null> {
+  const res = await fetch(
+    `${env.SUPABASE_URL}/rest/v1/place_details?place_id=eq.${encodeURIComponent(placeId)}&select=*`,
+    { headers: headers(env) },
+  )
+  await assertOk(res, 'getPlaceDetailCache')
+  const rows = (await res.json()) as PlaceDetailRow[]
+  return rows[0] ?? null
+}
+
+/** Upserts a Place Details cache row so the paid Google call is made once per place, not per view. */
+export async function upsertPlaceDetailCache(env: Env, row: PlaceDetailRow): Promise<void> {
+  const res = await fetch(`${env.SUPABASE_URL}/rest/v1/place_details`, {
+    method: 'POST',
+    headers: headers(env, { Prefer: 'resolution=merge-duplicates' }),
+    body: JSON.stringify({ ...row, last_refreshed: new Date().toISOString() }),
+  })
+  await assertOk(res, 'upsertPlaceDetailCache')
+}
+
 export async function countRecentRequests(
   env: Env,
   ipHash: string,

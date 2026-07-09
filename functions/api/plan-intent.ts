@@ -5,9 +5,10 @@ import { isUnderRateLimit, hashIp } from '../../src/lib/rateLimit'
 import { logger } from '../../src/lib/logger'
 
 const RATE_LIMIT_PER_HOUR = 20
-const OPENAI_MODEL = 'gpt-4o-mini'
+// Configurable via AI_MODEL env var; defaults to the low-cost gpt-4o-mini.
+const DEFAULT_MODEL = 'gpt-4o-mini'
 
-type PlanEnv = Env & { OPENAI_API_KEY?: string }
+type PlanEnv = Env & { OPENAI_API_KEY?: string; AI_MODEL?: string }
 
 const intentRequestSchema = z.object({ text: z.string().trim().min(1).max(500) })
 
@@ -64,7 +65,7 @@ export async function onRequestPost({ env, request }: { env: PlanEnv; request: R
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.OPENAI_API_KEY}` },
       body: JSON.stringify({
-        model: OPENAI_MODEL,
+        model: env.AI_MODEL ?? DEFAULT_MODEL,
         messages: [{ role: 'user', content: prompt }],
         response_format: { type: 'json_object' },
         temperature: 0,

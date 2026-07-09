@@ -8,6 +8,8 @@ export interface MapMarker {
   lng: number
   label: string
   category: string
+  /** Google place_id, when known, so a marker click can open rich detail. */
+  placeId?: string
 }
 
 interface Props {
@@ -36,6 +38,12 @@ interface Props {
   route?: { lat: number; lng: number }[]
   /** Map height in pixels. Defaults to 300 (a compact embedded card); the dedicated Map page uses a taller value. */
   height?: number
+  /**
+   * Called when an extra marker is clicked, so the page can open the place
+   * detail panel. Held in a ref internally, so passing a fresh function each
+   * render does NOT tear down and rebuild the Leaflet map.
+   */
+  onSelectMarker?: (marker: MapMarker) => void
 }
 
 // Below this size (in degrees), a bounding box is treated as effectively a
@@ -79,8 +87,13 @@ function buildPopupEl(text: string): HTMLDivElement {
   return popupEl
 }
 
-export function MapView({ lat, lng, label, markers, boundingBox, route, height = 300 }: Props) {
+export function MapView({ lat, lng, label, markers, boundingBox, route, height = 300, onSelectMarker }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
+  // Keep the latest select handler in a ref so marker clicks always call the
+  // current one WITHOUT adding it to the effect deps (which would rebuild the
+  // whole map on every parent render).
+  const onSelectRef = useRef(onSelectMarker)
+  onSelectRef.current = onSelectMarker
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -111,6 +124,7 @@ export function MapView({ lat, lng, label, markers, boundingBox, route, height =
       L.marker([marker.lat, marker.lng], { icon: markerIcon })
         .addTo(map)
         .bindPopup(buildPopupEl(`${marker.label} (${marker.category})`))
+        .on('click', () => onSelectRef.current?.(marker))
     }
 
     if (route && route.length > 1) {

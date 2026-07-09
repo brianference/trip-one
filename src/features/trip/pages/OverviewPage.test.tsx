@@ -49,7 +49,7 @@ describe('OverviewPage', () => {
     expect(screen.getByText('Breakfast')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /see full itinerary/i })).toHaveAttribute('href', '/trip/t1/itinerary')
     expect(screen.getByRole('link', { name: /browse all things to do/i })).toHaveAttribute('href', '/trip/t1/things-to-do')
-    expect(screen.getByRole('link', { name: /full info/i })).toHaveAttribute('href', '/trip/t1/local-info')
+    expect(screen.getByRole('link', { name: /weather & info/i })).toHaveAttribute('href', '/trip/t1/weather')
 
     await waitFor(() => expect(screen.getByText(/68°F/)).toBeInTheDocument())
   })

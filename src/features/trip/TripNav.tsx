@@ -37,11 +37,11 @@ function ListIcon() {
   )
 }
 
-function InfoIcon() {
+function WeatherIcon() {
   return (
     <svg {...ICON_PROPS} aria-hidden="true">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 11v5M12 7.5h.01" />
+      <path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.6 1.5A3.5 3.5 0 0 0 6.5 19Z" />
+      <path d="M8 5.5 8.7 6.7M12 3v1.5M16 5.5l-.7 1.2" />
     </svg>
   )
 }
@@ -58,7 +58,7 @@ function tripPages(tripId: string) {
     { to: `/trip/${tripId}/itinerary`, end: false, label: 'Itinerary', Icon: CalendarIcon },
     { to: `/trip/${tripId}/map`, end: false, label: 'Map', Icon: MapIcon },
     { to: `/trip/${tripId}/things-to-do`, end: false, label: 'Things to do', Icon: ListIcon },
-    { to: `/trip/${tripId}/local-info`, end: false, label: 'Info', Icon: InfoIcon },
+    { to: `/trip/${tripId}/weather`, end: false, label: 'Weather', Icon: WeatherIcon },
   ]
 }
 

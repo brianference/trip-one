@@ -106,7 +106,7 @@ export function OverviewPage() {
         </PreviewCard>
       )}
 
-      <PreviewCard title="Local info" to={`/trip/${trip.id}/local-info`} linkLabel="Full info">
+      <PreviewCard title="Local info" to={`/trip/${trip.id}/weather`} linkLabel="Weather & info">
         <LocalInfoCard displayName={displayName} />
       </PreviewCard>
     </article>

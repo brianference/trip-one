@@ -55,8 +55,8 @@ export function AiPlanner({
         .sort((a, b) => (b.rating ?? -Infinity) - (a.rating ?? -Infinity))
         .slice(0, MAX_CANDIDATES)
       const candidates = candidatePlaces.map((p) => ({ name: p.name, category: p.category, rating: p.rating }))
-      const plan = await generatePlan(text.trim(), days, candidates)
-      onPlan(plan, days, candidatePlaces)
+      const { days: planDays } = await generatePlan(text.trim(), days, candidates)
+      onPlan(planDays, days, candidatePlaces)
       setIntent('')
     } catch (err) {
       logger.error('AI plan generation failed', err)
