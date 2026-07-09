@@ -33,7 +33,7 @@ describe('ThingsToDoPage', () => {
       designStyle: 'chronicle',
     })
     render(<ThingsToDoPage />)
-    fireEvent.click(screen.getByRole('button', { name: /add to itinerary/i }))
+    fireEvent.click(screen.getByRole('button', { name: /add .*to itinerary/i }))
     await waitFor(() => expect(updateSpy).toHaveBeenCalled())
     const persisted = updateSpy.mock.calls[0][1].itinerary as Array<{ text: string; lat?: number }>
     expect(persisted.find((i) => i.text === 'Belem Tower')?.lat).toBe(38.69)

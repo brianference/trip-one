@@ -11,7 +11,7 @@ describe('ThingsToDoList', () => {
     ]
     render(<ThingsToDoList thingsToDo={items} onAdd={onAdd} onSelect={vi.fn()} />)
     expect(screen.getByText('Belem Tower')).toBeInTheDocument()
-    fireEvent.click(screen.getAllByRole('button', { name: /add to itinerary/i })[0])
+    fireEvent.click(screen.getAllByRole('button', { name: /add .*to itinerary/i })[0])
     expect(onAdd).toHaveBeenCalledWith(items[0])
   })
 

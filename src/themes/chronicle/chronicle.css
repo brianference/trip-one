@@ -617,25 +617,112 @@
 
 /* ---------- Things to do ---------- */
 .chronicle-suggestions {
-  max-width: 680px;
   margin: var(--chronicle-space-lg) auto 0;
   list-style: none;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--chronicle-space-sm);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--chronicle-space-md);
 }
 
 .chronicle-suggestions li {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--chronicle-space-sm) var(--chronicle-space-md);
   background: var(--chronicle-bg-surface);
   border: 1px solid var(--chronicle-border-hairline);
   border-radius: var(--chronicle-radius-md);
   padding: var(--chronicle-space-md);
   box-shadow: var(--chronicle-shadow-card);
+}
+
+/* Things-to-do card: category + rating up top, name, then an action row. */
+.chronicle-ttd-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-sm);
+  align-items: flex-start;
+  height: 100%;
+}
+
+.chronicle-ttd-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--chronicle-space-sm);
+  width: 100%;
+}
+
+.chronicle-ttd-rating {
+  font-family: var(--chronicle-font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--chronicle-gold);
+  white-space: nowrap;
+}
+
+.chronicle-ttd-name {
+  font-family: var(--chronicle-font-display);
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1.25;
+  color: var(--chronicle-text-primary);
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chronicle-ttd-name:hover,
+.chronicle-ttd-name:focus-visible {
+  color: var(--chronicle-teal);
+}
+
+.chronicle-ttd-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--chronicle-space-sm);
+  width: 100%;
+  margin-top: auto;
+  flex-wrap: wrap;
+}
+
+.chronicle-ttd-details,
+.chronicle-ttd-directions,
+.chronicle-ttd-add {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: var(--chronicle-radius-pill);
+  font-family: var(--chronicle-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.chronicle-ttd-details {
+  background: var(--chronicle-bg-surface-2);
+  color: var(--chronicle-text-primary);
+  border: 1px solid var(--chronicle-border-subtle);
+}
+
+.chronicle-ttd-directions {
+  background: none;
+  color: var(--chronicle-teal);
+  border: 1px solid var(--chronicle-teal);
+}
+
+.chronicle-ttd-add {
+  background: var(--chronicle-teal);
+  color: var(--chronicle-bg-canvas);
+  border: none;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.chronicle-ttd-add:hover {
+  background: var(--chronicle-teal-hover);
 }
 
 .chronicle-suggestion-category {
