@@ -14,7 +14,9 @@
   <body>
     <div id="root"></div>
     <!-- Apply the saved light/dark choice before first paint so there's no
-         flash of the wrong theme. Mirrors src/lib/theme.ts. -->
+         flash of the wrong theme. Mirrors src/lib/theme.ts.
+         NOTE: this inline script is allowlisted in public/_headers via a CSP
+         sha256 hash. If you edit the script below, regenerate that hash. -->
     <script>
       try {
         var t = localStorage.getItem('trip-one-theme')
