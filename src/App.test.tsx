@@ -105,6 +105,12 @@ describe('App', () => {
     expect(screen.queryByText(/phrasebook/i)).not.toBeInTheDocument()
   })
 
+  it('renders the privacy policy at /privacy', async () => {
+    navigateTo('/privacy')
+    render(<App />)
+    await waitFor(() => expect(screen.getByRole('heading', { name: /privacy policy/i })).toBeInTheDocument())
+  })
+
   it('keeps the old /local-info link working as a weather alias', async () => {
     mockTripAndLocation()
     navigateTo('/trip/t1/local-info')

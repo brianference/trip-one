@@ -221,6 +221,7 @@ export function SearchScreen() {
           <span className="chronicle-footer-tagline">Made for wanderers. No accounts, ever.</span>
         </div>
         <nav className="chronicle-landing-footer-links" aria-label="Footer">
+          <Link to="/privacy">Privacy</Link>
           <a href="https://github.com/brianference/trip-one" target="_blank" rel="noreferrer">
             GitHub
           </a>

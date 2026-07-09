@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ThemeToggle } from './components/ThemeToggle'
+import { PrivacyPage } from './features/legal/PrivacyPage'
 import { SearchScreen } from './themes/chronicle/SearchScreen'
 import { TripShell } from './features/trip/TripShell'
 import { OverviewPage } from './features/trip/pages/OverviewPage'
@@ -44,6 +45,7 @@ export default function App() {
           {/* Alias: older links/bookmarks to the former Info page still resolve. */}
           <Route path="local-info" element={<WeatherPage />} />
         </Route>
+        <Route path="/privacy" element={<PrivacyPage />} />
       </Routes>
     </BrowserRouter>
   )
