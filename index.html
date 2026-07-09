@@ -13,6 +13,14 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Apply the saved light/dark choice before first paint so there's no
+         flash of the wrong theme. Mirrors src/lib/theme.ts. -->
+    <script>
+      try {
+        var t = localStorage.getItem('trip-one-theme')
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t)
+      } catch (e) {}
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

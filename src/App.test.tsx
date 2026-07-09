@@ -100,7 +100,7 @@ describe('App', () => {
     render(<App />)
     await waitFor(() => expect(screen.getByRole('heading', { name: /weather in/i })).toBeInTheDocument())
     // The still-useful local info (transit link) lives on the weather page now.
-    expect(screen.getByRole('link', { name: /transit directions/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /getting around/i })).toBeInTheDocument()
     // Dublin is English-speaking, so there's no phrasebook (and never a Google Translate link).
     expect(screen.queryByText(/phrasebook/i)).not.toBeInTheDocument()
   })

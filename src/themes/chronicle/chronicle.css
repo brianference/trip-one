@@ -64,8 +64,13 @@
   --chronicle-shadow-focus: 0 0 0 2px var(--chronicle-bg-canvas), 0 0 0 4px var(--chronicle-teal);
 }
 
+/* Light palette. Applied two ways: automatically when the OS prefers light AND
+   the user hasn't picked a theme (`:root:not([data-theme])`), or explicitly
+   when they toggle to light (`:root[data-theme='light']`). An explicit
+   `data-theme='dark'` matches neither, so it falls back to the dark `:root`
+   defaults above — that's how the toggle overrides the system setting. */
 @media (prefers-color-scheme: light) {
-  :root {
+  :root:not([data-theme]) {
     --chronicle-bg-canvas: #f7f2e7;
     --chronicle-bg-surface: #fffdf8;
     --chronicle-bg-surface-2: #f0e9d8;
@@ -87,6 +92,54 @@
 
     --chronicle-shadow-card: 0 1px 2px rgba(26, 26, 26, 0.06), 0 8px 20px -12px rgba(26, 26, 26, 0.16);
   }
+}
+
+:root[data-theme='light'] {
+  --chronicle-bg-canvas: #f7f2e7;
+  --chronicle-bg-surface: #fffdf8;
+  --chronicle-bg-surface-2: #f0e9d8;
+
+  --chronicle-border-hairline: rgba(26, 26, 26, 0.1);
+  --chronicle-border-subtle: rgba(26, 26, 26, 0.18);
+  --chronicle-spine: #d8cfba;
+
+  --chronicle-teal: #1d8a7d;
+  --chronicle-teal-hover: #166f64;
+  --chronicle-gold: #b8912e;
+  --chronicle-gold-hover: #967520;
+  --chronicle-muted: #8a8370;
+
+  --chronicle-text-primary: #1a1a1a;
+  --chronicle-text-secondary: #4a4438;
+  --chronicle-text-tertiary: #746c5a;
+  --chronicle-text-on-gold: #fffdf8;
+
+  --chronicle-shadow-card: 0 1px 2px rgba(26, 26, 26, 0.06), 0 8px 20px -12px rgba(26, 26, 26, 0.16);
+}
+
+/* ---------- Theme toggle (fixed, top-right, every page) ---------- */
+.chronicle-theme-toggle {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--chronicle-border-subtle);
+  border-radius: var(--chronicle-radius-pill);
+  background: var(--chronicle-bg-surface);
+  color: var(--chronicle-text-primary);
+  cursor: pointer;
+  box-shadow: var(--chronicle-shadow-card);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.chronicle-theme-toggle:hover {
+  color: var(--chronicle-teal);
+  border-color: var(--chronicle-teal);
 }
 
 /* ---------- Base ---------- */
@@ -855,6 +908,16 @@ body:has(.chronicle-page) label {
   list-style: none;
   margin: 0;
   padding: 0 0 4px;
+}
+
+/* On desktop the whole week fits, so wrap instead of scrolling — no stray
+   horizontal scrollbar under the forecast. Mobile keeps the swipe strip. */
+@media (min-width: 700px) {
+  .chronicle-forecast-strip {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    padding-bottom: 0;
+  }
 }
 
 .chronicle-forecast-day {
@@ -1860,6 +1923,54 @@ body:has(.chronicle-page) label {
 
 .chronicle-weather-localinfo {
   margin-top: var(--chronicle-space-lg);
+}
+
+/* Transit presented as a card (not a bare link) */
+.chronicle-transit-card {
+  display: flex;
+  align-items: center;
+  gap: var(--chronicle-space-md);
+  margin: var(--chronicle-space-sm) 0;
+  padding: var(--chronicle-space-md);
+  background: var(--chronicle-bg-surface);
+  border: 1px solid var(--chronicle-border-hairline);
+  border-radius: var(--chronicle-radius-md);
+  text-decoration: none;
+  color: var(--chronicle-text-primary);
+  transition: border-color 0.15s ease;
+}
+
+.chronicle-transit-card:hover {
+  border-color: var(--chronicle-teal);
+}
+
+.chronicle-transit-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.chronicle-transit-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.chronicle-transit-title {
+  font-family: var(--chronicle-font-display);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.chronicle-transit-sub {
+  font-family: var(--chronicle-font-body);
+  font-size: 13px;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-transit-arrow {
+  color: var(--chronicle-teal);
+  font-size: 18px;
 }
 
 /* ---------- Itinerary chat (left rail) ---------- */

@@ -176,7 +176,6 @@ export function SearchScreen() {
             </div>
           </div>
         </div>
-        <p className="chronicle-trust-line">No account. No tracking. Powered by Tripadvisor + Google Places.</p>
       </section>
 
       <section className="chronicle-features" aria-labelledby="chronicle-features-heading">

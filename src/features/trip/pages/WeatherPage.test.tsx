@@ -59,7 +59,7 @@ describe('WeatherPage', () => {
     // rain packing tip derived from the 70% day
     expect(screen.getByText(/pack a rain layer/i)).toBeInTheDocument()
     // local info section present (transit link from LocalInfoCard)
-    expect(screen.getByRole('link', { name: /transit directions/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /getting around/i })).toBeInTheDocument()
   })
 
   it('requests at least a week of forecast even for a short trip', () => {
