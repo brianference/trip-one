@@ -1157,6 +1157,63 @@ body:has(.chronicle-page) label {
   cursor: default;
 }
 
+/* ---------- Homepage "Your AI Trip" hero planner ---------- */
+/* The landing-page variant of the planner: describe a whole trip in one
+   sentence and it plans end to end. Reuses the shared .chronicle-ai-* controls
+   above, with a larger, hero-scale header and its own full-width submit. */
+.chronicle-home-ai {
+  max-width: 560px;
+  margin: 0 auto var(--chronicle-space-md);
+  padding: var(--chronicle-space-lg);
+  text-align: left;
+  background: var(--chronicle-bg-surface-2);
+  border: 1px solid var(--chronicle-teal);
+  border-radius: var(--chronicle-radius-lg);
+}
+
+.chronicle-home-ai-heading {
+  font-family: var(--chronicle-font-display);
+  font-weight: 900;
+  font-style: italic;
+  font-size: 26px;
+  margin: 0 0 4px;
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-home-ai-sub {
+  margin: 0 0 var(--chronicle-space-md);
+  font-family: var(--chronicle-font-body);
+  font-size: 14px;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-home-ai-submit {
+  width: 100%;
+  margin-top: var(--chronicle-space-sm);
+}
+
+/* "or just browse a place" divider between the AI planner and the plain search */
+.chronicle-hero-or {
+  display: flex;
+  align-items: center;
+  gap: var(--chronicle-space-md);
+  max-width: 560px;
+  margin: var(--chronicle-space-md) auto;
+  color: var(--chronicle-text-tertiary);
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.chronicle-hero-or::before,
+.chronicle-hero-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--chronicle-border-hairline);
+}
+
 /* ---------- Save-error banner ---------- */
 .chronicle-save-error {
   max-width: 760px;

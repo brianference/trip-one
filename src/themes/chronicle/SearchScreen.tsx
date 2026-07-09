@@ -5,6 +5,7 @@ import { useTripStore } from '../../store/tripStore'
 import { logger } from '../../lib/logger'
 import { DEMO_TRIP_IDS } from '../../lib/api/demoIds'
 import { buildStarterItinerary } from '../../lib/itinerary/buildStarterItinerary'
+import { HomeAiPlanner } from '../../features/trip/components/HomeAiPlanner'
 
 const AUTOCOMPLETE_DEBOUNCE_MS = 300
 const AUTOCOMPLETE_MIN_LENGTH = 2
@@ -118,11 +119,17 @@ export function SearchScreen() {
     <div className="chronicle-landing">
       <section className="chronicle-hero">
         <p className="chronicle-kicker">Trip One · a trip planner, without the friction</p>
-        <h1 className="chronicle-hero-heading">Somewhere new, ready in a minute.</h1>
+        <h1 className="chronicle-hero-heading">Describe your trip. We build it.</h1>
         <p className="chronicle-hero-sub">
-          Search any city, state, or national park. Land on a real trip page with a Home dashboard, itinerary, map,
-          and real things to do — instantly, without signing up.
+          Tell us where you want to go and what you’re after — we turn one sentence into a real day-by-day itinerary
+          made from actual places there. No account, no signup.
         </p>
+
+        <HomeAiPlanner />
+
+        <div className="chronicle-hero-or">
+          <span>or just browse a place</span>
+        </div>
 
         <div ref={containerRef} onKeyDown={handleKeyDown} className="chronicle-search-wrap">
           <form onSubmit={handleSubmit} className="chronicle-search-bar">

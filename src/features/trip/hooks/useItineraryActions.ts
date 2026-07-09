@@ -6,6 +6,7 @@ import { queueTripWrite } from '../../../lib/api/tripWriteQueue'
 import { organizeItinerary } from '../../../lib/itinerary/organizeItinerary'
 import { reorderItinerary } from '../../../lib/itinerary/reorderItinerary'
 import { adjustItineraryForTripLength } from '../../../lib/itinerary/adjustItineraryForTripLength'
+import { planToItinerary } from '../../../lib/itinerary/planToItinerary'
 import { logger } from '../../../lib/logger'
 
 /**
@@ -132,23 +133,7 @@ export function useItineraryActions(tripId: string) {
    * @param days - Trip length the plan was built for
    */
   function applyPlan(plan: PlanDay[], places: ThingToDo[], days: number) {
-    const items: ItineraryItem[] = []
-    for (const dayPlan of plan) {
-      for (const idx of dayPlan.placeIndexes) {
-        const place = places[idx]
-        if (!place) continue
-        items.push({
-          time: '',
-          text: place.name,
-          type: 'option',
-          q: place.name,
-          lat: place.lat,
-          lng: place.lng,
-          category: place.category,
-          day: dayPlan.day,
-        })
-      }
-    }
+    const items = planToItinerary(plan, places)
     useTripStore.getState().setItinerary(items)
     useTripStore.getState().setTripLengthDays(days)
     persist(tripId, { itinerary: items, tripLengthDays: days })

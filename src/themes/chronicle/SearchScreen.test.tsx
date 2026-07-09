@@ -25,7 +25,7 @@ describe('Chronicle SearchScreen', () => {
       </MemoryRouter>,
     )
     fireEvent.change(screen.getByLabelText(/where to/i), { target: { value: 'Kyoto, Japan' } })
-    fireEvent.click(screen.getByRole('button', { name: /go/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Go' }))
     await waitFor(() => expect(createSpy).toHaveBeenCalledWith('kyoto-japan', 'chronicle'))
   })
 
@@ -62,7 +62,7 @@ describe('Chronicle SearchScreen', () => {
       </MemoryRouter>,
     )
     fireEvent.change(screen.getByLabelText(/where to/i), { target: { value: 'Nowhereville' } })
-    fireEvent.click(screen.getByRole('button', { name: /go/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Go' }))
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/location not found/i))
   })
 
@@ -82,7 +82,7 @@ describe('Chronicle SearchScreen', () => {
         <SearchScreen />
       </MemoryRouter>,
     )
-    expect(screen.getByRole('heading', { name: /somewhere new, ready in a minute/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /describe your trip\. we build it\./i })).toBeInTheDocument()
     expect(screen.getByText('Live weather')).toBeInTheDocument()
     expect(screen.getByText('A real trip page')).toBeInTheDocument()
   })

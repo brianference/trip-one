@@ -2,6 +2,7 @@ import type { ItineraryItem } from '../validation/schemas'
 import type { DesignStyle } from '../../store/tripStore'
 import { logger } from '../logger'
 import { cleanDisplayName } from '../location/displayName'
+import { isExperienceCategory } from '../location/experienceFilter'
 
 export interface ThingToDo {
   name: string
@@ -66,8 +67,11 @@ export async function fetchLocation(query: string): Promise<LocationResult> {
   if (!res.ok) throw new Error(body.error ?? 'failed to fetch location')
   // Trim the geocoder's full admin chain to a clean "City, Region" here, at
   // the one boundary every display path flows through, so it applies to
-  // cached and new locations alike without a data migration.
-  return { ...body, displayName: cleanDisplayName(body.displayName) }
+  // cached and new locations alike without a data migration. Also drop
+  // service/utility noise (hotels, gyms, ATMs) so the things-to-do list, map,
+  // and AI candidate pool only contain real experiences.
+  const thingsToDo: ThingToDo[] = (body.thingsToDo ?? []).filter((t: ThingToDo) => isExperienceCategory(t.category))
+  return { ...body, displayName: cleanDisplayName(body.displayName), thingsToDo }
 }
 
 export interface AutocompleteSuggestion {
@@ -99,6 +103,33 @@ export async function fetchAutocomplete(query: string): Promise<AutocompleteSugg
 export interface PlanDay {
   day: number
   placeIndexes: number[]
+}
+
+export interface TripIntent {
+  /** The destination named in the request, or null if none could be found. */
+  destination: string | null
+  /** The stated trip length, or null if unspecified. */
+  days: number | null
+  /** A short interests/pace phrase to feed the planner. */
+  interests: string
+}
+
+/**
+ * Parse a free-text trip request ("a fun 9-day San Diego trip with kids") into
+ * a destination, day count, and interests, so the homepage can turn one
+ * sentence into a real trip.
+ * @param text - The traveler's free-text request
+ * @throws If the request is invalid, rate limited, or extraction fails
+ */
+export async function extractTripIntent(text: string): Promise<TripIntent> {
+  const res = await fetch('/api/plan-intent', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  })
+  const body = await res.json()
+  if (!res.ok) throw new Error(body.error ?? 'failed to understand your request')
+  return body
 }
 
 /**

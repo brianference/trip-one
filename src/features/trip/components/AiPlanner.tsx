@@ -78,12 +78,12 @@ export function AiPlanner({
 
   return (
     <form className="chronicle-ai-planner" onSubmit={handleSubmit} aria-labelledby="chronicle-ai-heading">
-      <p className="chronicle-ai-kicker">✨ Plan with AI</p>
+      <p className="chronicle-ai-kicker">✨ Your AI Trip</p>
       <h2 id="chronicle-ai-heading" className="chronicle-ai-heading">
-        Tell me the trip you want
+        Describe your trip
       </h2>
       <p className="chronicle-ai-sub">
-        Describe it in a sentence, or tap an idea below. Every stop is picked from real places nearby — nothing invented.
+        Say what you want in a sentence, or tap an idea below. Every stop is picked from real places nearby — nothing invented.
       </p>
       <textarea
         className="chronicle-ai-input"
