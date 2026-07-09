@@ -1134,8 +1134,8 @@ body:has(.chronicle-page) label {
 }
 
 .chronicle-ai-suggestion {
-  min-height: 40px;
-  padding: 6px var(--chronicle-space-md);
+  min-height: 44px;
+  padding: 8px var(--chronicle-space-md);
   border: 1px solid var(--chronicle-border-subtle);
   border-radius: var(--chronicle-radius-pill);
   background: var(--chronicle-bg-surface);
@@ -1646,24 +1646,25 @@ body:has(.chronicle-page) label {
   position: absolute;
   top: var(--chronicle-space-sm);
   right: var(--chronicle-space-sm);
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border: none;
   border-radius: 50%;
   background: var(--chronicle-bg-surface-2);
   color: var(--chronicle-text-primary);
-  font-size: 22px;
+  font-size: 24px;
   line-height: 1;
   cursor: pointer;
 }
 
 .chronicle-place-title {
-  margin: 0 32px 8px 0;
+  margin: 0 48px 8px 0;
   font-family: var(--chronicle-font-display);
   font-weight: 900;
   font-style: italic;
   font-size: 22px;
   color: var(--chronicle-text-primary);
+  overflow-wrap: break-word;
 }
 
 .chronicle-place-photos {
@@ -1787,7 +1788,8 @@ body:has(.chronicle-page) label {
 .chronicle-place-directions {
   display: block;
   margin-top: var(--chronicle-space-md);
-  padding: var(--chronicle-space-sm);
+  min-height: 44px;
+  padding: 12px var(--chronicle-space-md);
   border-radius: var(--chronicle-radius-pill);
   background: var(--chronicle-teal);
   color: var(--chronicle-bg-canvas);
@@ -1960,6 +1962,8 @@ body:has(.chronicle-page) label {
   font-size: 14px;
   line-height: 1.5;
   white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .chronicle-chat-time {
@@ -2079,6 +2083,13 @@ body:has(.chronicle-page) label {
   30% {
     transform: translateY(-5px);
     opacity: 1;
+  }
+}
+
+/* Tablet: narrow the rail so the itinerary keeps enough room before stacking. */
+@media (min-width: 861px) and (max-width: 1024px) {
+  .chronicle-itinerary-chat-col {
+    flex: 0 0 300px;
   }
 }
 

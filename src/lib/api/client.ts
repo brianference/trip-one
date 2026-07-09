@@ -214,9 +214,17 @@ export function placePhotoUrl(ref: string, width = 400): string {
   return `/api/place-photo?ref=${encodeURIComponent(ref)}&w=${width}`
 }
 
+// Per-session cache of place-detail lookups (keyed by the query). The result
+// is already server-cached in Supabase, but this also avoids a duplicate
+// network round-trip when the same place is opened twice — e.g. from the map
+// and then from the things-to-do list. Stores the in-flight promise so two
+// near-simultaneous opens share one request.
+const placeDetailCache = new Map<string, Promise<PlaceDetail>>()
+
 /**
  * Fetch rich detail for a place — by `placeId` when known (Places-sourced
  * suggestions carry one), else by `name` + coordinates (itinerary stops).
+ * Deduplicated per session so reopening the same place doesn't refetch.
  * @throws If the place can't be found or the request fails
  */
 export async function fetchPlaceDetails(params: { placeId?: string; name?: string; lat?: number; lng?: number }): Promise<PlaceDetail> {
@@ -225,10 +233,21 @@ export async function fetchPlaceDetails(params: { placeId?: string; name?: strin
   if (params.name) qs.set('name', params.name)
   if (params.lat != null) qs.set('lat', String(params.lat))
   if (params.lng != null) qs.set('lng', String(params.lng))
-  const res = await fetch(`/api/place-details?${qs.toString()}`)
-  const body = await res.json()
-  if (!res.ok) throw new Error(body.error ?? 'failed to load place details')
-  return body
+  const key = qs.toString()
+
+  const cached = placeDetailCache.get(key)
+  if (cached) return cached
+
+  const promise = (async () => {
+    const res = await fetch(`/api/place-details?${key}`)
+    const body = await res.json()
+    if (!res.ok) throw new Error(body.error ?? 'failed to load place details')
+    return body as PlaceDetail
+  })()
+  // Cache the in-flight promise; drop it on failure so errors can be retried.
+  placeDetailCache.set(key, promise)
+  promise.catch(() => placeDetailCache.delete(key))
+  return promise
 }
 
 export async function createTrip(locationSlug: string, designStyle?: DesignStyle): Promise<Trip> {

@@ -45,6 +45,7 @@ export function ItineraryPage() {
           error={chat.error}
           disabled={places.length === 0}
           onSend={(text) => void chat.send(text, itinerary)}
+          locationName={location?.displayName}
         />
       </aside>
 

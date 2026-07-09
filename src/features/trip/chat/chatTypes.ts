@@ -7,13 +7,22 @@ export interface ChatMessage {
   ts: number
 }
 
-/** Ready-made conversation starters shown when the chat is empty. */
-export const CHAT_STARTERS = [
-  'A relaxed trip with the best food and history',
-  'Kid-friendly, easy walking, one museum a day',
-  'A foodie trip — top-rated restaurants and cafés',
-  'More outdoors and scenic views',
-] as const
+/**
+ * Ready-made conversation starters shown when the chat is empty. Made
+ * destination-aware when a place is known ("A foodie trip in Lisbon") so they
+ * feel relevant and immediately actionable rather than generic.
+ * @param place - The trip's display name (e.g. "Lisbon, Portugal"); the city part is used
+ */
+export function chatStartersFor(place?: string): string[] {
+  const city = place?.split(',')[0]?.trim()
+  const where = city ? ` in ${city}` : ''
+  return [
+    `A relaxed trip with the best food and history${where}`,
+    `Kid-friendly, easy walking, one museum a day`,
+    `A foodie trip — top-rated restaurants and cafés${where}`,
+    `More outdoors and scenic views${where}`,
+  ]
+}
 
 /** How the assistant opens the conversation on a fresh trip. */
 export const CHAT_GREETING =

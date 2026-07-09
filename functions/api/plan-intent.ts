@@ -2,6 +2,7 @@ import { z } from 'zod'
 import type { Env } from '../lib/supabaseAdmin'
 import { countRecentRequests, insertRequestLog } from '../lib/supabaseAdmin'
 import { isUnderRateLimit, hashIp } from '../../src/lib/rateLimit'
+import { openAiResponseSchema } from '../lib/openAi'
 import { logger } from '../../src/lib/logger'
 
 const RATE_LIMIT_PER_HOUR = 20
@@ -11,10 +12,6 @@ const DEFAULT_MODEL = 'gpt-4o-mini'
 type PlanEnv = Env & { OPENAI_API_KEY?: string; AI_MODEL?: string }
 
 const intentRequestSchema = z.object({ text: z.string().trim().min(1).max(500) })
-
-const openAiResponseSchema = z.object({
-  choices: z.array(z.object({ message: z.object({ content: z.string() }) })).min(1),
-})
 
 // What we read out of the model's JSON. `destination` is null when the text
 // names no place, so the client can ask for one instead of guessing.

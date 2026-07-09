@@ -41,7 +41,14 @@ export function PlaceDetailPanel({
       if (e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    // Lock background scroll while the sheet is open, so the page behind it
+    // doesn't scroll under the overlay on touch devices.
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
   }, [onClose])
 
   const title = detail?.name ?? query.label

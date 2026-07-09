@@ -68,8 +68,10 @@ export function useTripChat(
       }
       setError(null)
 
-      // Build the conversation to send BEFORE adding the user's message to
-      // state, so we control exactly what the model sees (prior turns only).
+      // The latest request is sent separately (as `intent`); `conversation`
+      // carries only the PRIOR turns for context. So we snapshot messages
+      // before appending the user's new bubble — the model still sees the new
+      // request via `intent`, just not duplicated in the history.
       const priorTurns: PlanTurn[] = messages.map((m) => ({ role: m.role, content: m.text }))
       setMessages((prev) => [...prev, makeMessage('user', trimmed)])
       setIsThinking(true)
@@ -90,8 +92,14 @@ export function useTripChat(
         setMessages((prev) => [...prev, makeMessage('assistant', result.message || 'Done — your itinerary is updated.')])
       } catch (err) {
         logger.error('itinerary chat planning failed', err)
-        const reason = err instanceof Error ? err.message : 'Something went wrong.'
-        setMessages((prev) => [...prev, makeMessage('assistant', `Sorry — ${reason} Try rephrasing?`)])
+        // Backend messages (rate limit, planner unavailable) are already
+        // traveler-friendly — show them as-is. Anything else (network/parse) is
+        // technical, so replace it with a plain retry prompt.
+        const reason = err instanceof Error ? err.message : ''
+        const friendly = /try again|rate limit|unavailable|couldn/i.test(reason)
+          ? reason
+          : 'Something went wrong on my end. Mind trying that again?'
+        setMessages((prev) => [...prev, makeMessage('assistant', friendly)])
       } finally {
         setIsThinking(false)
       }

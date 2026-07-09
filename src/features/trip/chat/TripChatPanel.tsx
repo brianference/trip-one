@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChatMessage } from './chatTypes'
-import { CHAT_STARTERS } from './chatTypes'
+import { chatStartersFor } from './chatTypes'
 import { ChatMessageBubble } from './ChatMessageBubble'
 import { ThinkingIndicator } from './ThinkingIndicator'
 
@@ -17,15 +17,19 @@ export function TripChatPanel({
   error,
   disabled,
   onSend,
+  locationName,
 }: {
   messages: ChatMessage[]
   isThinking: boolean
   error: string | null
   disabled: boolean
   onSend: (text: string) => void
+  /** Destination display name, used to make the starter prompts place-aware. */
+  locationName?: string
 }) {
   const [draft, setDraft] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
+  const starters = chatStartersFor(locationName)
 
   // Keep the newest message (or the thinking indicator) in view.
   useEffect(() => {
@@ -73,7 +77,7 @@ export function TripChatPanel({
 
       {showStarters && (
         <div className="chronicle-chat-starters" aria-label="Conversation starters">
-          {CHAT_STARTERS.map((starter) => (
+          {starters.map((starter) => (
             <button key={starter} type="button" className="chronicle-ai-suggestion" onClick={() => submit(starter)} disabled={disabled}>
               {starter}
             </button>

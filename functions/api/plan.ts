@@ -3,6 +3,7 @@ import type { Env } from '../lib/supabaseAdmin'
 import { countRecentRequests, insertRequestLog } from '../lib/supabaseAdmin'
 import { isUnderRateLimit, hashIp } from '../../src/lib/rateLimit'
 import { buildPlanPrompt, normalizePlan, extractPlanMessage } from '../lib/aiPlan'
+import { openAiResponseSchema } from '../lib/openAi'
 import { logger } from '../../src/lib/logger'
 
 // A short, friendly default when the model omits its own reply, so the chat
@@ -41,11 +42,6 @@ const planRequestSchema = z.object({
     .array(z.object({ day: z.number().int().min(1).max(14), placeNames: z.array(z.string().max(200)).max(40) }))
     .max(14)
     .optional(),
-})
-
-// Validate the shape we actually read out of OpenAI rather than trusting it.
-const openAiResponseSchema = z.object({
-  choices: z.array(z.object({ message: z.object({ content: z.string() }) })).min(1),
 })
 
 function json(body: unknown, status: number) {
