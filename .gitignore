@@ -5,3 +5,6 @@ dist/
 .env
 *.local
 tsconfig.tsbuildinfo
+
+# Playwright MCP scratch
+.playwright-mcp/
