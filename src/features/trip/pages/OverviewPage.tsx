@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import type { PlanDay } from '../../../lib/api/client'
+import type { PlanDay, ThingToDo } from '../../../lib/api/client'
 import { useTripContext } from '../useTripContext'
 import { useTripStore } from '../../../store/tripStore'
 import { useItineraryActions } from '../hooks/useItineraryActions'
@@ -41,8 +41,8 @@ export function OverviewPage() {
   const nextStops = itinerary.slice(0, NEXT_UP_COUNT)
   const nearby = location?.thingsToDo.slice(0, NEARBY_PREVIEW_COUNT) ?? []
 
-  function handleAiPlan(plan: PlanDay[], days: number) {
-    applyPlan(plan, location?.thingsToDo ?? [], days)
+  function handleAiPlan(plan: PlanDay[], days: number, candidatePlaces: ThingToDo[]) {
+    applyPlan(plan, candidatePlaces, days)
     navigate(`/trip/${trip.id}/itinerary`)
   }
 

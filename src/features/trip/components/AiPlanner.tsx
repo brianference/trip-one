@@ -4,6 +4,11 @@ import { logger } from '../../../lib/logger'
 
 const DAY_OPTIONS = Array.from({ length: 14 }, (_, i) => i + 1)
 
+// The backend caps the candidate list (prompt size / cost), so send the
+// top-rated N. The plan's indices map into THIS list, so the same subset is
+// handed to onPlan for grounding — never the full, larger list.
+const MAX_CANDIDATES = 40
+
 // Ready-made prompts a traveler can tap instead of typing — the "Or ask
 // anything" pattern. Each is intent-driven (pace + interests), which is
 // exactly what the grounded planner reasons over against the real nearby
@@ -30,7 +35,7 @@ export function AiPlanner({
 }: {
   places: ThingToDo[]
   defaultDays: number
-  onPlan: (plan: PlanDay[], days: number) => void
+  onPlan: (plan: PlanDay[], days: number, candidatePlaces: ThingToDo[]) => void
 }) {
   const [intent, setIntent] = useState('')
   const [days, setDays] = useState(defaultDays)
@@ -44,9 +49,14 @@ export function AiPlanner({
     setBusy(true)
     setError(null)
     try {
-      const candidates = places.map((p) => ({ name: p.name, category: p.category, rating: p.rating }))
+      // Take the top-rated MAX_CANDIDATES so we stay under the backend cap;
+      // the plan's indices map into exactly this subset.
+      const candidatePlaces = [...places]
+        .sort((a, b) => (b.rating ?? -Infinity) - (a.rating ?? -Infinity))
+        .slice(0, MAX_CANDIDATES)
+      const candidates = candidatePlaces.map((p) => ({ name: p.name, category: p.category, rating: p.rating }))
       const plan = await generatePlan(text.trim(), days, candidates)
-      onPlan(plan, days)
+      onPlan(plan, days, candidatePlaces)
       setIntent('')
     } catch (err) {
       logger.error('AI plan generation failed', err)

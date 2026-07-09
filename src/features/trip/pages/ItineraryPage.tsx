@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { ItineraryItem } from '../../../lib/validation/schemas'
-import type { PlanDay } from '../../../lib/api/client'
+import type { PlanDay, ThingToDo } from '../../../lib/api/client'
 import { useTripContext } from '../useTripContext'
 import { useItineraryActions } from '../hooks/useItineraryActions'
 import { AiPlanner } from '../components/AiPlanner'
@@ -17,8 +17,8 @@ export function ItineraryPage() {
     setTripLength(newLength, location?.thingsToDo ?? [])
   }
 
-  function handleAiPlan(plan: PlanDay[], days: number) {
-    applyPlan(plan, location?.thingsToDo ?? [], days)
+  function handleAiPlan(plan: PlanDay[], days: number, candidatePlaces: ThingToDo[]) {
+    applyPlan(plan, candidatePlaces, days)
   }
 
   const dayGroups = useMemo(() => {
