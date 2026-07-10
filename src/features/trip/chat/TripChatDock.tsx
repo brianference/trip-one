@@ -121,6 +121,9 @@ export function TripChatDock({
           onSend={(text) => void chat.send(text, itinerary)}
           locationName={location?.displayName}
           onClose={() => onOpenChange(false)}
+          pendingRelocate={chat.pendingRelocate}
+          onConfirmRelocate={() => void chat.confirmRelocate()}
+          onCancelRelocate={chat.cancelRelocate}
         />
       </aside>
     </>

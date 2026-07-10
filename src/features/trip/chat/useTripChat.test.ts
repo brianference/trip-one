@@ -68,7 +68,7 @@ describe('useTripChat', () => {
     expect(onApply).not.toHaveBeenCalled()
   })
 
-  it('a relocate calls onRelocate with the new destination and the message', async () => {
+  it('a relocate asks for confirmation instead of navigating away immediately', async () => {
     vi.spyOn(client, 'sendChat').mockResolvedValue({
       action: 'relocate',
       message: 'Switching to Las Vegas!',
@@ -83,10 +83,53 @@ describe('useTripChat', () => {
       await result.current.send('it should be las vegas', [])
     })
 
-    expect(onRelocate).toHaveBeenCalledWith('Las Vegas, Nevada', 'it should be las vegas')
+    // Nothing rebuilt yet — a confirmation is pending.
+    expect(onRelocate).not.toHaveBeenCalled()
     expect(onApply).not.toHaveBeenCalled()
-    // the acknowledgement is shown before navigating away
-    expect(result.current.messages.some((m) => m.text === 'Switching to Las Vegas!')).toBe(true)
+    expect(result.current.pendingRelocate).toEqual({ destination: 'Las Vegas, Nevada', interests: 'it should be las vegas' })
+    expect(result.current.messages.some((m) => m.text.includes('Switching to Las Vegas!'))).toBe(true)
+    expect(result.current.messages.some((m) => m.text.includes('Start a new trip to Las Vegas, Nevada?'))).toBe(true)
+  })
+
+  it('confirmRelocate rebuilds the trip; cancelRelocate stays put', async () => {
+    vi.spyOn(client, 'sendChat').mockResolvedValue({
+      action: 'relocate',
+      message: '',
+      days: null,
+      destination: 'Las Vegas, Nevada',
+    })
+    const onRelocate = vi.fn().mockResolvedValue(undefined)
+    const { result } = hook(vi.fn(), onRelocate)
+
+    await act(async () => {
+      await result.current.send('go to vegas', [])
+    })
+    await act(async () => {
+      await result.current.confirmRelocate()
+    })
+    expect(onRelocate).toHaveBeenCalledWith('Las Vegas, Nevada', 'go to vegas')
+    expect(result.current.pendingRelocate).toBeNull()
+  })
+
+  it('cancelRelocate clears the pending relocate without navigating', async () => {
+    vi.spyOn(client, 'sendChat').mockResolvedValue({
+      action: 'relocate',
+      message: '',
+      days: null,
+      destination: 'Las Vegas, Nevada',
+    })
+    const onRelocate = vi.fn().mockResolvedValue(undefined)
+    const { result } = hook(vi.fn(), onRelocate)
+
+    await act(async () => {
+      await result.current.send('go to vegas', [])
+    })
+    act(() => {
+      result.current.cancelRelocate()
+    })
+    expect(onRelocate).not.toHaveBeenCalled()
+    expect(result.current.pendingRelocate).toBeNull()
+    expect(result.current.messages.some((m) => m.text.includes('staying with'))).toBe(true)
   })
 
   it('enforces the 3-day minimum when planning', async () => {

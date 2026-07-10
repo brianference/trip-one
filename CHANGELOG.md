@@ -3,6 +3,20 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v6.1.0 — Export and safer chat relocate
+
+### Added
+- **Export your trip.** A Print / PDF view (clean, chrome-free, full multi-day
+  itinerary) and a downloadable **.ics calendar** file — timed stops become
+  one-hour events, untimed stops become all-day events on their real date. The
+  calendar export appears once a start date is set (an event needs a real date).
+
+### Changed
+- **Chat confirms before relocating.** When the assistant detects a destination
+  change ("actually, make it Rome"), it now asks "Start a new trip to Rome?"
+  with Yes/No instead of silently rebuilding and navigating away — your current
+  plan stays put unless you confirm.
+
 ## v6.0.0 — Mobile shell, neural phrasebook audio, shareable metadata
 
 A mobile-first pass and a much better phrasebook, plus the metadata a public site

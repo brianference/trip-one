@@ -77,7 +77,9 @@ describe('App', () => {
     mockTripAndLocation()
     navigateTo('/trip/t1/itinerary')
     render(<App />)
-    await waitFor(() => expect(screen.getByText('Guinness Storehouse')).toBeInTheDocument())
+    // The interactive stop name is a button (the print-only full itinerary
+    // duplicates the text in a hidden block, so target the button specifically).
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Guinness Storehouse' })).toBeInTheDocument())
   })
 
   it('renders the Map page at /trip/:id/map', async () => {

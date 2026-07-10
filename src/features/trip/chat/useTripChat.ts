@@ -70,6 +70,10 @@ export function useTripChat(
   })
   const [isThinking, setIsThinking] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // A detected destination change waits for explicit confirmation before we
+  // rebuild the trip and navigate away — relocating silently threw away the
+  // plan the traveler was looking at.
+  const [pendingRelocate, setPendingRelocate] = useState<{ destination: string; interests: string } | null>(null)
 
   // Persist the conversation per trip so it survives reloads and page switches.
   useEffect(() => {
@@ -85,6 +89,8 @@ export function useTripChat(
         return
       }
       setError(null)
+      // Typing a new message supersedes any unconfirmed relocate prompt.
+      setPendingRelocate(null)
 
       // The latest request is sent separately (as `intent`); `conversation`
       // carries only the PRIOR turns for context. So we snapshot messages
@@ -109,10 +115,13 @@ export function useTripChat(
         })
 
         if (result.action === 'relocate' && result.destination) {
-          // Show the assistant's acknowledgement, then rebuild the trip around
-          // the new destination and navigate there.
-          if (result.message) setMessages((prev) => [...prev, makeMessage('assistant', result.message)])
-          await onRelocate(result.destination, trimmed)
+          // Don't navigate away silently — ask first. Rebuilding around a new
+          // destination replaces what the traveler is looking at, so it needs
+          // an explicit yes (see confirmRelocate below).
+          const ack = result.message?.trim()
+          const question = `Start a new trip to ${result.destination}? Your current plan stays saved at this link.`
+          setPendingRelocate({ destination: result.destination, interests: trimmed })
+          setMessages((prev) => [...prev, makeMessage('assistant', ack ? `${ack}\n\n${question}` : question)])
           return
         }
 
@@ -144,5 +153,30 @@ export function useTripChat(
     [messages, isThinking, places, days, locationName, onApplyPlan, onRelocate],
   )
 
-  return { messages, isThinking, error, send }
+  /** Confirms a pending destination change — rebuilds the trip and navigates. */
+  const confirmRelocate = useCallback(async () => {
+    if (!pendingRelocate || isThinking) return
+    const { destination, interests } = pendingRelocate
+    setPendingRelocate(null)
+    setIsThinking(true)
+    try {
+      await onRelocate(destination, interests)
+    } catch (err) {
+      logger.error('relocate failed', err)
+      setMessages((prev) => [...prev, makeMessage('assistant', 'I couldn’t start that trip just now. Mind trying again?')])
+    } finally {
+      setIsThinking(false)
+    }
+  }, [pendingRelocate, isThinking, onRelocate])
+
+  /** Dismisses a pending destination change and stays on the current trip. */
+  const cancelRelocate = useCallback(() => {
+    setPendingRelocate(null)
+    setMessages((prev) => [
+      ...prev,
+      makeMessage('assistant', `Okay — staying with ${locationName ?? 'your current trip'}. What would you like to change?`),
+    ])
+  }, [locationName])
+
+  return { messages, isThinking, error, send, pendingRelocate, confirmRelocate, cancelRelocate }
 }

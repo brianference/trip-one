@@ -2675,6 +2675,45 @@ body:has(.chronicle-page) label {
   border: 0;
 }
 
+/* Trip export toolbar (print / calendar). */
+.chronicle-export {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--chronicle-space-sm);
+}
+
+.chronicle-export-btn {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--chronicle-border-subtle);
+  border-radius: var(--chronicle-radius-pill);
+  background: var(--chronicle-bg-surface);
+  color: var(--chronicle-text-secondary);
+  font-family: var(--chronicle-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.chronicle-export-btn:hover,
+.chronicle-export-btn:focus-visible {
+  border-color: var(--chronicle-teal);
+  color: var(--chronicle-teal);
+}
+
+.chronicle-export-hint {
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  color: var(--chronicle-text-tertiary);
+}
+
+/* Print-only trip title (destination + dates); hidden on screen. */
+.chronicle-print-title {
+  display: none;
+}
+
 /* Per-day summary chips (Plan page day heading). */
 .chronicle-day-chips {
   display: flex;
@@ -2997,6 +3036,47 @@ body:has(.chronicle-page) label {
   margin: 0 var(--chronicle-space-md) var(--chronicle-space-sm);
 }
 
+/* Relocate confirmation — sits above the composer when the chat detects a
+   destination change, so rebuilding the trip needs an explicit yes. */
+.chronicle-chat-confirm {
+  display: flex;
+  gap: var(--chronicle-space-sm);
+  padding: var(--chronicle-space-sm) var(--chronicle-space-md);
+}
+
+.chronicle-chat-confirm-yes,
+.chronicle-chat-confirm-no {
+  flex: 1;
+  min-height: 44px;
+  border-radius: var(--chronicle-radius-pill);
+  font-family: var(--chronicle-font-mono);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.chronicle-chat-confirm-yes {
+  border: none;
+  background: var(--chronicle-teal);
+  color: var(--chronicle-bg-canvas);
+}
+
+.chronicle-chat-confirm-yes:hover:not(:disabled) {
+  background: var(--chronicle-teal-hover);
+}
+
+.chronicle-chat-confirm-no {
+  border: 1px solid var(--chronicle-border-subtle);
+  background: none;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-chat-confirm-yes:disabled,
+.chronicle-chat-confirm-no:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .chronicle-chat-composer {
   display: flex;
   gap: var(--chronicle-space-sm);
@@ -3088,4 +3168,85 @@ body:has(.chronicle-page) label {
   .chronicle-chat-dots span {
     animation: none;
   }
+}
+
+/* ---------- Print / PDF ---------- */
+/* A clean printed itinerary: hide all interactive chrome (nav, chat, map,
+   controls, things-to-do) and show only the destination header and the full
+   multi-day stop list. */
+@media print {
+  .chronicle-section-nav,
+  .chronicle-chat-dock,
+  .chronicle-chat-fab,
+  .chronicle-theme-toggle,
+  .chronicle-page-footer,
+  .chronicle-map-frame,
+  .chronicle-map-places,
+  .chronicle-trip-controls,
+  .chronicle-export,
+  .chronicle-plan-day,
+  .chronicle-save-banner {
+    display: none !important;
+  }
+
+  .chronicle-page {
+    padding: 0 !important;
+  }
+
+  .chronicle-print-title {
+    display: block;
+    font-family: var(--chronicle-font-display);
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: #000;
+  }
+
+  .chronicle-print-itinerary {
+    display: block !important;
+    color: #000;
+  }
+
+  .chronicle-print-itinerary section {
+    break-inside: avoid;
+    margin-bottom: 16px;
+  }
+
+  .chronicle-print-itinerary h2 {
+    font-family: var(--chronicle-font-display);
+    font-size: 15px;
+    margin: 0 0 6px;
+    border-bottom: 1px solid #999;
+    padding-bottom: 3px;
+  }
+
+  .chronicle-print-itinerary ul {
+    margin: 0;
+    padding-left: 18px;
+  }
+
+  .chronicle-print-itinerary li {
+    font-family: var(--chronicle-font-body);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .chronicle-print-time {
+    font-family: var(--chronicle-font-mono);
+    font-weight: 600;
+    margin-right: 8px;
+  }
+
+  /* White background, black text for ink economy regardless of theme. */
+  .chronicle-page,
+  .chronicle-chapter {
+    background: #fff !important;
+    color: #000 !important;
+  }
+}
+
+/* Print-only full itinerary is hidden on screen (the @media print block above
+   overrides this with !important). */
+.chronicle-print-itinerary {
+  display: none;
 }

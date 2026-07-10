@@ -19,6 +19,9 @@ export function TripChatPanel({
   onSend,
   locationName,
   onClose,
+  pendingRelocate,
+  onConfirmRelocate,
+  onCancelRelocate,
 }: {
   messages: ChatMessage[]
   isThinking: boolean
@@ -29,6 +32,10 @@ export function TripChatPanel({
   locationName?: string
   /** When provided, shows a collapse button (the panel is a toggleable rail/drawer). */
   onClose?: () => void
+  /** A detected destination change awaiting confirmation (null when none). */
+  pendingRelocate?: { destination: string } | null
+  onConfirmRelocate?: () => void
+  onCancelRelocate?: () => void
 }) {
   const [draft, setDraft] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
@@ -97,6 +104,17 @@ export function TripChatPanel({
         <p role="alert" className="chronicle-ai-error chronicle-chat-error">
           {error}
         </p>
+      )}
+
+      {pendingRelocate && onConfirmRelocate && onCancelRelocate && (
+        <div className="chronicle-chat-confirm" role="group" aria-label={`Start a new trip to ${pendingRelocate.destination}?`}>
+          <button type="button" className="chronicle-chat-confirm-yes" onClick={onConfirmRelocate} disabled={isThinking}>
+            Yes, start it
+          </button>
+          <button type="button" className="chronicle-chat-confirm-no" onClick={onCancelRelocate} disabled={isThinking}>
+            No, stay here
+          </button>
+        </div>
       )}
 
       <form className="chronicle-chat-composer" onSubmit={handleSubmit}>

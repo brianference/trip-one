@@ -11,6 +11,7 @@ import { ItineraryStopForm } from '../components/ItineraryStopForm'
 import { ItineraryDayGroup } from '../components/ItineraryDayGroup'
 import { ThingsToDoList } from '../components/ThingsToDoList'
 import { TripSkeleton } from '../components/TripSkeleton'
+import { TripExport } from '../components/TripExport'
 import { PlaceDetailPanel } from '../place/PlaceDetailPanel'
 import { usePlaceDetail, type PlaceQuery } from '../place/usePlaceDetail'
 import { placeQueryFor, placeQueryForThing } from '../place/placeQuery'
@@ -55,6 +56,11 @@ export function TripPlanPage() {
 
   return (
     <article className="chronicle-chapter chronicle-chapter--wide">
+      {/* Print-only header: destination + dates, so a printed/PDF itinerary is labeled. */}
+      <p className="chronicle-print-title">
+        {location.displayName}
+        {startDate ? ` · from ${startDate}` : ''}
+      </p>
       <div className="chronicle-itinerary-header">
         <h1 className="chronicle-timeline-heading">Your trip</h1>
         <div className="chronicle-trip-controls">
@@ -77,6 +83,7 @@ export function TripPlanPage() {
             </select>
           </label>
         </div>
+        <TripExport itinerary={itinerary} startDate={startDate} destinationName={location.displayName} />
       </div>
 
       <TripMap
@@ -137,6 +144,26 @@ export function TripPlanPage() {
           onSelect={(item) => setSelected(placeQueryForThing(item))}
         />
       </section>
+
+      {/* Full multi-day itinerary, hidden on screen and shown only when printing
+          (the interactive view above shows one day at a time). */}
+      <div className="chronicle-print-itinerary" aria-hidden="true">
+        {[...dayGroups.entries()]
+          .sort(([a], [b]) => a - b)
+          .map(([day, entries]) => (
+            <section key={day}>
+              <h2>{dayHeading(startDate, day)}</h2>
+              <ul>
+                {entries.map(({ item }, i) => (
+                  <li key={`${item.text}-${i}`}>
+                    {item.time?.trim() ? <span className="chronicle-print-time">{item.time}</span> : null}
+                    {item.text}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+      </div>
 
       {selected && (
         <PlaceDetailPanel
