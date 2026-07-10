@@ -5,11 +5,11 @@ are just section markers for editing and aren't meant to be posted._
 
 ---
 
-I built an AI trip planner where the AI never makes up a place. It's live, it's free, and there's no signup: **https://trip-one.pages.dev**
+Seven days from idea to production. I shipped an AI trip planner. It's live, it's free, there's no signup: **https://trip-one.pages.dev**
 
-Here's the whole loop: you describe your trip in one sentence — "a relaxed 4 days in Lisbon, food and history" — and an AI builds a real, day-by-day itinerary from actual nearby places. Then you **plan the rest by chatting with it**. "Add specialty coffee shops to each day." "Find a rooftop bar and a space museum." "Make it 9 days." "Move the museum to day two." "Actually, make it Rome." The assistant re-plans in seconds, tells you what it changed, and confirms before anything drastic.
+Describe your trip in one sentence. An AI builds a real, day-by-day itinerary from actual nearby places. Then you refine it by chatting. Add sushi. Find a rooftop bar and a space museum. Make it 9 days. Swap the city for Rome. It re-plans in seconds, tells you what changed, and confirms before anything drastic.
 
-The part I care most about is how the AI is built. The core idea is **grounded generation**: the model never writes a place name. It's handed a numbered list of real places (from Google Places and Tripadvisor) and may only pick and order them by index. Anything outside the list is dropped. So a bad or hallucinated response degrades to a smaller real plan, never a fake one — no invented restaurants, ratings, hours, or reviews. And when you ask for something the list doesn't have, it doesn't fake it and it doesn't refuse — it goes and searches for the real thing.
+Here's the bet that makes it work: the model never writes a place name. It gets a numbered list of real places (Google Places, Tripadvisor) and can only pick and order them. Anything off the list is dropped — so a bad response degrades to a smaller real plan, never a fake one. No invented restaurants, ratings, or hours. And when you ask for something the list doesn't have, it doesn't fake it and it doesn't refuse. It searches for the real thing.
 
 That combination — a genuinely conversational planner, with hard guardrails so it can't invent — is the thing most "AI travel" tools get wrong. They're either a static prompt-and-pray itinerary or a confident hallucination machine. This is neither.
 
