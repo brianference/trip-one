@@ -3,6 +3,31 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v9.0.0 — Mobile app shell
+
+### Added
+- **A real mobile app shell (map-forward).** On phones the trip is now framed
+  by a slim top bar (brand, current temperature, currency) and a bottom tab bar,
+  with the map given room to breathe between them. The layout is one cohesive
+  design instead of stacked cards, and the chat is always one tap away via a
+  floating button above the tabs.
+
+### Fixed
+- **Place details close and fit on mobile.** The place sheet (photos, reviews,
+  hours) now has a pinned header with an always-visible close button and a
+  pinned action footer, so the ✕ never scrolls away and "Add to day" / "Get
+  Directions" never hide under the nav bar. The sheet is capped to the visible
+  screen and scrolls inside itself.
+- **Nearby search stays nearby.** Asking the chat to add a kind of place could
+  return far-flung matches — a Florida or Cleveland aquarium for a Corfu trip —
+  because Google's and Tripadvisor's location parameter only *biases* the search.
+  Results are now hard-filtered to the trip's vicinity (within ~80 km), so an
+  "added nearby" place is actually nearby.
+
+### Changed
+- Currency moved from the mobile bottom bar into the top bar, so the bottom bar
+  is just navigation and the converter reads as part of the trip's chrome.
+
 ## v8.0.0 — Ask for any kind of place
 
 ### Added
