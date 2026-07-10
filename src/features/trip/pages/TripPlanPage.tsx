@@ -5,10 +5,12 @@ import { useTripStore } from '../../../store/tripStore'
 import { useItineraryActions } from '../hooks/useItineraryActions'
 import { dayHeading } from '../../../lib/itinerary/tripDates'
 import { dayEffort, formatEffort } from '../../../lib/itinerary/dayEffort'
+import { daySummary, daySummaryChips } from '../../../lib/itinerary/daySummary'
 import { TripMap } from '../components/TripMap'
 import { ItineraryStopForm } from '../components/ItineraryStopForm'
 import { ItineraryDayGroup } from '../components/ItineraryDayGroup'
 import { ThingsToDoList } from '../components/ThingsToDoList'
+import { TripSkeleton } from '../components/TripSkeleton'
 import { PlaceDetailPanel } from '../place/PlaceDetailPanel'
 import { usePlaceDetail, type PlaceQuery } from '../place/usePlaceDetail'
 import { placeQueryFor, placeQueryForThing } from '../place/placeQuery'
@@ -43,12 +45,13 @@ export function TripPlanPage() {
 
   const selectedEntries = dayGroups.get(selectedDay) ?? []
   const effort = dayEffort(selectedEntries.map((e) => e.item))
+  const summaryChips = daySummaryChips(daySummary(selectedEntries.map((e) => e.item)))
   const dayCount = tripLengthDays && tripLengthDays > 1 ? tripLengthDays : 1
   // Names already on the plan (to badge things-to-do and drive the detail sheet's add/remove state).
   const plannedNames = useMemo(() => new Set(itinerary.map((it) => it.text)), [itinerary])
   const onPlanIndex = selected ? itinerary.findIndex((it) => it.text === (selected.name ?? selected.label)) : -1
 
-  if (!location) return <p>Loading…</p>
+  if (!location) return <TripSkeleton />
 
   return (
     <article className="chronicle-chapter chronicle-chapter--wide">
@@ -90,6 +93,15 @@ export function TripPlanPage() {
 
       <section className="chronicle-plan-day" aria-label={`Day ${selectedDay} stops`} key={`${selectedDay}-${itinerary.length}`}>
         <h2 className="chronicle-weather-section-heading">{dayHeading(startDate, selectedDay)}</h2>
+        {summaryChips.length > 0 && (
+          <div className="chronicle-day-chips" aria-label="Day summary">
+            {summaryChips.map((chip) => (
+              <span key={chip.key} className={`chronicle-day-chip chronicle-day-chip--${chip.key}`}>
+                {chip.label}
+              </span>
+            ))}
+          </div>
+        )}
         {effort && (
           <p className={`chronicle-day-effort${effort.crossTown ? ' chronicle-day-effort--warn' : ''}`}>
             {formatEffort(effort)}

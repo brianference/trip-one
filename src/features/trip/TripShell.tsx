@@ -3,6 +3,7 @@ import { useParams, Outlet, Link } from 'react-router-dom'
 import { useTripData } from './hooks/useTripData'
 import { TripNav } from './TripNav'
 import { TripChatDock } from './chat/TripChatDock'
+import { TripSkeleton } from './components/TripSkeleton'
 import { SaveErrorBanner } from './components/SaveErrorBanner'
 import { recordRecentTrip } from './recentTrips'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
@@ -30,6 +31,17 @@ export function TripShell() {
     if (id && tripName) recordRecentTrip(id, tripName)
   }, [id, tripName])
 
+  // Give the browser tab (and link unfurls that read the live title) the
+  // destination name; restore the default when leaving the trip.
+  useEffect(() => {
+    if (!tripName) return
+    const previous = document.title
+    document.title = `${tripName} — Trip One`
+    return () => {
+      document.title = previous
+    }
+  }, [tripName])
+
   if (!id) return null
 
   if (error) {
@@ -51,7 +63,9 @@ export function TripShell() {
   if (loading || !trip) {
     return (
       <div className="chronicle-page">
-        <p>Loading…</p>
+        <main className="chronicle-book">
+          <TripSkeleton />
+        </main>
       </div>
     )
   }

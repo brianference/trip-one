@@ -2501,6 +2501,72 @@ body:has(.chronicle-page) label {
   }
 }
 
+/* Mobile: the trip nav becomes a fixed bottom tab bar in the thumb zone —
+   a real app shell, so any page is one thumb-reach tap away. Reuses the same
+   NavLinks (icon + label + active state); only its position changes. */
+@media (max-width: 720px) {
+  .chronicle-section-nav {
+    position: fixed;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 900;
+    margin: 0;
+    max-width: none;
+    gap: 0;
+    padding: 4px 0 calc(4px + env(safe-area-inset-bottom));
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.12);
+  }
+
+  .chronicle-section-nav-item {
+    min-height: 48px;
+    justify-content: center;
+    border-radius: 0;
+  }
+
+  .chronicle-section-nav-item svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Active tab reads as a top-edge indicator, not a filled pill. */
+  .chronicle-section-nav-item--active {
+    background: none;
+    color: var(--chronicle-teal);
+    box-shadow: inset 0 2px 0 var(--chronicle-teal);
+  }
+
+  /* The footer link row is redundant with the bottom tab bar. */
+  .chronicle-footer-links {
+    display: none;
+  }
+
+  /* Content clears the fixed bar (≈60px + safe area). */
+  .chronicle-page {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+
+  /* Raise the chat FAB and the update toast above the tab bar. */
+  .chronicle-chat-fab {
+    bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+
+  .chronicle-update-toast {
+    bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+
+  /* When the full-screen chat sheet is open, the tab bar underneath is just
+     noise (and would sit under the chat input) — hide it. */
+  body.trip-chat-open .chronicle-section-nav {
+    display: none;
+  }
+}
+
 /* Cleaner itinerary rows on phones: the stop name gets its own line, then a
    single compact row of time · badge · directions · move · remove. */
 @media (max-width: 600px) {
@@ -2592,6 +2658,98 @@ body:has(.chronicle-page) label {
 
 .chronicle-map-places {
   margin-top: var(--chronicle-space-lg);
+}
+
+/* Visually hidden but available to screen readers. */
+.chronicle-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Per-day summary chips (Plan page day heading). */
+.chronicle-day-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--chronicle-space-sm);
+  margin: var(--chronicle-space-sm) 0;
+}
+
+.chronicle-day-chip {
+  padding: 3px 10px;
+  border-radius: var(--chronicle-radius-pill);
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  background: var(--chronicle-bg-surface-2);
+  color: var(--chronicle-text-secondary);
+  border: 1px solid var(--chronicle-border-hairline);
+}
+
+.chronicle-day-chip--food {
+  color: var(--chronicle-gold);
+  border-color: color-mix(in srgb, var(--chronicle-gold) 40%, transparent);
+}
+
+.chronicle-day-chip--outdoors {
+  color: var(--chronicle-teal);
+  border-color: color-mix(in srgb, var(--chronicle-teal) 40%, transparent);
+}
+
+/* Loading skeleton (shown while a trip loads). */
+.chronicle-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-md);
+}
+
+.chronicle-skeleton-block,
+.chronicle-skeleton-line {
+  border-radius: var(--chronicle-radius-md);
+  background: linear-gradient(
+    90deg,
+    var(--chronicle-bg-surface-2) 25%,
+    color-mix(in srgb, var(--chronicle-bg-surface-2) 60%, var(--chronicle-border-hairline)) 37%,
+    var(--chronicle-bg-surface-2) 63%
+  );
+  background-size: 400% 100%;
+  animation: chronicle-shimmer 1.4s ease infinite;
+}
+
+.chronicle-skeleton-map {
+  height: 220px;
+}
+
+.chronicle-skeleton-line {
+  height: 16px;
+}
+
+.chronicle-skeleton-line--title {
+  height: 26px;
+  width: 55%;
+}
+
+@keyframes chronicle-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chronicle-skeleton-block,
+  .chronicle-skeleton-line {
+    animation: none;
+  }
 }
 
 /* Selected day's stops listed under the map (Overview preview, read-only). */
