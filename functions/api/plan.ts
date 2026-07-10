@@ -2,7 +2,7 @@ import { z } from 'zod'
 import type { Env } from '../lib/supabaseAdmin'
 import { countRecentRequests, insertRequestLog } from '../lib/supabaseAdmin'
 import { isUnderRateLimit, hashIp } from '../../src/lib/rateLimit'
-import { buildPlanPrompt, normalizePlan, extractPlanMessage } from '../lib/aiPlan'
+import { buildPlanPrompt, normalizePlan, extractPlanMessage, ensureFoodPerDay } from '../lib/aiPlan'
 import { openAiResponseSchema } from '../lib/openAi'
 import { logger } from '../../src/lib/logger'
 
@@ -91,7 +91,7 @@ export async function onRequestPost({ env, request }: { env: PlanEnv; request: R
         messages: [{ role: 'user', content: prompt }],
         response_format: { type: 'json_object' },
         temperature: 0.4,
-        max_tokens: 800,
+        max_tokens: 1200,
       }),
     })
     if (!res.ok) {
@@ -115,7 +115,9 @@ export async function onRequestPost({ env, request }: { env: PlanEnv; request: R
     const plan = normalizePlan(rawPlan, places.length, days)
     if (!plan) return json({ error: 'AI planner could not build a plan from nearby places, try again' }, 502)
 
-    return json({ days: plan, message: extractPlanMessage(rawPlan) ?? DEFAULT_PLAN_MESSAGE }, 200)
+    // Deterministically guarantee ≥3 food stops per day, near each day's stops.
+    const withFood = ensureFoodPerDay(plan, places, 3)
+    return json({ days: withFood, message: extractPlanMessage(rawPlan) ?? DEFAULT_PLAN_MESSAGE }, 200)
   } catch (err) {
     logger.error('AI plan generation failed', err)
     return json({ error: 'internal error' }, 500)

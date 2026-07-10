@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildPlanPrompt, normalizePlan, extractPlanMessage } from './aiPlan'
+import { buildPlanPrompt, normalizePlan, extractPlanMessage, ensureFoodPerDay } from './aiPlan'
 
 const candidates = [
   { name: 'Ramen Shop', category: 'restaurant', rating: 4.6 },
@@ -110,5 +110,39 @@ describe('normalizePlan', () => {
   it('sorts days ascending', () => {
     const plan = normalizePlan({ days: [{ day: 2, placeIndexes: [0] }, { day: 1, placeIndexes: [1] }] }, 3, 2)
     expect(plan?.map((d) => d.day)).toEqual([1, 2])
+  })
+})
+
+describe('ensureFoodPerDay', () => {
+  // 0,1 = attractions near (0,0); 2,3,4 = restaurants near (0,0); 5,6 = restaurants far (10,10)
+  const candidates = [
+    { name: 'Museum A', category: 'museum', lat: 0.0, lng: 0.0 },
+    { name: 'Park B', category: 'park', lat: 0.01, lng: 0.01 },
+    { name: 'Cafe Near', category: 'cafe', lat: 0.02, lng: 0.0, rating: 4.5 },
+    { name: 'Bistro Near', category: 'restaurant', lat: 0.0, lng: 0.02, rating: 4.6 },
+    { name: 'Bar Near', category: 'bar', lat: 0.03, lng: 0.01, rating: 4.2 },
+    { name: 'Diner Far', category: 'restaurant', lat: 10.0, lng: 10.0, rating: 4.9 },
+    { name: 'Grill Far', category: 'restaurant', lat: 10.1, lng: 10.1, rating: 4.8 },
+  ]
+
+  it('adds food to reach the minimum, choosing the nearest to the day’s attractions', () => {
+    const out = ensureFoodPerDay([{ day: 1, placeIndexes: [0, 1] }], candidates, 3)
+    const foodIdx = out[0].placeIndexes.filter((i) => ['cafe', 'restaurant', 'bar'].includes(candidates[i].category))
+    expect(foodIdx.length).toBeGreaterThanOrEqual(3)
+    // the far, higher-rated restaurants (5,6) are NOT chosen over the near ones (2,3,4)
+    expect(out[0].placeIndexes).not.toContain(5)
+    expect(out[0].placeIndexes).not.toContain(6)
+    expect(out[0].placeIndexes).toEqual(expect.arrayContaining([2, 3, 4]))
+  })
+
+  it('leaves a day alone when it already has enough food', () => {
+    const out = ensureFoodPerDay([{ day: 1, placeIndexes: [0, 2, 3, 4] }], candidates, 3)
+    expect(out[0].placeIndexes).toEqual([0, 2, 3, 4])
+  })
+
+  it('never reuses a food place across days', () => {
+    const out = ensureFoodPerDay([{ day: 1, placeIndexes: [0] }, { day: 2, placeIndexes: [1] }], candidates, 3)
+    const all = out.flatMap((d) => d.placeIndexes)
+    expect(new Set(all).size).toBe(all.length)
   })
 })

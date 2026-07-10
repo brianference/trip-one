@@ -64,7 +64,12 @@ describe('POST /api/plan', () => {
     vi.stubGlobal('fetch', mockBackend(JSON.stringify({ days: [{ day: 1, placeIndexes: [0, 99] }] })))
     const res = await onRequestPost({ env, request: req(validBody) } as never)
     const body = await res.json()
-    expect(body.days).toEqual([{ day: 1, placeIndexes: [0] }])
+    // The hallucinated index 99 is dropped; only real indices remain (food-per-day
+    // enforcement may add other REAL indices, but never the out-of-range one).
+    const all = body.days.flatMap((d: { placeIndexes: number[] }) => d.placeIndexes)
+    expect(all).toContain(0)
+    expect(all).not.toContain(99)
+    expect(all.every((i: number) => i >= 0 && i < validBody.places.length)).toBe(true)
   })
 
   it('502s when the model returns nothing usable', async () => {

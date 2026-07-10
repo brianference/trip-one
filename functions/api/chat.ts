@@ -3,6 +3,7 @@ import type { Env } from '../lib/supabaseAdmin'
 import { countRecentRequests, insertRequestLog } from '../lib/supabaseAdmin'
 import { isUnderRateLimit, hashIp } from '../../src/lib/rateLimit'
 import { buildChatPrompt, normalizeChatResponse } from '../lib/aiChat'
+import { ensureFoodPerDay } from '../lib/aiPlan'
 import { openAiResponseSchema } from '../lib/openAi'
 import { logger } from '../../src/lib/logger'
 
@@ -75,7 +76,7 @@ export async function onRequestPost({ env, request }: { env: ChatEnv; request: R
         messages: [{ role: 'user', content: prompt }],
         response_format: { type: 'json_object' },
         temperature: 0.5,
-        max_tokens: 800,
+        max_tokens: 1200,
       }),
     })
     if (!res.ok) {
@@ -96,6 +97,10 @@ export async function onRequestPost({ env, request }: { env: ChatEnv; request: R
     const result = normalizeChatResponse(raw, places.length, days)
     if (!result) return json({ error: 'AI assistant could not respond, try again' }, 502)
 
+    // On a re-plan, guarantee ≥3 food stops per day near each day's stops.
+    if (result.action === 'plan' && result.days) {
+      result.days = ensureFoodPerDay(result.days, places, 3)
+    }
     return json(result, 200)
   } catch (err) {
     logger.error('chat turn failed', err)

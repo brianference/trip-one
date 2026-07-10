@@ -136,6 +136,79 @@ export function extractPlanMessage(raw: unknown): string | null {
   return trimmed.length > 0 ? trimmed.slice(0, 600) : null
 }
 
+const FOOD_CATEGORIES = new Set([
+  'restaurant',
+  'cafe',
+  'bar',
+  'bakery',
+  'food',
+  'meal_takeaway',
+  'meal_delivery',
+])
+
+function isFoodCategory(category?: string): boolean {
+  return category != null && FOOD_CATEGORIES.has(category)
+}
+
+/** Squared distance between two coordinates — enough to rank proximity, no sqrt needed. */
+function distSq(aLat: number, aLng: number, bLat: number, bLng: number): number {
+  const dLat = aLat - bLat
+  const dLng = aLng - bLng
+  return dLat * dLat + dLng * dLng
+}
+
+/**
+ * Guarantees each day has at least `minFood` food/drink stops, chosen from the
+ * REAL candidate pool and placed NEAR that day's existing (attraction) stops —
+ * so meals are convenient, not clustered across town. The LLM is unreliable at
+ * this hard constraint, so we enforce it deterministically after the fact.
+ *
+ * For each short day it finds the day's geographic center (from its stops that
+ * have coordinates) and adds the closest unused food candidates until the day
+ * has `minFood` of them. Food candidates without coordinates are used only as a
+ * last resort (appended when nothing closer remains). Every place is still real
+ * and used at most once across the whole plan.
+ * @param plan - The normalized plan (mutated copy returned)
+ * @param candidates - The real candidates the indices refer to
+ * @param minFood - Minimum food stops required per day
+ */
+export function ensureFoodPerDay(plan: PlanDay[], candidates: PlanCandidate[], minFood = 3): PlanDay[] {
+  const used = new Set<number>(plan.flatMap((d) => d.placeIndexes))
+  const foodPool = candidates.map((_, i) => i).filter((i) => isFoodCategory(candidates[i]?.category))
+
+  const result = plan.map((d) => ({ day: d.day, placeIndexes: [...d.placeIndexes] }))
+  for (const day of result) {
+    let foodCount = day.placeIndexes.filter((i) => isFoodCategory(candidates[i]?.category)).length
+    if (foodCount >= minFood) continue
+
+    // Center of the day: average of its stops that have coordinates.
+    const coords = day.placeIndexes.map((i) => candidates[i]).filter((c) => c?.lat != null && c?.lng != null)
+    const center =
+      coords.length > 0
+        ? { lat: coords.reduce((s, c) => s + (c.lat as number), 0) / coords.length, lng: coords.reduce((s, c) => s + (c.lng as number), 0) / coords.length }
+        : null
+
+    const available = foodPool.filter((i) => !used.has(i))
+    available.sort((a, b) => {
+      const ca = candidates[a]
+      const cb = candidates[b]
+      // Places with coords, closest to the day's center first; then the rest.
+      const da = center && ca.lat != null && ca.lng != null ? distSq(center.lat, center.lng, ca.lat, ca.lng) : Infinity
+      const db = center && cb.lat != null && cb.lng != null ? distSq(center.lat, center.lng, cb.lat, cb.lng) : Infinity
+      if (da !== db) return da - db
+      return (cb.rating ?? 0) - (ca.rating ?? 0)
+    })
+
+    for (const i of available) {
+      if (foodCount >= minFood) break
+      day.placeIndexes.push(i)
+      used.add(i)
+      foodCount += 1
+    }
+  }
+  return result
+}
+
 /**
  * Validates and normalizes a raw LLM response into a safe plan. Drops
  * out-of-range/non-integer indices, de-duplicates places across the whole
