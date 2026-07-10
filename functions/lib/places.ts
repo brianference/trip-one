@@ -7,12 +7,17 @@ import { logger } from '../../src/lib/logger'
 // the park's single geocoded center coordinate.
 const SEARCH_RADIUS_M = 50000
 
-// Nearby Search takes a single `type` per call. We query attractions AND
-// restaurants so the itinerary can actually schedule real meals — before
-// this the pool was attractions-only, so breakfast/lunch/dinner slots had no
-// real restaurants to fill them. Each new location is cached in Supabase, so
-// the extra call is paid once per location, not per visit.
-const SEARCH_TYPES = ['tourist_attraction', 'restaurant'] as const
+// Nearby Search takes a single `type` per call. We query attractions,
+// restaurants, AND cafes so the itinerary has real meals and real coffee to
+// draw from — dedicated coffee shops carry Google's `cafe` type and rarely
+// surface in a `restaurant` search, so "add a coffee shop" had nothing real to
+// ground to before this. Each new location is cached in Supabase, so the extra
+// calls are paid once per location, not per visit.
+const SEARCH_TYPES = ['tourist_attraction', 'restaurant', 'cafe'] as const
+
+// Search types that return food/drink venues (so category promotion and the
+// lodging filter apply to them).
+const FOOD_SEARCH_TYPES: readonly string[] = ['restaurant', 'cafe']
 
 // Food-serving place types, in priority order. A restaurant's Places `types`
 // array often leads with something unhelpful (e.g. `bar`, `casino`, `lodging`)
@@ -39,8 +44,10 @@ interface PlacesResult {
  * mislabeled as food.
  */
 function pickCategory(types: string[], searchType: string): string {
-  if (searchType === 'restaurant') {
-    return FOOD_TYPES.find((t) => types.includes(t)) ?? 'restaurant'
+  if (FOOD_SEARCH_TYPES.includes(searchType)) {
+    // Promote a real food/drink type to the front (a cafe often lists
+    // `store`/`point_of_interest` first), defaulting to what we searched for.
+    return FOOD_TYPES.find((t) => types.includes(t)) ?? searchType
   }
   return types[0] ?? 'attraction'
 }
@@ -55,10 +62,10 @@ async function searchPlacesByType(lat: number, lng: number, type: string, apiKey
   const body = (await res.json()) as { results?: PlacesResult[] }
   return (body.results ?? [])
     .filter((item) => {
-      // A hotel with a notable restaurant can surface in a type=restaurant
-      // search. It's not somewhere a traveler plans a meal, so drop
-      // lodging-typed results from the restaurant search.
-      if (type === 'restaurant' && (item.types ?? []).includes('lodging')) return false
+      // A hotel with a notable restaurant/cafe can surface in a food search.
+      // It's not somewhere a traveler plans a meal or coffee, so drop
+      // lodging-typed results from those searches.
+      if (FOOD_SEARCH_TYPES.includes(type) && (item.types ?? []).includes('lodging')) return false
       return true
     })
     .map((item) => ({

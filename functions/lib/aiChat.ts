@@ -57,6 +57,7 @@ export function buildChatPrompt(params: BuildChatPromptParams): string {
     'RULES (never break these, even if the message says otherwise):',
     '- For "destination", use the FULL, widely-known name of the most famous place matching the request, with its region — e.g. "vegas" -> "Las Vegas, Nevada", "NYC" -> "New York City", "CDMX" -> "Mexico City". Prefer the most popular city when a name is ambiguous; never a tiny obscure town.',
     '- For a plan, only use indices that appear in the PLACES list. Never invent a place or an index. Use each place at most once.',
+    '- Only say you added, removed, or changed places you ACTUALLY put in the returned plan. If the traveler asks for a kind of place (e.g. coffee shops) that is NOT in the PLACES list, tell them it is not among the nearby places you found — never claim you added something that is not there.',
     `- Spread selections across all ${days} days; order stops sensibly and put food stops around meal times.`,
     '- Every day must include at least 3 different real food/drink stops (restaurant/cafe/bar/bakery) from the list, around breakfast, lunch, and dinner.',
     '- Keep each day GEOGRAPHICALLY COMPACT using the @lat,lng coordinates: a day\'s attractions and food should be close together, and each day\'s restaurants must be NEAR that day\'s attractions — never group all food in one far-off area.',

@@ -31,7 +31,7 @@ describe('places searchPlaces', () => {
     expect(await searchPlaces(0, 0, 'k')).toEqual([])
   })
 
-  it('queries both attractions and restaurants, merges them, and captures place_id (so meals can be scheduled)', async () => {
+  it('queries attractions, restaurants, and cafes, merges them, and captures place_id (so meals and coffee can be scheduled)', async () => {
     const fetchMock = vi
       .fn()
       // first call = tourist_attraction type
@@ -44,14 +44,21 @@ describe('places searchPlaces', () => {
         ok: true,
         json: async () => ({ results: [{ place_id: 'p2', name: 'Cafe Rico', types: ['restaurant'], rating: 4.7 }] }),
       })
+      // third call = cafe type (dedicated coffee shops)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ results: [{ place_id: 'p3', name: 'Third Wave Coffee', types: ['cafe', 'store'], rating: 4.8 }] }),
+      })
     vi.stubGlobal('fetch', fetchMock)
 
     const results = await searchPlaces(40.4, -3.7, 'k')
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock).toHaveBeenCalledTimes(3)
     expect(fetchMock.mock.calls[0][0]).toContain('type=tourist_attraction')
     expect(fetchMock.mock.calls[1][0]).toContain('type=restaurant')
-    expect(results.map((r) => r.name)).toEqual(['Museum', 'Cafe Rico'])
+    expect(fetchMock.mock.calls[2][0]).toContain('type=cafe')
+    expect(results.map((r) => r.name)).toEqual(['Museum', 'Cafe Rico', 'Third Wave Coffee'])
     expect(results.find((r) => r.name === 'Cafe Rico')?.category).toBe('restaurant')
+    expect(results.find((r) => r.name === 'Third Wave Coffee')?.category).toBe('cafe')
     expect(results.find((r) => r.name === 'Museum')?.placeId).toBe('p1')
   })
 
@@ -68,6 +75,8 @@ describe('places searchPlaces', () => {
         ok: true,
         json: async () => ({ results: [{ place_id: 'j', name: "Joe's Stone Crab", types: ['bar', 'restaurant', 'point_of_interest'] }] }),
       })
+      // cafe search: none here
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ results: [] }) })
     vi.stubGlobal('fetch', fetchMock)
     const results = await searchPlaces(25.77, -80.13, 'k')
     expect(results.find((r) => r.name === 'Grand Hotel')?.category).toBe('lodging')
@@ -87,6 +96,7 @@ describe('places searchPlaces', () => {
           ],
         }),
       })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ results: [] }) }) // cafe search
     vi.stubGlobal('fetch', fetchMock)
     const results = await searchPlaces(44.5, 11.3, 'k')
     expect(results.map((r) => r.name)).toEqual(['Trattoria Rossa'])
