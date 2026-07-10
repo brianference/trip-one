@@ -1,11 +1,6 @@
 import type { DailyForecast } from '../../weather/useDailyForecast'
 import { wmoEmoji } from '../../weather/useForecast'
-
-/** A real hourly-forecast link for a place and date (Google weather, works globally). */
-function hourlyUrl(displayName: string, date: string): string {
-  const when = new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-  return `https://www.google.com/search?q=${encodeURIComponent(`hourly weather ${displayName} ${when}`)}`
-}
+import { hourlyForecastUrl } from '../../weather/wunderground'
 
 /**
  * The daily forecast as a card grid — one card per day with the weather emoji,
@@ -20,7 +15,7 @@ export function ForecastStrip({ days, displayName }: { days: DailyForecast[]; di
         <a
           key={day.date}
           className="chronicle-forecast-day"
-          href={hourlyUrl(displayName, day.date)}
+          href={hourlyForecastUrl(displayName, day.date)}
           target="_blank"
           rel="noopener noreferrer"
           title={`Hourly forecast for ${new Date(`${day.date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'long' })}`}

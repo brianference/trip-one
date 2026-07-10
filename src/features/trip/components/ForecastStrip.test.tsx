@@ -15,8 +15,8 @@ describe('ForecastStrip', () => {
     expect(screen.getByText('20% precip')).toBeInTheDocument()
     // each day links to a real hourly forecast for that place
     const link = screen.getByRole('link', { name: /hourly/i })
-    expect(link.getAttribute('href')).toContain('google.com/search')
-    expect(link.getAttribute('href')).toContain('Reykjavik')
+    // Reykjavik, Iceland → a real Weather Underground hourly URL for that date
+    expect(link.getAttribute('href')).toBe('https://www.wunderground.com/hourly/is/reykjavik/date/2026-07-10')
   })
 
   it('renders nothing when there are no days', () => {

@@ -49,6 +49,13 @@ export function OverviewPage() {
   return (
     <article className="chronicle-chapter">
       <h1>{displayName}</h1>
+
+      {location && (
+        <PreviewCard title="Map" to={`/trip/${trip.id}/map`} linkLabel="Open full map">
+          <TripMap location={location} itinerary={itinerary} tripLengthDays={tripLengthDays} height={220} />
+        </PreviewCard>
+      )}
+
       <WeatherNow forecast={forecast} />
       {dailyForecast && dailyForecast.length > 0 && (
         <>
@@ -72,12 +79,6 @@ export function OverviewPage() {
           </li>
         )}
       </ul>
-
-      {location && (
-        <PreviewCard title="Map" to={`/trip/${trip.id}/map`} linkLabel="Open full map">
-          <TripMap location={location} itinerary={itinerary} tripLengthDays={tripLengthDays} height={200} />
-        </PreviewCard>
-      )}
 
       {nextStops.length > 0 && (
         <PreviewCard title="Up next" to={`/trip/${trip.id}/itinerary`} linkLabel="See full itinerary">
