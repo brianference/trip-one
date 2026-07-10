@@ -4,6 +4,7 @@ import { useTripContext } from '../useTripContext'
 import { useTripStore } from '../../../store/tripStore'
 import { useItineraryActions } from '../hooks/useItineraryActions'
 import { dayHeading } from '../../../lib/itinerary/tripDates'
+import { dayEffort, formatEffort } from '../../../lib/itinerary/dayEffort'
 import { TripMap } from '../components/TripMap'
 import { ItineraryStopForm } from '../components/ItineraryStopForm'
 import { ItineraryDayGroup } from '../components/ItineraryDayGroup'
@@ -24,7 +25,7 @@ const TRIP_LENGTH_OPTIONS = Array.from({ length: 14 }, (_, i) => i + 1)
 export function TripPlanPage() {
   const { trip, location } = useTripContext()
   const startDate = useTripStore((s) => s.startDate)
-  const { itinerary, tripLengthDays, adding, addStop, addFromThingToDo, removeStop, moveStop, setTripLength, setStartDate } =
+  const { itinerary, tripLengthDays, adding, addStop, addFromThingToDo, addToDay, removeStop, moveStop, setTripLength, setStartDate } =
     useItineraryActions(trip.id)
   const [selectedDay, setSelectedDay] = useState(1)
   const [selected, setSelected] = useState<PlaceQuery | null>(null)
@@ -41,6 +42,11 @@ export function TripPlanPage() {
   }, [itinerary])
 
   const selectedEntries = dayGroups.get(selectedDay) ?? []
+  const effort = dayEffort(selectedEntries.map((e) => e.item))
+  const dayCount = tripLengthDays && tripLengthDays > 1 ? tripLengthDays : 1
+  // Names already on the plan (to badge things-to-do and drive the detail sheet's add/remove state).
+  const plannedNames = useMemo(() => new Set(itinerary.map((it) => it.text)), [itinerary])
+  const onPlanIndex = selected ? itinerary.findIndex((it) => it.text === (selected.name ?? selected.label)) : -1
 
   if (!location) return <p>Loading…</p>
 
@@ -78,12 +84,18 @@ export function TripPlanPage() {
         selectedDay={selectedDay}
         onSelectDay={setSelectedDay}
         onSelectMarker={(marker) =>
-          setSelected(placeQueryFor({ name: marker.label, placeId: marker.placeId, lat: marker.lat, lng: marker.lng }))
+          setSelected(placeQueryFor({ name: marker.label, placeId: marker.placeId, lat: marker.lat, lng: marker.lng, category: marker.category }))
         }
       />
 
       <section className="chronicle-plan-day" aria-label={`Day ${selectedDay} stops`} key={`${selectedDay}-${itinerary.length}`}>
         <h2 className="chronicle-weather-section-heading">{dayHeading(startDate, selectedDay)}</h2>
+        {effort && (
+          <p className={`chronicle-day-effort${effort.crossTown ? ' chronicle-day-effort--warn' : ''}`}>
+            {formatEffort(effort)}
+            {effort.crossTown && ' · spread across town — consider splitting'}
+          </p>
+        )}
         {selectedEntries.length > 0 ? (
           <ItineraryDayGroup day={selectedDay} entries={selectedEntries} showHeading={false} onMove={moveStop} onRemove={removeStop} />
         ) : (
@@ -96,13 +108,28 @@ export function TripPlanPage() {
         <h2 className="chronicle-weather-section-heading">Things to do nearby</h2>
         <ThingsToDoList
           thingsToDo={location.thingsToDo}
+          plannedNames={plannedNames}
           onAdd={addFromThingToDo}
           onSelect={(item) => setSelected(placeQueryForThing(item))}
         />
       </section>
 
       {selected && (
-        <PlaceDetailPanel query={selected} detail={detail} loading={loading} error={error} onClose={() => setSelected(null)} />
+        <PlaceDetailPanel
+          query={selected}
+          detail={detail}
+          loading={loading}
+          error={error}
+          onClose={() => setSelected(null)}
+          dayCount={dayCount}
+          defaultDay={selectedDay}
+          onPlanDay={onPlanIndex >= 0 ? itinerary[onPlanIndex].day ?? 1 : null}
+          onAddToDay={(day) => {
+            addToDay({ name: selected.name ?? selected.label, lat: selected.lat, lng: selected.lng, category: selected.category }, day)
+            setSelected(null)
+          }}
+          onRemoveFromPlan={onPlanIndex >= 0 ? () => { removeStop(onPlanIndex); setSelected(null) } : undefined}
+        />
       )}
     </article>
   )

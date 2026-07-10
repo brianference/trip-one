@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { placePhotoUrl, type PlaceDetail } from '../../../lib/api/client'
 import { directionsUrl } from '../../../lib/itinerary/badges'
 import type { PlaceQuery } from './usePlaceDetail'
@@ -29,13 +29,29 @@ export function PlaceDetailPanel({
   loading,
   error,
   onClose,
+  dayCount,
+  defaultDay,
+  onPlanDay,
+  onAddToDay,
+  onRemoveFromPlan,
 }: {
   query: PlaceQuery
   detail: PlaceDetail | null
   loading: boolean
   error: string | null
   onClose: () => void
+  /** Number of days available to add to (enables the plan CTA when > 0). */
+  dayCount?: number
+  /** The day to preselect in the picker. */
+  defaultDay?: number
+  /** If this place is already on the plan, which day it's on (else null). */
+  onPlanDay?: number | null
+  /** Add this place to the given day. */
+  onAddToDay?: (day: number) => void
+  /** Remove this place from the plan. */
+  onRemoveFromPlan?: () => void
 }) {
+  const [pickDay, setPickDay] = useState(defaultDay ?? 1)
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
@@ -146,6 +162,36 @@ export function PlaceDetailPanel({
             )}
           </div>
         )}
+
+        {onAddToDay &&
+          (onPlanDay != null ? (
+            <div className="chronicle-place-plan">
+              <span className="chronicle-place-on-plan">✓ On Day {onPlanDay}</span>
+              {onRemoveFromPlan && (
+                <button type="button" className="chronicle-place-remove" onClick={onRemoveFromPlan}>
+                  Remove from trip
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="chronicle-place-plan">
+              {dayCount && dayCount > 1 && (
+                <label className="chronicle-place-day-pick">
+                  <span className="chronicle-sr-only">Day</span>
+                  <select value={pickDay} onChange={(e) => setPickDay(Number(e.target.value))}>
+                    {Array.from({ length: dayCount }, (_, i) => i + 1).map((d) => (
+                      <option key={d} value={d}>
+                        Day {d}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <button type="button" className="chronicle-place-add" onClick={() => onAddToDay(dayCount && dayCount > 1 ? pickDay : 1)}>
+                {dayCount && dayCount > 1 ? `Add to Day ${pickDay}` : 'Add to trip'}
+              </button>
+            </div>
+          ))}
 
         <a className="chronicle-place-directions" href={directionsHref} target="_blank" rel="noopener noreferrer">
           Get Directions

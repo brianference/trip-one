@@ -8,6 +8,8 @@ export interface PlaceQuery {
   name?: string
   lat?: number
   lng?: number
+  /** Category, carried so a place added from the detail sheet keeps its role/marker. */
+  category?: string
 }
 
 /**

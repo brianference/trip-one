@@ -77,6 +77,20 @@ export function useItineraryActions(tripId: string) {
     )
   }
 
+  /**
+   * Adds a place to a SPECIFIC day (from the detail sheet's "Add to Day N").
+   * Unlike addFromThingToDo, this respects the chosen day instead of
+   * re-clustering, so the traveler's explicit placement is honored.
+   */
+  function addToDay(input: { name: string; lat?: number; lng?: number; category?: string }, day: number) {
+    const next: ItineraryItem[] = [
+      ...itinerary,
+      { time: '', text: input.name, type: 'option', q: input.name, lat: input.lat, lng: input.lng, category: input.category, day },
+    ]
+    useTripStore.getState().setItinerary(next)
+    persist(tripId, { itinerary: next })
+  }
+
   function removeStop(index: number) {
     organizeAndPersist(
       itinerary.filter((_, i) => i !== index),
@@ -145,5 +159,5 @@ export function useItineraryActions(tripId: string) {
     persist(tripId, { startDate: date })
   }
 
-  return { itinerary, tripLengthDays, adding, addStop, addFromThingToDo, removeStop, moveStop, setTripLength, setStartDate, applyPlan }
+  return { itinerary, tripLengthDays, adding, addStop, addFromThingToDo, addToDay, removeStop, moveStop, setTripLength, setStartDate, applyPlan }
 }

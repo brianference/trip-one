@@ -7,8 +7,8 @@ import type { PlaceQuery } from './usePlaceDetail'
  * back to name + coordinates so entries without an id (e.g. Tripadvisor
  * suggestions, itinerary stops) still resolve via Find Place.
  */
-export function placeQueryFor(item: { name: string; placeId?: string; lat?: number; lng?: number }): PlaceQuery {
-  return { label: item.name, placeId: item.placeId, name: item.name, lat: item.lat, lng: item.lng }
+export function placeQueryFor(item: { name: string; placeId?: string; lat?: number; lng?: number; category?: string }): PlaceQuery {
+  return { label: item.name, placeId: item.placeId, name: item.name, lat: item.lat, lng: item.lng, category: item.category }
 }
 
 /** Convenience for a ThingToDo suggestion. */

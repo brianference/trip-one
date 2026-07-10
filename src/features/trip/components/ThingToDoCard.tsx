@@ -12,7 +12,17 @@ function prettyCategory(category: string): string {
  * button that opens the rich detail panel (reviews, photos, hours, phone), and
  * a clear action row — Details, Directions, and Add to itinerary.
  */
-export function ThingToDoCard({ item, onAdd, onSelect }: { item: ThingToDo; onAdd: () => void; onSelect: () => void }) {
+export function ThingToDoCard({
+  item,
+  onPlan,
+  onAdd,
+  onSelect,
+}: {
+  item: ThingToDo
+  onPlan?: boolean
+  onAdd: () => void
+  onSelect: () => void
+}) {
   return (
     <li className="chronicle-ttd-card">
       <div className="chronicle-ttd-head">
@@ -23,6 +33,8 @@ export function ThingToDoCard({ item, onAdd, onSelect }: { item: ThingToDo; onAd
           </span>
         )}
       </div>
+
+      {onPlan && <span className="chronicle-ttd-onplan">✓ On your trip</span>}
 
       <button type="button" className="chronicle-ttd-name" onClick={onSelect}>
         {item.name}

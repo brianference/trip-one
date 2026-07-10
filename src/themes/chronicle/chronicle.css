@@ -796,6 +796,103 @@
   background: var(--chronicle-teal-hover);
 }
 
+/* Things-to-do filters + on-plan badge */
+.chronicle-ttd-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--chronicle-space-sm);
+  margin-bottom: var(--chronicle-space-md);
+}
+
+.chronicle-ttd-filter,
+.chronicle-ttd-showunrated {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--chronicle-border-subtle);
+  border-radius: var(--chronicle-radius-pill);
+  background: var(--chronicle-bg-surface);
+  color: var(--chronicle-text-secondary);
+  font-family: var(--chronicle-font-mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.chronicle-ttd-filter--active {
+  background: var(--chronicle-teal);
+  border-color: var(--chronicle-teal);
+  color: var(--chronicle-bg-canvas);
+}
+
+.chronicle-ttd-showunrated {
+  margin-left: auto;
+  color: var(--chronicle-text-tertiary);
+}
+
+.chronicle-ttd-onplan {
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--chronicle-teal);
+}
+
+/* Place detail: add-to-day / on-plan CTA */
+.chronicle-place-plan {
+  display: flex;
+  align-items: center;
+  gap: var(--chronicle-space-sm);
+  margin-top: var(--chronicle-space-md);
+}
+
+.chronicle-place-day-pick select {
+  min-height: 44px;
+  padding: 0 8px;
+  border: 1px solid var(--chronicle-border-subtle);
+  border-radius: var(--chronicle-radius-sm);
+  background: var(--chronicle-bg-surface);
+  color: var(--chronicle-text-primary);
+  font-family: var(--chronicle-font-mono);
+  font-size: 13px;
+}
+
+.chronicle-place-add {
+  flex: 1;
+  min-height: 44px;
+  border: none;
+  border-radius: var(--chronicle-radius-pill);
+  background: var(--chronicle-teal);
+  color: var(--chronicle-bg-canvas);
+  font-family: var(--chronicle-font-mono);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.chronicle-place-add:hover {
+  background: var(--chronicle-teal-hover);
+}
+
+.chronicle-place-on-plan {
+  flex: 1;
+  font-family: var(--chronicle-font-mono);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--chronicle-teal);
+}
+
+.chronicle-place-remove {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--chronicle-danger);
+  border-radius: var(--chronicle-radius-pill);
+  background: none;
+  color: var(--chronicle-danger);
+  font-family: var(--chronicle-font-mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+
 .chronicle-suggestion-category {
   font-family: var(--chronicle-font-mono);
   font-size: 10px;
@@ -2399,6 +2496,17 @@ body:has(.chronicle-page) label {
 .chronicle-plan-day {
   margin-top: var(--chronicle-space-lg);
   animation: chronicle-plan-pulse 0.7s ease-out;
+}
+
+.chronicle-day-effort {
+  margin: 0 0 var(--chronicle-space-sm);
+  font-family: var(--chronicle-font-mono);
+  font-size: 12px;
+  color: var(--chronicle-text-tertiary);
+}
+
+.chronicle-day-effort--warn {
+  color: var(--chronicle-danger);
 }
 
 @keyframes chronicle-plan-pulse {

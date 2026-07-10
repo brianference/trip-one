@@ -1,22 +1,93 @@
+import { useMemo, useState } from 'react'
 import type { ThingToDo } from '../../../lib/api/client'
 import { ThingToDoCard } from './ThingToDoCard'
 
-/** The full list of nearby things-to-do suggestions. */
+type Group = 'all' | 'food' | 'sights' | 'outdoors' | 'museums'
+
+const FOOD = new Set(['restaurant', 'cafe', 'bar', 'bakery', 'food', 'meal_takeaway', 'meal_delivery'])
+const MUSEUMS = new Set(['museum', 'art_gallery'])
+const OUTDOORS = new Set(['park', 'natural_feature', 'campground', 'zoo', 'aquarium', 'beach', 'hiking_area', 'amusement_park'])
+
+function groupOf(category: string): Exclude<Group, 'all'> {
+  if (FOOD.has(category)) return 'food'
+  if (MUSEUMS.has(category)) return 'museums'
+  if (OUTDOORS.has(category)) return 'outdoors'
+  return 'sights'
+}
+
+const FILTERS: { key: Group; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'food', label: 'Food' },
+  { key: 'sights', label: 'Sights' },
+  { key: 'outdoors', label: 'Outdoors' },
+  { key: 'museums', label: 'Museums' },
+]
+
+/**
+ * Nearby things-to-do with filters (by type), rating sort, an "on plan" badge
+ * to prevent duplicates, and unrated/low-signal places hidden by default so the
+ * list reads like curated picks rather than an unfiltered dump.
+ */
 export function ThingsToDoList({
   thingsToDo,
+  plannedNames,
   onAdd,
   onSelect,
 }: {
   thingsToDo: ThingToDo[]
+  plannedNames?: Set<string>
   onAdd: (item: ThingToDo) => void
   onSelect: (item: ThingToDo) => void
 }) {
+  const [filter, setFilter] = useState<Group>('all')
+  const [showUnrated, setShowUnrated] = useState(false)
+
+  const hasUnrated = useMemo(() => thingsToDo.some((t) => t.rating == null), [thingsToDo])
+
+  const visible = useMemo(() => {
+    return thingsToDo
+      .filter((t) => filter === 'all' || groupOf(t.category) === filter)
+      .filter((t) => showUnrated || t.rating != null)
+      .sort((a, b) => (b.rating ?? -Infinity) - (a.rating ?? -Infinity))
+  }, [thingsToDo, filter, showUnrated])
+
   if (thingsToDo.length === 0) return <p className="chronicle-rate-line">No nearby suggestions yet.</p>
+
   return (
-    <ol className="chronicle-suggestions">
-      {thingsToDo.map((item) => (
-        <ThingToDoCard key={item.name} item={item} onAdd={() => onAdd(item)} onSelect={() => onSelect(item)} />
-      ))}
-    </ol>
+    <div>
+      <div className="chronicle-ttd-controls" role="group" aria-label="Filter places">
+        {FILTERS.map((f) => (
+          <button
+            key={f.key}
+            type="button"
+            className={`chronicle-ttd-filter${filter === f.key ? ' chronicle-ttd-filter--active' : ''}`}
+            onClick={() => setFilter(f.key)}
+          >
+            {f.label}
+          </button>
+        ))}
+        {hasUnrated && (
+          <button type="button" className="chronicle-ttd-showunrated" onClick={() => setShowUnrated((v) => !v)}>
+            {showUnrated ? 'Hide unrated' : 'Show unrated'}
+          </button>
+        )}
+      </div>
+
+      {visible.length === 0 ? (
+        <p className="chronicle-rate-line">No {filter === 'all' ? 'rated' : filter} places here.</p>
+      ) : (
+        <ol className="chronicle-suggestions">
+          {visible.map((item) => (
+            <ThingToDoCard
+              key={item.name}
+              item={item}
+              onPlan={plannedNames?.has(item.name) ?? false}
+              onAdd={() => onAdd(item)}
+              onSelect={() => onSelect(item)}
+            />
+          ))}
+        </ol>
+      )}
+    </div>
   )
 }
