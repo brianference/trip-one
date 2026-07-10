@@ -159,6 +159,63 @@ describe('GET /api/location', () => {
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('nominatim.openstreetmap.org'))).toBe(true)
   })
 
+  it('refreshes a cached row whose place names are mojibake, and drops corrupt names from the fresh result', async () => {
+    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      if (url.includes('/rest/v1/locations') && (!init || init.method === undefined)) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => [
+            {
+              slug: 'beijing-china',
+              lat: 39.9,
+              lng: 116.4,
+              display_name: 'Beijing, China',
+              // Full, coord-bearing, restaurant-having row — but one name is
+              // garbled (lone surrogate). Only the mojibake check should force
+              // the refresh.
+              things_to_do: [
+                { name: '交泰殿', category: 'tourist_attraction', source: 'places', lat: 39.92, lng: 116.39 },
+                { name: '故宫\uDC8D物院', category: 'restaurant', source: 'places', lat: 39.91, lng: 116.39 },
+              ],
+            },
+          ],
+        })
+      }
+      if (url.includes('/rest/v1/locations')) return Promise.resolve({ ok: true, json: async () => ({}) })
+      if (url.includes('/rest/v1/request_log')) {
+        return Promise.resolve({ ok: true, headers: new Headers({ 'content-range': '*/1' }), json: async () => [] })
+      }
+      if (url.includes('nominatim.openstreetmap.org')) {
+        return Promise.resolve({ ok: true, json: async () => [{ lat: '39.9', lon: '116.4', display_name: 'Beijing, China' }] })
+      }
+      if (url.includes('tripadvisor.com')) return Promise.resolve({ ok: true, json: async () => ({ data: [] }) })
+      if (url.includes('googleapis.com')) {
+        // Fresh Places result includes one clean and one still-garbled name;
+        // the corrupt one must be dropped before caching/returning.
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            results: [
+              { name: 'Family Li Imperial Cuisine', types: ['restaurant'], place_id: 'a', geometry: { location: { lat: 39.91, lng: 116.42 } } },
+              { name: '天\uDC9D厅', types: ['restaurant'], place_id: 'b', geometry: { location: { lat: 39.88, lng: 116.4 } } },
+            ],
+          }),
+        })
+      }
+      throw new Error(`unexpected fetch to ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const res = await onRequestGet({ env, request: req('https://x/api/location?q=Beijing') } as never)
+    expect(res.status).toBe(200)
+    // It refreshed (called the geocoder)…
+    expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('nominatim.openstreetmap.org'))).toBe(true)
+    // …and the returned list has the clean name but not the corrupt one.
+    const body = await res.json()
+    const names = body.thingsToDo.map((t: { name: string }) => t.name)
+    expect(names).toContain('Family Li Imperial Cuisine')
+    expect(names.some((n: string) => [...n].some((c) => c.charCodeAt(0) >= 0xdc00 && c.charCodeAt(0) <= 0xdfff))).toBe(false)
+  })
+
   it('does not refresh a cached row whose places-sourced entries already have coordinates', async () => {
     const fetchMock = vi.fn((url: string) => {
       if (url.includes('/rest/v1/locations')) {

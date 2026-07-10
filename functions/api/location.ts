@@ -12,6 +12,7 @@ import { geocode } from '../lib/geocode'
 import { searchThingsToDo } from '../lib/tripadvisor'
 import { searchPlaces } from '../lib/places'
 import { mergeThingsToDo } from '../lib/mergeThingsToDo'
+import { anyNameCorrupt, dropCorruptNames } from '../lib/textIntegrity'
 import { logger } from '../../src/lib/logger'
 
 const RATE_LIMIT_PER_HOUR = 20
@@ -58,7 +59,7 @@ export async function onRequestGet({
     // they were cached — so a places-sourced item lacking lat/lng also
     // triggers a refresh.
     const cachedThingsToDo = Array.isArray(cached?.things_to_do)
-      ? (cached.things_to_do as Array<{ source?: string; lat?: number; category?: string }>)
+      ? (cached.things_to_do as Array<{ name?: string; source?: string; lat?: number; category?: string }>)
       : []
     const placesEntriesLackCoordinates =
       cachedThingsToDo.some((item) => item.source === 'places') &&
@@ -67,7 +68,13 @@ export async function onRequestGet({
     // search to Google Places — refresh it so the itinerary can schedule
     // real meals, the same way the coordinate self-heal above works.
     const hasNoRestaurant = !cachedThingsToDo.some((item) => /restaurant|cafe|food|dining|bakery|bar/i.test(item.category ?? ''))
-    if (cached && cachedThingsToDo.length > 0 && !placesEntriesLackCoordinates && !hasNoRestaurant) {
+    // A row with mojibake place names (garbled UTF-8 from an earlier import,
+    // e.g. "故宫\uDC8D物院") self-heals the same way: re-fetch from Google
+    // Places, whose spec-compliant JSON decode yields clean names. Without this
+    // the cache-hit conditions above are all satisfied, so a corrupt row would
+    // be served forever.
+    const namesAreCorrupt = anyNameCorrupt(cachedThingsToDo)
+    if (cached && cachedThingsToDo.length > 0 && !placesEntriesLackCoordinates && !hasNoRestaurant && !namesAreCorrupt) {
       // The dedicated weather_baseline column has never stored weather data
       // (see supabaseAdmin.ts) — it's repurposed here to carry the geocoded
       // bounding box so a fresh Nominatim call isn't needed just to zoom the
@@ -102,7 +109,10 @@ export async function onRequestGet({
       searchThingsToDo(slug, geo.lat, geo.lng, env.TRIPADVISOR_API_KEY),
       searchPlaces(geo.lat, geo.lng, env.GOOGLE_PLACES_API_KEY),
     ])
-    const thingsToDo = mergeThingsToDo(tripadvisorResults, placesResults)
+    // Drop any place whose name is mojibake before caching or returning it — a
+    // place we can't name correctly is better omitted than shown garbled, and
+    // this keeps a healed row from tripping the self-heal check on its next hit.
+    const thingsToDo = dropCorruptNames(mergeThingsToDo(tripadvisorResults, placesResults))
 
     await upsertLocation(env, {
       slug,
