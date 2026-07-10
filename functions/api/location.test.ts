@@ -247,7 +247,7 @@ describe('GET /api/location', () => {
     vi.stubGlobal('fetch', (url: string) => {
       if (url.includes('/rest/v1/locations')) return Promise.resolve({ ok: true, json: async () => [] })
       if (url.includes('/rest/v1/request_log')) {
-        return Promise.resolve({ ok: true, headers: new Headers({ 'content-range': '*/25' }), json: async () => [] })
+        return Promise.resolve({ ok: true, headers: new Headers({ 'content-range': '*/250' }), json: async () => [] })
       }
       throw new Error(`unexpected fetch to ${url}`)
     })

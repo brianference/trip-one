@@ -15,7 +15,7 @@ import { mergeThingsToDo } from '../lib/mergeThingsToDo'
 import { anyNameCorrupt, dropCorruptNames } from '../lib/textIntegrity'
 import { logger } from '../../src/lib/logger'
 
-const RATE_LIMIT_PER_HOUR = 20
+const RATE_LIMIT_PER_HOUR = 200
 
 type LocationEnv = Env & { TRIPADVISOR_API_KEY: string; GOOGLE_PLACES_API_KEY: string }
 

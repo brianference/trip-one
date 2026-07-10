@@ -4,7 +4,7 @@ import type { Env } from '../lib/supabaseAdmin'
 import { logger } from '../../src/lib/logger'
 
 const currencyQuerySchema = z.string().trim().regex(/^[A-Z]{3}$/)
-const CURRENCY_PER_HOUR = 120
+const CURRENCY_PER_HOUR = 1200
 
 function json(body: unknown, status: number) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })

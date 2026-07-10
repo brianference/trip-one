@@ -6,7 +6,7 @@ import { logger } from '../../src/lib/logger'
 
 // Generous — this is typeahead (debounced, min 2 chars), so a real user stays
 // well under it; the cap only stops scripted abuse of the Nominatim proxy.
-const AUTOCOMPLETE_PER_HOUR = 240
+const AUTOCOMPLETE_PER_HOUR = 2400
 
 function json(body: unknown, status: number) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })

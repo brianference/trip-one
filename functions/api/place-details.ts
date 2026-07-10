@@ -7,7 +7,7 @@ import { logger } from '../../src/lib/logger'
 
 // Details is a paid Google call, but cached per place, so the limit is
 // generous enough for normal browsing while still capping abuse.
-const RATE_LIMIT_PER_HOUR = 120
+const RATE_LIMIT_PER_HOUR = 1200
 // Refresh a cached place at most this often (30 days) — hours/phone rarely change.
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000
 

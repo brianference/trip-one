@@ -8,7 +8,7 @@ import { openAiResponseSchema } from '../lib/openAi'
 import { logger } from '../../src/lib/logger'
 
 // AI calls cost money; gated like the planner.
-const RATE_LIMIT_PER_HOUR = 30
+const RATE_LIMIT_PER_HOUR = 300
 const DEFAULT_MODEL = 'gpt-4o-mini'
 
 type ChatEnv = Env & { OPENAI_API_KEY?: string; AI_MODEL?: string }

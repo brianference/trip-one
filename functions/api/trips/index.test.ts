@@ -46,7 +46,7 @@ describe('POST /api/trips', () => {
       'fetch',
       vi.fn((url: string) => {
         if (String(url).includes('/rest/v1/request_log')) {
-          return Promise.resolve({ ok: true, headers: new Headers({ 'content-range': '*/50' }), json: async () => [] })
+          return Promise.resolve({ ok: true, headers: new Headers({ 'content-range': '*/500' }), json: async () => [] })
         }
         throw new Error('must not create a trip when rate-limited')
       }),

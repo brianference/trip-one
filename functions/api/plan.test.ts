@@ -91,7 +91,7 @@ describe('POST /api/plan', () => {
   })
 
   it('returns 429 when over the rate limit', async () => {
-    vi.stubGlobal('fetch', mockBackend(JSON.stringify({ days: [{ day: 1, placeIndexes: [0] }] }), { recent: 99 }))
+    vi.stubGlobal('fetch', mockBackend(JSON.stringify({ days: [{ day: 1, placeIndexes: [0] }] }), { recent: 199 }))
     const res = await onRequestPost({ env, request: req(validBody) } as never)
     expect(res.status).toBe(429)
   })

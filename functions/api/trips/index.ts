@@ -4,7 +4,7 @@ import { isRateLimited } from '../../lib/rateLimitGuard'
 import { logger } from '../../../src/lib/logger'
 import { z } from 'zod'
 
-const CREATE_TRIPS_PER_HOUR = 30
+const CREATE_TRIPS_PER_HOUR = 300
 
 const createTripSchema = z.object({
   location_slug: z.string().min(1),

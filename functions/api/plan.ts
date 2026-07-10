@@ -12,7 +12,7 @@ const DEFAULT_PLAN_MESSAGE = 'Here’s your updated plan — every stop is a rea
 
 // AI calls cost real money per request, so this is gated tighter than the
 // free-ish location cache endpoint.
-const RATE_LIMIT_PER_HOUR = 15
+const RATE_LIMIT_PER_HOUR = 150
 // The model is configurable via the AI_MODEL env var so it can be tuned or
 // upgraded without a code change; it defaults to the low-cost gpt-4o-mini.
 const DEFAULT_MODEL = 'gpt-4o-mini'

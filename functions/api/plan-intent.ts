@@ -5,7 +5,7 @@ import { isUnderRateLimit, hashIp } from '../../src/lib/rateLimit'
 import { openAiResponseSchema } from '../lib/openAi'
 import { logger } from '../../src/lib/logger'
 
-const RATE_LIMIT_PER_HOUR = 20
+const RATE_LIMIT_PER_HOUR = 200
 // Configurable via AI_MODEL env var; defaults to the low-cost gpt-4o-mini.
 const DEFAULT_MODEL = 'gpt-4o-mini'
 
