@@ -3,6 +3,33 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v8.0.0 — Ask for any kind of place
+
+### Added
+- **On-demand nearby search — ask the chat for anything.** Ask for a cuisine
+  (sushi, ramen, vegan), a venue type (rooftop bar, planetarium, night market),
+  or a theme ("moon-related", "hidden gems") and the assistant finds real
+  matching places nearby and adds them to the map and itinerary. It runs a live
+  Google Places text search, with a **Tripadvisor fallback** (coordinate-enriched
+  so results are map-able) for niche or thematic queries Google misses. The
+  planner then places them on your days.
+
+### Fixed
+- **The chat no longer refuses.** Asking for "moon-related" or "space" stops used
+  to get "I don't see any…" even when a space museum existed nearby — an old
+  guardrail fought the search. Now any "add a kind of place" request always
+  searches (translating themes to real place types) and never refuses; a real
+  search finds it or confirms none exist. It still won't fake or substitute
+  unrelated places.
+
+### Changed
+- **Unified header.** The nav links and the currency converter now live in one
+  card (not two mismatched pills), with the current temperature on one line.
+- Raised all API rate limits 10× for smoother use.
+
+Chat routing was validated with a live eval across ~90 travel inputs
+(`docs/CHAT-EVAL.md`) — ~96% classified as expected.
+
 ## v7.0.0 — Currency converter, live temp, real coffee, new wordmark
 
 ### Added

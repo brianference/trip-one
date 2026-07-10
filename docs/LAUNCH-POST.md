@@ -7,7 +7,7 @@ are just section markers for editing and aren't meant to be posted._
 
 I built an AI trip planner where the AI never makes up a place. It's live, it's free, and there's no signup: **https://trip-one.pages.dev**
 
-Here's the whole loop: you describe your trip in one sentence — "a relaxed 4 days in Lisbon, food and history" — and an AI builds a real, day-by-day itinerary from actual nearby places. Then you **plan the rest by chatting with it**. "Add specialty coffee shops to each day." "Make it 9 days." "Move the museum to day two." "Actually, make it Rome." The assistant re-plans in seconds, tells you what it changed, and confirms before anything drastic.
+Here's the whole loop: you describe your trip in one sentence — "a relaxed 4 days in Lisbon, food and history" — and an AI builds a real, day-by-day itinerary from actual nearby places. Then you **plan the rest by chatting with it**. "Add specialty coffee shops to each day." "Find a rooftop bar and a space museum." "Make it 9 days." "Move the museum to day two." "Actually, make it Rome." The assistant re-plans in seconds, tells you what it changed, and confirms before anything drastic.
 
 The part I care most about is how the AI is built. The core idea is **grounded generation**: the model never writes a place name. It's handed a numbered list of real places (from Google Places and Tripadvisor) and may only pick and order them by index. Anything outside the list is dropped. So a bad or hallucinated response degrades to a smaller real plan, never a fake one — no invented restaurants, ratings, hours, or reviews. The chat is fenced the same way: it can't claim it added a kind of place that isn't actually in the nearby list.
 
@@ -15,7 +15,8 @@ That combination — a genuinely conversational planner, with hard guardrails so
 
 **The AI, concretely**
 
-💬 Conversational planning is the main interaction, not a gimmick: add or remove stops, change the pace, extend or shorten the trip, swap cities, add coffee or food — all in plain language, re-planned from real places
+💬 Conversational planning is the main interaction, not a gimmick: add or remove stops, change the pace, extend or shorten the trip, swap cities — all in plain language, re-planned from real places
+🔎 Ask for any kind of place and it's added: a cuisine (sushi, ramen, vegan), a venue type (rooftop bar, planetarium, night market), or a theme ("moon-related", "hidden gems"). It runs a live nearby search (Google Places, with a Tripadvisor fallback for niche queries) and drops the real results on your map and itinerary
 🧠 Grounded generation: index-only, schema-validated model output with a normalization layer that drops anything ungrounded, so the failure mode is "less," never "wrong"
 ✨ Every change is reviewable: the assistant lists what it added and confirms before it rebuilds or relocates your trip
 
