@@ -117,6 +117,28 @@ export function useItineraryActions(tripId: string) {
   }
 
   /**
+   * Moves a single stop to a different day (the row's day picker). Like
+   * addToDay, this is a deliberate placement, so it writes the new day
+   * directly instead of re-clustering — re-running organizeItinerary would
+   * override the traveler's explicit choice.
+   */
+  function moveToDay(index: number, day: number) {
+    const next = itinerary.map((it, i) => (i === index ? { ...it, day } : it))
+    useTripStore.getState().setItinerary(next)
+    persist(tripId, { itinerary: next })
+  }
+
+  /**
+   * Sets (or clears) a stop's clock time from the row's `<input type="time">`.
+   * An empty string falls the row back to its soft time-of-day slot label.
+   */
+  function setStopTime(index: number, time: string) {
+    const next = itinerary.map((it, i) => (i === index ? { ...it, time } : it))
+    useTripStore.getState().setItinerary(next)
+    persist(tripId, { itinerary: next })
+  }
+
+  /**
    * Changing the trip length re-clusters everything from scratch (day
    * assignments are stripped first) rather than only fitting new stops
    * around whatever the previous day count happened to place — a day count
@@ -159,5 +181,16 @@ export function useItineraryActions(tripId: string) {
     persist(tripId, { startDate: date })
   }
 
-  return { itinerary, tripLengthDays, adding, addStop, addFromThingToDo, addToDay, removeStop, moveStop, setTripLength, setStartDate, applyPlan }
+  /**
+   * Restores a previously-snapshotted itinerary and trip length — the "Undo"
+   * behind a chat-driven plan change. Writes the exact prior state back with no
+   * re-clustering so undo is a faithful reversal, not a re-plan.
+   */
+  function restorePlan(items: ItineraryItem[], days: number | null) {
+    useTripStore.getState().setItinerary(items)
+    useTripStore.getState().setTripLengthDays(days)
+    persist(tripId, { itinerary: items, tripLengthDays: days })
+  }
+
+  return { itinerary, tripLengthDays, adding, addStop, addFromThingToDo, addToDay, removeStop, moveStop, moveToDay, setStopTime, setTripLength, setStartDate, applyPlan, restorePlan }
 }

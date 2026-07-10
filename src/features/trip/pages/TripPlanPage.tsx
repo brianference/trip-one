@@ -25,7 +25,7 @@ const TRIP_LENGTH_OPTIONS = Array.from({ length: 14 }, (_, i) => i + 1)
 export function TripPlanPage() {
   const { trip, location } = useTripContext()
   const startDate = useTripStore((s) => s.startDate)
-  const { itinerary, tripLengthDays, adding, addStop, addFromThingToDo, addToDay, removeStop, moveStop, setTripLength, setStartDate } =
+  const { itinerary, tripLengthDays, adding, addStop, addFromThingToDo, addToDay, removeStop, moveStop, moveToDay, setStopTime, setTripLength, setStartDate } =
     useItineraryActions(trip.id)
   const [selectedDay, setSelectedDay] = useState(1)
   const [selected, setSelected] = useState<PlaceQuery | null>(null)
@@ -97,7 +97,16 @@ export function TripPlanPage() {
           </p>
         )}
         {selectedEntries.length > 0 ? (
-          <ItineraryDayGroup day={selectedDay} entries={selectedEntries} showHeading={false} onMove={moveStop} onRemove={removeStop} />
+          <ItineraryDayGroup
+            day={selectedDay}
+            entries={selectedEntries}
+            showHeading={false}
+            dayCount={dayCount}
+            onMove={moveStop}
+            onMoveToDay={moveToDay}
+            onSetTime={setStopTime}
+            onRemove={removeStop}
+          />
         ) : (
           <p className="chronicle-rate-line">No stops on day {selectedDay} yet — add one below, or ask the chat.</p>
         )}

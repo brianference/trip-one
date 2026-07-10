@@ -6,13 +6,19 @@ export function ItineraryDayGroup({
   day,
   entries,
   showHeading,
+  dayCount,
   onMove,
+  onMoveToDay,
+  onSetTime,
   onRemove,
 }: {
   day: number
   entries: { item: ItineraryItem; index: number }[]
   showHeading: boolean
+  dayCount: number
   onMove: (entries: { item: ItineraryItem; index: number }[], entryPos: number, direction: -1 | 1) => void
+  onMoveToDay: (index: number, day: number) => void
+  onSetTime: (index: number, time: string) => void
   onRemove: (index: number) => void
 }) {
   return (
@@ -27,8 +33,11 @@ export function ItineraryDayGroup({
             total={entries.length}
             isFirst={entryPos === 0}
             isLast={entryPos === entries.length - 1}
+            dayCount={dayCount}
             onMoveEarlier={() => onMove(entries, entryPos, -1)}
             onMoveLater={() => onMove(entries, entryPos, 1)}
+            onMoveToDay={(d) => onMoveToDay(index, d)}
+            onSetTime={(t) => onSetTime(index, t)}
             onRemove={() => onRemove(index)}
           />
         ))}

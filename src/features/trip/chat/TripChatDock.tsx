@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import type { LocationResult, Trip, PlanDay } from '../../../lib/api/client'
 import type { ThingToDo } from '../../../lib/api/client'
+import type { ItineraryItem } from '../../../lib/validation/schemas'
 import { useTripStore } from '../../../store/tripStore'
 import { useItineraryActions } from '../hooks/useItineraryActions'
 import { useTripChat } from './useTripChat'
@@ -35,14 +36,21 @@ export function TripChatDock({
   const { pathname } = useLocation()
   const itinerary = useTripStore((s) => s.itinerary)
   const tripLengthDays = useTripStore((s) => s.tripLengthDays)
-  const { applyPlan } = useItineraryActions(trip.id)
+  const { applyPlan, restorePlan } = useItineraryActions(trip.id)
   const places = location?.thingsToDo ?? []
   const [showToast, setShowToast] = useState(false)
+  // The itinerary + length snapshotted just before the last chat-driven plan
+  // change, so the toast can offer a one-tap Undo.
+  const [undoSnapshot, setUndoSnapshot] = useState<{ itinerary: ItineraryItem[]; days: number | null } | null>(null)
 
   // Wrap applyPlan so a chat-driven itinerary change always flashes a toast —
   // otherwise, on a page other than the itinerary, the update is invisible.
   const applyWithToast = useCallback(
     (plan: PlanDay[], candidatePlaces: ThingToDo[], days: number) => {
+      // Snapshot the pre-change plan from the store (not a possibly-stale
+      // closure) so Undo restores exactly what was there.
+      const store = useTripStore.getState()
+      setUndoSnapshot({ itinerary: store.itinerary, days: store.tripLengthDays })
       applyPlan(plan, candidatePlaces, days)
       setShowToast(true)
       // Take the traveler to the consolidated plan page so they SEE the change.
@@ -51,9 +59,16 @@ export function TripChatDock({
     [applyPlan, pathname, navigate, trip.id],
   )
 
+  const handleUndo = useCallback(() => {
+    if (undoSnapshot) restorePlan(undoSnapshot.itinerary, undoSnapshot.days)
+    setUndoSnapshot(null)
+    setShowToast(false)
+  }, [undoSnapshot, restorePlan])
+
   useEffect(() => {
     if (!showToast) return
-    const t = setTimeout(() => setShowToast(false), 3000)
+    // Longer window when an Undo is offered so it's actually reachable.
+    const t = setTimeout(() => setShowToast(false), 6000)
     return () => clearTimeout(t)
   }, [showToast])
 
@@ -84,7 +99,12 @@ export function TripChatDock({
     <>
       {showToast && (
         <div className="chronicle-update-toast" role="status">
-          ✓ Itinerary updated
+          <span>✓ Itinerary updated</span>
+          {undoSnapshot && (
+            <button type="button" className="chronicle-update-toast-undo" onClick={handleUndo}>
+              Undo
+            </button>
+          )}
         </div>
       )}
       {!open && (

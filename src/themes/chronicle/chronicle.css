@@ -587,16 +587,19 @@
 
 .chronicle-entry {
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: var(--chronicle-space-sm);
-  flex-wrap: wrap;
   padding: var(--chronicle-space-md) 0;
   border-bottom: 1px solid var(--chronicle-border-hairline);
 }
 
 .chronicle-entry:last-child {
   border-bottom: none;
+}
+
+.chronicle-entry-main {
+  display: flex;
+  align-items: center;
+  gap: var(--chronicle-space-sm);
+  flex-wrap: wrap;
 }
 
 .chronicle-entry span[data-testid^='timeline-dot'] {
@@ -684,6 +687,63 @@
 .chronicle-move-btn:disabled {
   opacity: 0.35;
   cursor: default;
+}
+
+/* Per-row Edit toggle + disclosed edit panel (time / move-to-day / reorder) */
+.chronicle-entry-edit-toggle {
+  flex: none;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: var(--chronicle-radius-pill);
+  border: 1px solid var(--chronicle-border-hairline);
+  background: var(--chronicle-bg-surface-2);
+  color: var(--chronicle-text-secondary);
+  font-family: var(--chronicle-font-mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.chronicle-entry-edit-toggle:hover,
+.chronicle-entry-edit-toggle:focus-visible,
+.chronicle-entry-edit-toggle[aria-expanded='true'] {
+  color: var(--chronicle-teal);
+  border-color: var(--chronicle-teal);
+}
+
+.chronicle-entry-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--chronicle-space-md);
+  margin-top: var(--chronicle-space-sm);
+  padding: var(--chronicle-space-md);
+  border-radius: var(--chronicle-radius-md);
+  background: var(--chronicle-bg-surface-2);
+}
+
+.chronicle-entry-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--chronicle-text-tertiary);
+}
+
+.chronicle-entry-edit-field input,
+.chronicle-entry-edit-field select {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--chronicle-border-subtle);
+  border-radius: var(--chronicle-radius-sm);
+  background: var(--chronicle-bg-surface);
+  color: var(--chronicle-text-primary);
+  font-family: var(--chronicle-font-mono);
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 /* ---------- Things to do ---------- */
@@ -2409,8 +2469,10 @@ body:has(.chronicle-page) label {
 /* Cleaner itinerary rows on phones: the stop name gets its own line, then a
    single compact row of time · badge · directions · move · remove. */
 @media (max-width: 600px) {
-  .chronicle-entry {
+  /* Stop name gets its own line, then a compact row of the remaining controls. */
+  .chronicle-entry-main {
     row-gap: 6px;
+    column-gap: 6px;
   }
 
   .chronicle-entry-text {
@@ -2430,14 +2492,13 @@ body:has(.chronicle-page) label {
     min-width: 34px;
   }
 
-  /* Keep the time · badge · directions · move · remove controls on one line. */
-  .chronicle-entry {
-    column-gap: 6px;
-  }
-
   .chronicle-directions-link {
     font-size: 11px;
     letter-spacing: 0.02em;
+  }
+
+  .chronicle-entry-edit-field {
+    flex: 1 1 100%;
   }
 }
 
@@ -2457,6 +2518,30 @@ body:has(.chronicle-page) label {
   font-size: 13px;
   box-shadow: var(--chronicle-shadow-card);
   animation: chronicle-toast-in 0.2s ease-out;
+  display: flex;
+  align-items: center;
+  gap: var(--chronicle-space-md);
+}
+
+.chronicle-update-toast-undo {
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--chronicle-bg-canvas);
+  border-radius: var(--chronicle-radius-pill);
+  background: transparent;
+  color: var(--chronicle-bg-canvas);
+  font-family: var(--chronicle-font-mono);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.chronicle-update-toast-undo:hover,
+.chronicle-update-toast-undo:focus-visible {
+  background: var(--chronicle-bg-canvas);
+  color: var(--chronicle-teal);
 }
 
 @keyframes chronicle-toast-in {
