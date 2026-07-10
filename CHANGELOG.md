@@ -3,6 +3,34 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v6.0.0 — Mobile shell, neural phrasebook audio, shareable metadata
+
+A mobile-first pass and a much better phrasebook, plus the metadata a public site
+needs to look right when shared.
+
+### Added
+- **Mobile bottom tab bar.** On phones the trip nav becomes a fixed bottom tab
+  bar in the thumb zone — a real app shell — with safe-area padding; the chat FAB
+  and toast lift above it and it hides behind the full-screen chat sheet.
+- **Neural phrasebook audio.** The speaker button now plays a pre-generated
+  Microsoft Edge neural-TTS clip per phrase (the same approach as the tokyo-one
+  site) — far clearer than the browser's built-in voice, especially for CJK,
+  Thai, Arabic, and other non-Latin scripts. Falls back to SpeechSynthesis if a
+  clip can't load.
+- **More phrases.** Each language's phrasebook grew from 8 to 15 phrases
+  (goodbye, good morning, sorry, "I don't understand", "do you speak English?",
+  cheers, "the check, please"), consistent across all 33 languages.
+- **Shareable metadata.** Real page title + description, canonical URL, Open
+  Graph and Twitter tags with a generated 1200×630 image, an SVG favicon, and a
+  per-trip live title (`<destination> — Trip One`).
+- **Per-day summary chips** on the Plan page ("3 sights · 2 food · 1 outdoors").
+- **Loading skeletons** (shimmer map + rows) instead of a bare "Loading…".
+
+### Changed
+- **Tighter homepage.** Removed the dead vertical space between sections and the
+  void above the "browse a place" column — the landing page uses its space far
+  more efficiently.
+
 ## v5.1.0 — Tappable places, spoken phrasebook
 
 ### Added

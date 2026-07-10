@@ -3,13 +3,30 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { Phrasebook } from './Phrasebook'
 
 describe('Phrasebook', () => {
+  const play = vi.fn(() => Promise.resolve())
+  const audioInstances: { src: string }[] = []
   const speak = vi.fn()
   const cancel = vi.fn()
 
   beforeEach(() => {
+    play.mockClear()
+    audioInstances.length = 0
     speak.mockClear()
     cancel.mockClear()
-    // Provide a SpeechSynthesis so the speaker button renders and works.
+    // Pre-generated audio path.
+    vi.stubGlobal(
+      'Audio',
+      class {
+        src: string
+        constructor(src: string) {
+          this.src = src
+          audioInstances.push(this)
+        }
+        addEventListener() {}
+        play = play
+      },
+    )
+    // SpeechSynthesis fallback.
     vi.stubGlobal('speechSynthesis', { speak, cancel })
     vi.stubGlobal(
       'SpeechSynthesisUtterance',
@@ -36,18 +53,26 @@ describe('Phrasebook', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('speaks the native text in the destination voice when the speaker is tapped', () => {
-    render(<Phrasebook phrases={[{ english: 'Hello', translation: '你好 (Nǐ hǎo)' }]} language="mandarin" />)
-    fireEvent.click(screen.getByRole('button', { name: /hear "hello" spoken/i }))
-    expect(cancel).toHaveBeenCalled()
-    expect(speak).toHaveBeenCalledTimes(1)
-    const utterance = speak.mock.calls[0][0]
-    expect(utterance.text).toBe('你好') // romanization stripped
-    expect(utterance.lang).toBe('zh-CN')
+  it('plays the pre-generated clip for the phrase index when the speaker is tapped', () => {
+    render(
+      <Phrasebook
+        phrases={[
+          { english: 'Hello', translation: '你好 (Nǐ hǎo)' },
+          { english: 'Thank you', translation: '谢谢 (Xièxiè)' },
+        ]}
+        language="mandarin"
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /hear "thank you" spoken/i }))
+    expect(play).toHaveBeenCalledTimes(1)
+    expect(audioInstances[0].src).toContain('/audio/mandarin/1.mp3')
   })
 
-  it('hides the speaker button when the browser has no speech support', () => {
-    vi.unstubAllGlobals()
+  it('hides the speaker button when the browser can neither play audio nor speak', () => {
+    // No Audio and no SpeechSynthesis at all (e.g. server-side / very old client).
+    vi.stubGlobal('Audio', undefined)
+    vi.stubGlobal('speechSynthesis', undefined)
+    vi.stubGlobal('SpeechSynthesisUtterance', undefined)
     render(<Phrasebook phrases={[{ english: 'Hello', translation: 'Bonjour' }]} language="french" />)
     expect(screen.queryByRole('button', { name: /hear/i })).not.toBeInTheDocument()
   })

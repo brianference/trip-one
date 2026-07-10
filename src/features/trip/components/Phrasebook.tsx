@@ -1,5 +1,5 @@
 import type { Phrase } from '../../localinfo/phrasebook'
-import { canSpeak, speakPhrase } from '../../localinfo/speech'
+import { canSpeak, playPhrase } from '../../localinfo/speech'
 
 /**
  * Shows a real, curated phrase list for a foreign, non-English destination.
@@ -22,7 +22,7 @@ export function Phrasebook({ phrases, language }: { phrases: Phrase[] | null; la
     <div className="chronicle-phrasebook">
       <h3>Phrasebook</h3>
       <dl>
-        {phrases.map((phrase) => (
+        {phrases.map((phrase, index) => (
           <div className="chronicle-phrase-row" key={phrase.english}>
             <dt>{phrase.english}</dt>
             <dd>
@@ -31,7 +31,7 @@ export function Phrasebook({ phrases, language }: { phrases: Phrase[] | null; la
                 <button
                   type="button"
                   className="chronicle-phrase-speak"
-                  onClick={() => speakPhrase(phrase.translation, language)}
+                  onClick={() => playPhrase(phrase.translation, language, index)}
                   aria-label={`Hear "${phrase.english}" spoken`}
                   title="Hear pronunciation"
                 >

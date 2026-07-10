@@ -1,10 +1,10 @@
 /**
- * Text-to-speech for the phrasebook. Unlike a single-language trip that can ship
- * pre-recorded audio files, this app covers 30+ languages, so it uses the
- * browser's built-in SpeechSynthesis to speak the native-script text in the
- * destination language's voice — no audio assets, and it works for every
- * language the device has a voice for. The speaker button is hidden when the
- * API is unavailable.
+ * Pronunciation audio for the phrasebook. Primary path: pre-generated
+ * Microsoft Edge neural TTS clips (see scripts/generate-phrase-audio.py),
+ * served as /audio/<language>/<index>.mp3 — the same high-quality approach as
+ * the tokyo-one site, and far better than the browser's robotic
+ * SpeechSynthesis, especially for non-Latin scripts. If a clip is missing or
+ * fails to load, it falls back to SpeechSynthesis so the button still works.
  */
 
 /** Phrasebook language key (from languageByCountry) → BCP-47 tag for a voice. */
@@ -63,7 +63,40 @@ export function spokenText(translation: string): string {
 
 /** Whether the browser can speak (feature-detect before showing the button). */
 export function canSpeak(): boolean {
-  return typeof window !== 'undefined' && 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined'
+  return typeof window !== 'undefined' && ((typeof Audio !== 'undefined') || ('speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined'))
+}
+
+/** URL of the pre-generated pronunciation clip for a phrase. */
+export function audioUrlFor(languageKey: string | null, index: number): string | null {
+  if (!languageKey) return null
+  return `/audio/${languageKey}/${index}.mp3`
+}
+
+/**
+ * Plays a phrase's pronunciation: first the pre-generated neural clip, and if
+ * that's unavailable (missing file, network/codec error, or no Audio support),
+ * the SpeechSynthesis fallback. Returns nothing; failures degrade silently.
+ * @param translation - The phrase translation (native script + optional romanization)
+ * @param languageKey - The phrasebook language key (voice + audio folder)
+ * @param index - The phrase's index, for the pre-generated clip path
+ */
+export function playPhrase(translation: string, languageKey: string | null, index: number): void {
+  const url = audioUrlFor(languageKey, index)
+  if (url && typeof Audio !== 'undefined') {
+    try {
+      const audio = new Audio(url)
+      // 404 / decode error → fall back to the browser voice.
+      audio.addEventListener('error', () => speakPhrase(translation, languageKey), { once: true })
+      const played = audio.play()
+      if (played && typeof played.catch === 'function') {
+        played.catch(() => speakPhrase(translation, languageKey))
+      }
+      return
+    } catch {
+      // Fall through to SpeechSynthesis.
+    }
+  }
+  speakPhrase(translation, languageKey)
 }
 
 /**

@@ -174,7 +174,7 @@
 
 .chronicle-recents {
   max-width: 680px;
-  margin: 0 auto var(--chronicle-space-2xl);
+  margin: 0 auto;
   text-align: left;
 }
 
@@ -1700,7 +1700,9 @@ body:has(.chronicle-page) label {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  /* Align to the top so the card doesn't leave a void above "browse a place"
+     when the taller AI column stretches this one. */
+  justify-content: flex-start;
   padding: var(--chronicle-space-lg);
   background: var(--chronicle-bg-surface);
   border: 1px solid var(--chronicle-border-hairline);
@@ -1869,7 +1871,7 @@ body:has(.chronicle-page) label {
 .chronicle-hero {
   max-width: 720px;
   margin: 0 auto;
-  padding: var(--chronicle-space-3xl) var(--chronicle-space-lg) var(--chronicle-space-2xl);
+  padding: var(--chronicle-space-2xl) var(--chronicle-space-lg) var(--chronicle-space-xl);
   text-align: center;
 }
 
@@ -1998,7 +2000,7 @@ body:has(.chronicle-page) label {
 .chronicle-demos {
   max-width: 960px;
   margin: 0 auto;
-  padding: var(--chronicle-space-2xl) var(--chronicle-space-lg);
+  padding: var(--chronicle-space-xl) var(--chronicle-space-lg);
   text-align: center;
 }
 
