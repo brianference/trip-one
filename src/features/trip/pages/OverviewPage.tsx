@@ -51,8 +51,8 @@ export function OverviewPage() {
       <h1>{displayName}</h1>
 
       {location && (
-        <PreviewCard title="Map" to={`/trip/${trip.id}/map`} linkLabel="Open full map">
-          <TripMap location={location} itinerary={itinerary} tripLengthDays={tripLengthDays} height={220} />
+        <PreviewCard title="Map & days" to={`/trip/${trip.id}/plan`} linkLabel="Open trip plan">
+          <TripMap location={location} itinerary={itinerary} tripLengthDays={tripLengthDays} height={220} showDayStops />
         </PreviewCard>
       )}
 

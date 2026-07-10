@@ -116,10 +116,17 @@ export function useTripChat(
           return
         }
 
+        let replyText = result.message || 'Done — your itinerary is updated.'
         if (result.action === 'plan' && result.days) {
           onApplyPlan(result.days, candidatePlaces, planDays)
+          // List the places that are new versus the current itinerary, so the
+          // change is concrete ("Added: X, Y") rather than a vague claim.
+          const newNames = result.days.flatMap((d) => d.placeIndexes.map((i) => candidatePlaces[i]?.name).filter((n): n is string => !!n))
+          const existing = new Set(currentItinerary.map((it) => it.text))
+          const added = newNames.filter((n) => !existing.has(n))
+          if (added.length > 0) replyText += `\n\nAdded: ${added.join(', ')}.`
         }
-        setMessages((prev) => [...prev, makeMessage('assistant', result.message || 'Done — your itinerary is updated.')])
+        setMessages((prev) => [...prev, makeMessage('assistant', replyText)])
       } catch (err) {
         logger.error('itinerary chat turn failed', err)
         // Backend messages (rate limit, planner unavailable) are already

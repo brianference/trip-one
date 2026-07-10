@@ -11,28 +11,11 @@ function HomeIcon() {
   )
 }
 
-function CalendarIcon() {
-  return (
-    <svg {...ICON_PROPS} aria-hidden="true">
-      <rect x="3" y="4.5" width="18" height="16" rx="2" />
-      <path d="M3 9h18M8 2.5v4M16 2.5v4" />
-    </svg>
-  )
-}
-
 function MapIcon() {
   return (
     <svg {...ICON_PROPS} aria-hidden="true">
       <path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z" />
       <path d="M9 4v14M15 6v14" />
-    </svg>
-  )
-}
-
-function ListIcon() {
-  return (
-    <svg {...ICON_PROPS} aria-hidden="true">
-      <path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />
     </svg>
   )
 }
@@ -62,11 +45,10 @@ function PhraseIcon() {
  * from matching every nested trip route.
  */
 function tripPages(tripId: string) {
+  // Map, itinerary, and things-to-do are one consolidated "Plan" page now.
   return [
     { to: `/trip/${tripId}`, end: true, label: 'Home', Icon: HomeIcon },
-    { to: `/trip/${tripId}/itinerary`, end: false, label: 'Itinerary', Icon: CalendarIcon },
-    { to: `/trip/${tripId}/map`, end: false, label: 'Map', Icon: MapIcon },
-    { to: `/trip/${tripId}/things-to-do`, end: false, label: 'Things to do', Icon: ListIcon },
+    { to: `/trip/${tripId}/plan`, end: false, label: 'Plan', Icon: MapIcon },
     { to: `/trip/${tripId}/weather`, end: false, label: 'Weather', Icon: WeatherIcon },
     { to: `/trip/${tripId}/phrasebook`, end: false, label: 'Phrasebook', Icon: PhraseIcon },
   ]

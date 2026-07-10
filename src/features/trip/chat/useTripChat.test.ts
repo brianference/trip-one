@@ -46,7 +46,9 @@ describe('useTripChat', () => {
     })
 
     expect(result.current.messages.map((m) => m.role)).toEqual(['assistant', 'user', 'assistant'])
-    expect(result.current.messages[2].text).toBe('Added Balboa Park.')
+    // reply keeps the model's message and appends the concrete list of added places
+    expect(result.current.messages[2].text).toContain('Added Balboa Park.')
+    expect(result.current.messages[2].text).toContain('Added: Balboa Park.')
     expect(onApply).toHaveBeenCalledWith([{ day: 1, placeIndexes: [0] }], expect.any(Array), 3)
     // grounded: sends real places + the current destination for context
     expect(chatSpy.mock.calls[0][2][0]).toMatchObject({ name: 'Balboa Park' })

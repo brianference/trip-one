@@ -46,7 +46,8 @@ describe('OverviewPage', () => {
     expect(screen.getByRole('heading', { name: 'Lisbon, Portugal' })).toBeInTheDocument()
     expect(screen.getByText((_, el) => el?.textContent === '1 stop planned')).toBeInTheDocument()
     expect(screen.getByText((_, el) => el?.textContent === '1 nearby suggestion')).toBeInTheDocument()
-    expect(screen.getByText('Breakfast')).toBeInTheDocument()
+    // Appears in both the under-map day list and the "Up next" preview.
+    expect(screen.getAllByText('Breakfast').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByRole('link', { name: /see full itinerary/i })).toHaveAttribute('href', '/trip/t1/itinerary')
     expect(screen.getByRole('link', { name: /browse all things to do/i })).toHaveAttribute('href', '/trip/t1/things-to-do')
     expect(screen.getByRole('link', { name: /weather & info/i })).toHaveAttribute('href', '/trip/t1/weather')

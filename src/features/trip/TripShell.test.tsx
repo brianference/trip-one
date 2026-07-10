@@ -3,8 +3,25 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { TripShell } from './TripShell'
 import { OverviewPage } from './pages/OverviewPage'
-import { ItineraryPage } from './pages/ItineraryPage'
+import { TripPlanPage } from './pages/TripPlanPage'
 import * as client from '../../lib/api/client'
+
+vi.mock('leaflet', () => {
+  const map = () => {
+    const m: Record<string, unknown> = { remove: vi.fn(), setView: vi.fn(), fitBounds: vi.fn() }
+    m.setView = vi.fn(() => m)
+    return m
+  }
+  return {
+    default: {
+      map: vi.fn(map),
+      tileLayer: vi.fn(() => ({ addTo: vi.fn() })),
+      divIcon: vi.fn(() => ({})),
+      marker: vi.fn(() => ({ addTo: vi.fn().mockReturnThis(), bindPopup: vi.fn().mockReturnThis(), on: vi.fn().mockReturnThis() })),
+      polyline: vi.fn(() => ({ addTo: vi.fn().mockReturnThis() })),
+    },
+  }
+})
 
 function renderShell(initialPath: string) {
   return render(
@@ -12,7 +29,7 @@ function renderShell(initialPath: string) {
       <Routes>
         <Route path="/trip/:id" element={<TripShell />}>
           <Route index element={<OverviewPage />} />
-          <Route path="itinerary" element={<ItineraryPage />} />
+          <Route path="plan" element={<TripPlanPage />} />
         </Route>
       </Routes>
     </MemoryRouter>,
@@ -65,8 +82,8 @@ describe('TripShell', () => {
     renderShell('/trip/t1')
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Lisbon, Portugal' })).toBeInTheDocument())
 
-    fireEvent.click(screen.getAllByRole('link', { name: /itinerary/i })[0])
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Itinerary' })).toBeInTheDocument())
+    fireEvent.click(screen.getAllByRole('link', { name: /plan/i })[0])
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Your trip' })).toBeInTheDocument())
     expect(getTripSpy).toHaveBeenCalledTimes(1)
   })
 })

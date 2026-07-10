@@ -6,9 +6,7 @@ import { PrivacyPage } from './features/legal/PrivacyPage'
 import { SearchScreen } from './themes/chronicle/SearchScreen'
 import { TripShell } from './features/trip/TripShell'
 import { OverviewPage } from './features/trip/pages/OverviewPage'
-import { ItineraryPage } from './features/trip/pages/ItineraryPage'
-import { MapPage } from './features/trip/pages/MapPage'
-import { ThingsToDoPage } from './features/trip/pages/ThingsToDoPage'
+import { TripPlanPage } from './features/trip/pages/TripPlanPage'
 import { WeatherPage } from './features/trip/pages/WeatherPage'
 import { PhrasebookPage } from './features/trip/pages/PhrasebookPage'
 import './themes/chronicle/chronicle.css'
@@ -41,9 +39,12 @@ export default function App() {
           }
         >
           <Route index element={<OverviewPage />} />
-          <Route path="itinerary" element={<ItineraryPage />} />
-          <Route path="map" element={<MapPage />} />
-          <Route path="things-to-do" element={<ThingsToDoPage />} />
+          {/* The consolidated map + itinerary + things-to-do page. The old
+              separate routes alias to it so existing links keep working. */}
+          <Route path="plan" element={<TripPlanPage />} />
+          <Route path="itinerary" element={<TripPlanPage />} />
+          <Route path="map" element={<TripPlanPage />} />
+          <Route path="things-to-do" element={<TripPlanPage />} />
           <Route path="weather" element={<WeatherPage />} />
           <Route path="phrasebook" element={<PhrasebookPage />} />
           {/* Alias: older links/bookmarks to the former Info page still resolve. */}

@@ -19,6 +19,9 @@ export function TripMap({
   tripLengthDays,
   height,
   onSelectMarker,
+  selectedDay: controlledDay,
+  onSelectDay,
+  showDayStops,
 }: {
   location: LocationResult
   itinerary: ItineraryItem[]
@@ -26,9 +29,17 @@ export function TripMap({
   height?: number
   /** Clicking a things-to-do pin calls this (e.g. to open the place detail panel). */
   onSelectMarker?: (marker: MapMarker) => void
+  /** Controlled selected day — when provided, the parent owns the day (so a stop list can share it). */
+  selectedDay?: number
+  onSelectDay?: (day: number) => void
+  /** Render the selected day's stops as a read-only bulleted list under the map. */
+  showDayStops?: boolean
 }) {
-  const [selectedDay, setSelectedDay] = useState(1)
+  const [internalDay, setInternalDay] = useState(1)
+  const selectedDay = controlledDay ?? internalDay
+  const setSelectedDay = onSelectDay ?? setInternalDay
   const dayCount = tripLengthDays && tripLengthDays > 1 ? tripLengthDays : 1
+  const dayStops = itinerary.filter((item) => (item.day ?? 1) === selectedDay)
 
   // Only Places-sourced entries carry real per-item coordinates today —
   // Tripadvisor entries without lat/lng are left off the map rather than
@@ -63,6 +74,21 @@ export function TripMap({
         onSelectMarker={onSelectMarker}
       />
       {markers.length > 0 && <MapLegend className="chronicle-map-legend" />}
+      {showDayStops && (
+        <div className="chronicle-map-day-stops" key={`${selectedDay}-${dayStops.length}`}>
+          {dayStops.length > 0 ? (
+            <ul>
+              {dayStops.map((item, i) => (
+                <li key={`${item.text}-${i}`}>
+                  {item.time && <span className="chronicle-preview-time">{item.time}</span>} {item.text}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="chronicle-rate-line">No stops on day {selectedDay} yet.</p>
+          )}
+        </div>
+      )}
     </div>
   )
 }

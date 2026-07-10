@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import type { LocationResult, Trip, PlanDay } from '../../../lib/api/client'
 import type { ThingToDo } from '../../../lib/api/client'
 import { useTripStore } from '../../../store/tripStore'
@@ -32,6 +32,7 @@ export function TripChatDock({
   onOpenChange: (open: boolean) => void
 }) {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const itinerary = useTripStore((s) => s.itinerary)
   const tripLengthDays = useTripStore((s) => s.tripLengthDays)
   const { applyPlan } = useItineraryActions(trip.id)
@@ -44,8 +45,10 @@ export function TripChatDock({
     (plan: PlanDay[], candidatePlaces: ThingToDo[], days: number) => {
       applyPlan(plan, candidatePlaces, days)
       setShowToast(true)
+      // Take the traveler to the consolidated plan page so they SEE the change.
+      if (!pathname.endsWith('/plan')) navigate(`/trip/${trip.id}/plan`)
     },
-    [applyPlan],
+    [applyPlan, pathname, navigate, trip.id],
   )
 
   useEffect(() => {
@@ -53,6 +56,13 @@ export function TripChatDock({
     const t = setTimeout(() => setShowToast(false), 3000)
     return () => clearTimeout(t)
   }, [showToast])
+
+  // Flag the open dock on <body> so CSS can hide the top-right theme toggle on
+  // mobile (where the full-width dock would otherwise collide with it).
+  useEffect(() => {
+    document.body.classList.toggle('trip-chat-open', open)
+    return () => document.body.classList.remove('trip-chat-open')
+  }, [open])
 
   async function handleRelocate(destination: string, interests: string) {
     const built = await createTripForDestination(destination, interests, tripLengthDays)
