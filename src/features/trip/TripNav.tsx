@@ -72,7 +72,7 @@ export function TripNav({ tripId, variant, currentTempF }: { tripId: string; var
         return (
           <NavLink key={to} to={to} end={end} className={({ isActive }) => `${itemClass}${isActive ? ` ${itemClass}--active` : ''}`}>
             {variant === 'pill' && <Icon />}
-            <span>
+            <span className="chronicle-nav-label">
               {label}
               {showTemp && <span className="chronicle-nav-temp"> {Math.round(currentTempF as number)}°</span>}
             </span>

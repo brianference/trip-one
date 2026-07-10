@@ -1245,31 +1245,32 @@ body:has(.chronicle-page) label {
 }
 
 /* ---------- Sticky section nav ---------- */
-/* Sticky trip header: the nav card and the currency converter travel together
-   as one band, so the converter reads as part of the header, not a stray pill. */
+/* Sticky trip header: ONE card holding the nav links and the currency
+   converter, so they read as a single unit (not two cards of different
+   heights). The currency sits to the right behind a hairline divider. */
 .chronicle-trip-header {
   position: sticky;
   top: 0;
   z-index: 30;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  gap: var(--chronicle-space-sm);
-  max-width: 900px;
+  gap: var(--chronicle-space-md);
+  max-width: 820px;
   margin: 0 auto var(--chronicle-space-lg);
-}
-
-.chronicle-section-nav {
-  display: flex;
-  justify-content: center;
-  gap: 4px;
   padding: var(--chronicle-space-sm);
-  max-width: 680px;
   background: var(--chronicle-bg-surface);
   border: 1px solid var(--chronicle-border-hairline);
   border-radius: var(--chronicle-radius-md);
   box-shadow: var(--chronicle-shadow-card);
+}
+
+/* The nav itself is now just the row of links inside the header card — no card
+   styling of its own. It fills the row so the four links stay evenly spaced. */
+.chronicle-section-nav {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  flex: 1;
 }
 
 .chronicle-section-nav-item {
@@ -1299,23 +1300,26 @@ body:has(.chronicle-page) label {
   color: var(--chronicle-teal);
 }
 
+/* Keep the label (and its temperature) on one line — "Weather 70°", not wrapped. */
+.chronicle-nav-label {
+  white-space: nowrap;
+}
+
 /* Live temperature shown on the Weather nav item. */
 .chronicle-nav-temp {
   color: var(--chronicle-gold);
   font-weight: 600;
 }
 
-/* Currency converter — sits in the sticky trip header beside the nav card,
-   sharing its surface + shadow so the two read as one band. */
+/* Currency converter — a section inside the header card, set off by a hairline
+   divider rather than being its own separate card. */
 .chronicle-currency-tool {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
-  border: 1px solid var(--chronicle-border-hairline);
-  border-radius: var(--chronicle-radius-md);
-  background: var(--chronicle-bg-surface);
-  box-shadow: var(--chronicle-shadow-card);
+  flex: none;
+  padding-left: var(--chronicle-space-md);
+  border-left: 1px solid var(--chronicle-border-hairline);
   font-family: var(--chronicle-font-mono);
   font-size: 12px;
   color: var(--chronicle-text-secondary);
@@ -2562,11 +2566,27 @@ body:has(.chronicle-page) label {
    a real app shell, so any page is one thumb-reach tap away. Reuses the same
    NavLinks (icon + label + active state); only its position changes. */
 @media (max-width: 720px) {
-  /* The nav detaches to the bottom bar, so the header only carries the currency
-     converter at the top — no longer sticky. */
+  /* The nav detaches to the bottom bar, so the header is no longer a card — it
+     just carries the currency converter at the top. */
   .chronicle-trip-header {
     position: static;
+    display: flex;
+    justify-content: center;
     margin: 0;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* Currency stands alone as a small pill at the top (no divider/card context). */
+  .chronicle-currency-tool {
+    flex: none;
+    padding: 6px 12px;
+    border: 1px solid var(--chronicle-border-hairline);
+    border-radius: var(--chronicle-radius-pill);
+    background: var(--chronicle-bg-surface);
   }
 
   .chronicle-section-nav {
@@ -2580,10 +2600,10 @@ body:has(.chronicle-page) label {
     max-width: none;
     gap: 0;
     padding: 4px 0 calc(4px + env(safe-area-inset-bottom));
+    /* Re-add the bar surface (the base nav no longer carries card styling). */
+    background: var(--chronicle-bg-surface);
+    border-top: 1px solid var(--chronicle-border-hairline);
     border-radius: 0;
-    border-left: none;
-    border-right: none;
-    border-bottom: none;
     box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.12);
   }
 
