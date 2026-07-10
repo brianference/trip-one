@@ -1,22 +1,19 @@
 import { useState } from 'react'
-import { currencyForDisplayName } from '../../localinfo/currencyByCountry'
-import { useCurrencyRate } from '../../localinfo/useCurrencyRate'
 
 /**
- * A compact USD → local-currency converter for the trip header. Renders nothing
- * for US / USD destinations (where "1 USD ≈ 1 USD" is noise) or when the rate
- * can't be fetched. Type an amount in USD and it shows the live local total.
+ * A compact USD → local-currency converter, presentational only — the code and
+ * rate are resolved once by the shell and passed in, so the same tool can be
+ * rendered in more than one place (the nav on desktop, a top chip on mobile)
+ * without fetching twice. Renders nothing for a US / USD destination (where
+ * "1 USD ≈ 1 USD" is noise) or when the rate isn't available.
  *
- * @param displayName - The destination display name (its country picks the currency)
+ * @param code - The destination's ISO 4217 currency code
+ * @param rate - USD → `code` exchange rate, or null when unavailable
  */
-export function CurrencyTool({ displayName }: { displayName: string }) {
-  const code = currencyForDisplayName(displayName)
-  const { rate, loading } = useCurrencyRate(code)
+export function CurrencyTool({ code, rate }: { code: string; rate: number | null }) {
   const [usd, setUsd] = useState('1')
 
-  // Nothing to convert for a same-currency (US) destination, or if the rate
-  // isn't available — stay silent rather than show a broken tool.
-  if (code === 'USD' || loading || rate === null) return null
+  if (code === 'USD' || rate === null) return null
 
   const amount = Number(usd)
   const converted = Number.isFinite(amount) ? (amount * rate).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'

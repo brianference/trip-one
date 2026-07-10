@@ -1245,15 +1245,26 @@ body:has(.chronicle-page) label {
 }
 
 /* ---------- Sticky section nav ---------- */
-.chronicle-section-nav {
+/* Sticky trip header: the nav card and the currency converter travel together
+   as one band, so the converter reads as part of the header, not a stray pill. */
+.chronicle-trip-header {
   position: sticky;
   top: 0;
   z-index: 30;
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--chronicle-space-sm);
+  max-width: 900px;
+  margin: 0 auto var(--chronicle-space-lg);
+}
+
+.chronicle-section-nav {
+  display: flex;
   justify-content: center;
   gap: 4px;
   padding: var(--chronicle-space-sm);
-  margin: 0 auto var(--chronicle-space-lg);
   max-width: 680px;
   background: var(--chronicle-bg-surface);
   border: 1px solid var(--chronicle-border-hairline);
@@ -1294,27 +1305,17 @@ body:has(.chronicle-page) label {
   font-weight: 600;
 }
 
-/* Header utility row (currency converter) between the nav and the page. */
-.chronicle-trip-utility {
-  max-width: 760px;
-  margin: 0 auto var(--chronicle-space-md);
-  display: flex;
-  justify-content: flex-end;
-}
-
-.chronicle-trip-utility:empty {
-  display: none;
-  margin: 0;
-}
-
+/* Currency converter — sits in the sticky trip header beside the nav card,
+   sharing its surface + shadow so the two read as one band. */
 .chronicle-currency-tool {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 8px 14px;
   border: 1px solid var(--chronicle-border-hairline);
-  border-radius: var(--chronicle-radius-pill);
+  border-radius: var(--chronicle-radius-md);
   background: var(--chronicle-bg-surface);
+  box-shadow: var(--chronicle-shadow-card);
   font-family: var(--chronicle-font-mono);
   font-size: 12px;
   color: var(--chronicle-text-secondary);
@@ -2561,6 +2562,13 @@ body:has(.chronicle-page) label {
    a real app shell, so any page is one thumb-reach tap away. Reuses the same
    NavLinks (icon + label + active state); only its position changes. */
 @media (max-width: 720px) {
+  /* The nav detaches to the bottom bar, so the header only carries the currency
+     converter at the top — no longer sticky. */
+  .chronicle-trip-header {
+    position: static;
+    margin: 0;
+  }
+
   .chronicle-section-nav {
     position: fixed;
     top: auto;

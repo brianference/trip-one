@@ -1,30 +1,25 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, it, expect } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { CurrencyTool } from './CurrencyTool'
 
 describe('CurrencyTool', () => {
-  afterEach(() => vi.restoreAllMocks())
-
-  it('renders nothing for a US / USD destination', () => {
-    const { container } = render(<CurrencyTool displayName="Yellowstone National Park, Wyoming, United States" />)
+  it('renders nothing for a USD destination', () => {
+    const { container } = render(<CurrencyTool code="USD" rate={1} />)
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('converts USD to the destination currency and updates as the amount changes', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: async () => ({ rate: 0.92 }) }))
-    render(<CurrencyTool displayName="Paris, France" />)
+  it('renders nothing when the rate is unavailable', () => {
+    const { container } = render(<CurrencyTool code="MAD" rate={null} />)
+    expect(container).toBeEmptyDOMElement()
+  })
 
-    // Default 1 USD → 0.92 EUR once the rate loads.
-    await waitFor(() => expect(screen.getByText('0.92')).toBeInTheDocument())
+  it('converts USD to the destination currency and updates as the amount changes', () => {
+    render(<CurrencyTool code="EUR" rate={0.92} />)
+    // Default 1 USD → 0.92 EUR.
+    expect(screen.getByText('0.92')).toBeInTheDocument()
     expect(screen.getByText(/EUR/)).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Amount in US dollars'), { target: { value: '10' } })
     expect(screen.getByText('9.2')).toBeInTheDocument()
-  })
-
-  it('stays silent when the rate is unavailable', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: async () => ({ rate: null }) }))
-    const { container } = render(<CurrencyTool displayName="Marrakesh, Morocco" />)
-    await waitFor(() => expect(container).toBeEmptyDOMElement())
   })
 })
