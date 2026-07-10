@@ -46,7 +46,7 @@ export function TripChatDock({
         ts: now,
       },
     ])
-    navigate(`/trip/${built.tripId}/itinerary`)
+    navigate(`/trip/${built.tripId}`)
   }
 
   const chat = useTripChat(trip.id, places, tripLengthDays ?? 3, location?.displayName, applyPlan, handleRelocate)

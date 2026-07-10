@@ -1,13 +1,10 @@
 import { currencyForDisplayName } from '../../localinfo/currencyByCountry'
 import { useCurrencyRate } from '../../localinfo/useCurrencyRate'
-import { languageForDisplayName } from '../../localinfo/languageByCountry'
-import { phrasesForLanguage } from '../../localinfo/phrasebook'
-import { Phrasebook } from './Phrasebook'
 
 /**
  * Local info for the destination: currency (only when it differs from USD —
- * a US trip has no "1 USD ≈ 1 USD" line), public transit as a card (not a bare
- * link), and a real phrasebook for non-English destinations.
+ * a US trip has no "1 USD ≈ 1 USD" line) and public transit as a card. The
+ * phrasebook has its own page/nav entry, so it isn't repeated here.
  */
 export function LocalInfoCard({ displayName }: { displayName: string }) {
   const targetCurrency = currencyForDisplayName(displayName)
@@ -16,7 +13,6 @@ export function LocalInfoCard({ displayName }: { displayName: string }) {
   const showCurrency = targetCurrency !== 'USD'
   const { rate, loading } = useCurrencyRate(targetCurrency)
   const transitUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`public transit in ${displayName}`)}`
-  const phrases = phrasesForLanguage(languageForDisplayName(displayName))
 
   return (
     <>
@@ -35,8 +31,6 @@ export function LocalInfoCard({ displayName }: { displayName: string }) {
         </span>
         <span className="chronicle-transit-arrow" aria-hidden="true">→</span>
       </a>
-
-      <Phrasebook phrases={phrases} />
     </>
   )
 }

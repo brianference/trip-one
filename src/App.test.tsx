@@ -101,8 +101,15 @@ describe('App', () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: /weather in/i })).toBeInTheDocument())
     // The still-useful local info (transit link) lives on the weather page now.
     expect(screen.getByRole('link', { name: /getting around/i })).toBeInTheDocument()
-    // Dublin is English-speaking, so there's no phrasebook (and never a Google Translate link).
-    expect(screen.queryByText(/phrasebook/i)).not.toBeInTheDocument()
+  })
+
+  it('renders the Phrasebook page at /trip/:id/phrasebook', async () => {
+    mockTripAndLocation()
+    navigateTo('/trip/t1/phrasebook')
+    render(<App />)
+    await waitFor(() => expect(screen.getByRole('heading', { name: /^phrasebook$/i })).toBeInTheDocument())
+    // Dublin is English-speaking → a friendly note, no phrase list.
+    expect(screen.getByText(/english-speaking/i)).toBeInTheDocument()
   })
 
   it('renders the privacy policy at /privacy', async () => {

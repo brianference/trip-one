@@ -54,7 +54,7 @@ describe('HomeAiPlanner', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: /plan my trip/i }))
 
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/trip/trip-1/itinerary'))
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/trip/trip-1'))
     expect(intentSpy).toHaveBeenCalledWith('A fun 4-day San Diego trip with kids')
     expect(createSpy).toHaveBeenCalledWith('san-diego-california', 'chronicle')
     // the interests phrase (not the raw sentence) and the extracted day count drive the plan

@@ -32,12 +32,11 @@ describe('LocalInfoCard', () => {
     expect(screen.getByRole('link', { name: /getting around/i })).toBeInTheDocument()
   })
 
-  it('shows a real phrase list for a destination whose language is covered', async () => {
+  it('shows the currency for a foreign destination (phrasebook now lives on its own page)', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rate: 157.3 }) }))
     render(<LocalInfoCard displayName="Kyoto, Japan" />)
     await waitFor(() => expect(screen.getByText(/157\.3/)).toBeInTheDocument())
-    expect(screen.getByText('Hello')).toBeInTheDocument()
-    expect(screen.getByText(/Konnichiwa/)).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /phrasebook/i })).not.toBeInTheDocument()
+    // No phrasebook in the local-info card anymore.
+    expect(screen.queryByText('Hello')).not.toBeInTheDocument()
   })
 })

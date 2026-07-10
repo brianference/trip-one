@@ -15,6 +15,7 @@ describe('TripNav', () => {
     expect(screen.getByRole('link', { name: /^map$/i })).toHaveAttribute('href', '/trip/t1/map')
     expect(screen.getByRole('link', { name: /things to do/i })).toHaveAttribute('href', '/trip/t1/things-to-do')
     expect(screen.getByRole('link', { name: /weather/i })).toHaveAttribute('href', '/trip/t1/weather')
+    expect(screen.getByRole('link', { name: /phrasebook/i })).toHaveAttribute('href', '/trip/t1/phrasebook')
   })
 
   it('marks the current route active', () => {

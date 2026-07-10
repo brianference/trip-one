@@ -55,7 +55,9 @@ export function HomeAiPlanner() {
           ts: now + 1,
         },
       ])
-      navigate(`/trip/${built.tripId}/itinerary`)
+      // Land on the trip's Overview dashboard (map + itinerary + things-to-do +
+      // weather previews), not the bare itinerary page.
+      navigate(`/trip/${built.tripId}`)
     } catch (err) {
       logger.error('home AI trip planning failed', err)
       setError(err instanceof Error ? err.message : 'Something went wrong. Try again.')

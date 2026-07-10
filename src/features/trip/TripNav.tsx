@@ -46,6 +46,15 @@ function WeatherIcon() {
   )
 }
 
+function PhraseIcon() {
+  return (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <path d="M4 5h9v8H8l-3 3v-3H4Z" />
+      <path d="M13 9h7v6h-2v2l-2-2h-3Z" />
+    </svg>
+  )
+}
+
 /**
  * Real routes, not tabs-within-one-component and not anchor-scroll — each
  * link navigates to a distinct URL under `/trip/:id/*`, so back/forward and
@@ -59,6 +68,7 @@ function tripPages(tripId: string) {
     { to: `/trip/${tripId}/map`, end: false, label: 'Map', Icon: MapIcon },
     { to: `/trip/${tripId}/things-to-do`, end: false, label: 'Things to do', Icon: ListIcon },
     { to: `/trip/${tripId}/weather`, end: false, label: 'Weather', Icon: WeatherIcon },
+    { to: `/trip/${tripId}/phrasebook`, end: false, label: 'Phrasebook', Icon: PhraseIcon },
   ]
 }
 
