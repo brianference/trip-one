@@ -28,6 +28,24 @@ describe('TripNav', () => {
     expect(screen.getByRole('link', { name: /home/i })).not.toHaveClass('chronicle-section-nav-item--active')
   })
 
+  it('shows the current temperature on the Weather item when given', () => {
+    render(
+      <MemoryRouter>
+        <TripNav tripId="t1" variant="pill" currentTempF={63.6} />
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('link', { name: /weather 64°/i })).toBeInTheDocument()
+  })
+
+  it('omits the temperature when none is provided', () => {
+    render(
+      <MemoryRouter>
+        <TripNav tripId="t1" variant="pill" />
+      </MemoryRouter>,
+    )
+    expect(screen.queryByText(/°/)).not.toBeInTheDocument()
+  })
+
   it('does not render icons in the footer variant', () => {
     render(
       <MemoryRouter>

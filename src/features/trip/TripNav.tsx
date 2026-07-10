@@ -54,20 +54,31 @@ function tripPages(tripId: string) {
   ]
 }
 
-/** The pill nav bar, shared between `TripShell`'s persistent sticky nav and the footer's quick-link row. */
-export function TripNav({ tripId, variant }: { tripId: string; variant: 'pill' | 'footer' }) {
+/**
+ * The pill nav bar, shared between `TripShell`'s persistent sticky nav and the
+ * footer's quick-link row. When `currentTempF` is provided, the Weather item
+ * shows the destination's live temperature, so the current conditions are
+ * visible from anywhere without opening the Weather page.
+ */
+export function TripNav({ tripId, variant, currentTempF }: { tripId: string; variant: 'pill' | 'footer'; currentTempF?: number | null }) {
   const pages = tripPages(tripId)
   const navClass = variant === 'pill' ? 'chronicle-section-nav' : 'chronicle-footer-links'
   const itemClass = variant === 'pill' ? 'chronicle-tap-target chronicle-section-nav-item' : 'chronicle-footer-link'
 
   return (
     <nav className={navClass} aria-label="Trip pages">
-      {pages.map(({ to, end, label, Icon }) => (
-        <NavLink key={to} to={to} end={end} className={({ isActive }) => `${itemClass}${isActive ? ` ${itemClass}--active` : ''}`}>
-          {variant === 'pill' && <Icon />}
-          <span>{label}</span>
-        </NavLink>
-      ))}
+      {pages.map(({ to, end, label, Icon }) => {
+        const showTemp = label === 'Weather' && currentTempF != null
+        return (
+          <NavLink key={to} to={to} end={end} className={({ isActive }) => `${itemClass}${isActive ? ` ${itemClass}--active` : ''}`}>
+            {variant === 'pill' && <Icon />}
+            <span>
+              {label}
+              {showTemp && <span className="chronicle-nav-temp"> {Math.round(currentTempF as number)}°</span>}
+            </span>
+          </NavLink>
+        )
+      })}
     </nav>
   )
 }

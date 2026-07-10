@@ -5,7 +5,9 @@ import { TripNav } from './TripNav'
 import { TripChatDock } from './chat/TripChatDock'
 import { TripSkeleton } from './components/TripSkeleton'
 import { SaveErrorBanner } from './components/SaveErrorBanner'
+import { CurrencyTool } from './components/CurrencyTool'
 import { recordRecentTrip } from './recentTrips'
+import { useForecast } from '../weather/useForecast'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
 
 /** Start with the dock open on desktop-width screens, collapsed on mobile. */
@@ -24,6 +26,8 @@ export function TripShell() {
   const { id } = useParams<{ id: string }>()
   const { trip, location, loading, error } = useTripData(id ?? '')
   const [chatOpen, setChatOpen] = useState(initialChatOpen)
+  // Current temperature for the nav's Weather item — visible from any page.
+  const { data: forecast } = useForecast(location?.lat ?? 0, location?.lng ?? 0)
 
   // Remember this trip for the homepage "Continue" list once it has a name.
   const tripName = location?.displayName
@@ -73,7 +77,12 @@ export function TripShell() {
   return (
     <div className={`chronicle-page chronicle-trip-page${chatOpen ? ' chronicle-trip-page--chat-open' : ''}`}>
       <TripChatDock trip={trip} location={location} open={chatOpen} onOpenChange={setChatOpen} />
-      <TripNav tripId={id} variant="pill" />
+      <TripNav tripId={id} variant="pill" currentTempF={forecast?.temperatureF ?? null} />
+      {location && (
+        <div className="chronicle-trip-utility">
+          <CurrencyTool displayName={location.displayName} />
+        </div>
+      )}
       <SaveErrorBanner />
       <main className="chronicle-book">
         <ErrorBoundary label="Trip">

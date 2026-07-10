@@ -1288,6 +1288,54 @@ body:has(.chronicle-page) label {
   color: var(--chronicle-teal);
 }
 
+/* Live temperature shown on the Weather nav item. */
+.chronicle-nav-temp {
+  color: var(--chronicle-gold);
+  font-weight: 600;
+}
+
+/* Header utility row (currency converter) between the nav and the page. */
+.chronicle-trip-utility {
+  max-width: 760px;
+  margin: 0 auto var(--chronicle-space-md);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.chronicle-trip-utility:empty {
+  display: none;
+  margin: 0;
+}
+
+.chronicle-currency-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--chronicle-border-hairline);
+  border-radius: var(--chronicle-radius-pill);
+  background: var(--chronicle-bg-surface);
+  font-family: var(--chronicle-font-mono);
+  font-size: 12px;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-currency-eq strong {
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-currency-input {
+  width: 4.5em;
+  min-height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--chronicle-border-subtle);
+  border-radius: var(--chronicle-radius-sm);
+  background: var(--chronicle-bg-surface-2);
+  color: var(--chronicle-text-primary);
+  font-family: var(--chronicle-font-mono);
+  font-size: 12px;
+}
+
 /* Tighten the six-item nav so every label fits on small phones. */
 @media (max-width: 520px) {
   .chronicle-section-nav {
