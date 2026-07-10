@@ -21,10 +21,19 @@ chatting. No account, no signup.
   place good for kids?"); or change destination ("actually, make it Rome"). It
   routes each message to the right action and replies in plain language, with a
   live thinking indicator.
-- **Rich place detail.** Tap a place on the map or in the list for photos,
-  rating and review count, price, hours, phone, a real summary and reviews, and
-  Get Directions — from Google Place Details, cached, with the API key kept
-  server-side.
+- **Plan from a place, not just chat.** Tap a place on the map or in the list
+  for photos, rating and review count, price, hours, phone, a real summary and
+  reviews, and Get Directions — then add it straight to a specific day, or see
+  "On Day N" with a remove control if it's already on the trip.
+- **Editable itinerary.** Each stop opens a compact editor: set a real clock
+  time, move it to another day, or reorder it within the day. Nearby
+  things-to-do filter by type, sort by rating, hide unrated noise, and badge
+  what's already on your trip.
+- **Dates and effort.** Add an optional start date to unlock day-date labels and
+  date-aligned weather; each day shows its rough walking distance and time and
+  warns when it's spread across town.
+- **Reviewable AI.** A chat plan change lists what it added and offers one-tap
+  Undo, so nothing changes your trip without a way back.
 - **Real weather.** Current conditions, a multi-day forecast, and packing tips
   from Open-Meteo, with currency and transit for the destination.
 - **Light and dark.** A top-right toggle that remembers your choice; light by
