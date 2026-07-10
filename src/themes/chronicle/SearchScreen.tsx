@@ -7,6 +7,7 @@ import { DEMO_TRIPS } from '../../lib/api/demoIds'
 import { buildStarterItinerary } from '../../lib/itinerary/buildStarterItinerary'
 import { HomeAiPlanner } from '../../features/trip/components/HomeAiPlanner'
 import { getRecentTrips } from '../../features/trip/recentTrips'
+import { Logo } from '../../components/Logo'
 
 const AUTOCOMPLETE_DEBOUNCE_MS = 300
 const AUTOCOMPLETE_MIN_LENGTH = 2
@@ -110,7 +111,10 @@ export function SearchScreen() {
   return (
     <div className="chronicle-landing">
       <section className="chronicle-hero">
-        <p className="chronicle-kicker">Trip One · a trip planner, without the friction</p>
+        <div className="chronicle-hero-logo">
+          <Logo size={40} />
+        </div>
+        <p className="chronicle-kicker">A trip planner, without the friction</p>
         <h1 className="chronicle-hero-heading">Describe your trip. We build it.</h1>
         <p className="chronicle-hero-sub">
           Tell us where you want to go and what you’re after — we turn one sentence into a real day-by-day itinerary
@@ -217,7 +221,7 @@ export function SearchScreen() {
 
       <footer className="chronicle-landing-footer">
         <div>
-          <span className="chronicle-footer-wordmark">Trip One</span>
+          <Logo size={22} />
           <br />
           <span className="chronicle-footer-tagline">Made for wanderers. No accounts, ever.</span>
         </div>

@@ -1,7 +1,10 @@
 import type { Env } from '../../lib/supabaseAdmin'
 import { createTrip } from '../../lib/supabaseAdmin'
+import { isRateLimited } from '../../lib/rateLimitGuard'
 import { logger } from '../../../src/lib/logger'
 import { z } from 'zod'
+
+const CREATE_TRIPS_PER_HOUR = 30
 
 const createTripSchema = z.object({
   location_slug: z.string().min(1),
@@ -22,6 +25,12 @@ function json(body: unknown, status: number) {
 export async function onRequestPost({ env, request }: { env: Env; request: Request }): Promise<Response> {
   const parsed = createTripSchema.safeParse(await request.json().catch(() => ({})))
   if (!parsed.success) return json({ error: 'location_slug is required' }, 400)
+
+  // Unauthenticated write — cap trip creation per IP so it can't be scripted
+  // into unbounded DB rows.
+  if (await isRateLimited(env, request, 'trips', CREATE_TRIPS_PER_HOUR)) {
+    return json({ error: 'rate limit exceeded, try again later' }, 429)
+  }
 
   try {
     const trip = await createTrip(env, {

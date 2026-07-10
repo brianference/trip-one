@@ -35,8 +35,28 @@ describe('POST /api/trips', () => {
       body: JSON.stringify({ location_slug: 'dublin-ireland' }),
     })
     await onRequestPost({ env, request } as never)
-    const sentBody = JSON.parse(String(fetchMock.mock.calls[0][1].body))
+    // The first fetch may be the rate-limit bookkeeping — find the create call.
+    const createCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('/rest/v1/trips'))
+    const sentBody = JSON.parse(String(createCall![1].body))
     expect(sentBody.design_style).toBe('chronicle')
+  })
+
+  it('rate-limits trip creation past the hourly cap (and does not create a trip)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        if (String(url).includes('/rest/v1/request_log')) {
+          return Promise.resolve({ ok: true, headers: new Headers({ 'content-range': '*/50' }), json: async () => [] })
+        }
+        throw new Error('must not create a trip when rate-limited')
+      }),
+    )
+    const request = new Request('https://x/api/trips', {
+      method: 'POST',
+      body: JSON.stringify({ location_slug: 'dublin-ireland' }),
+    })
+    const res = await onRequestPost({ env, request } as never)
+    expect(res.status).toBe(429)
   })
 
   it('rejects a missing location_slug', async () => {

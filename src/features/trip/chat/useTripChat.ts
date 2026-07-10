@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { sendChat, type ThingToDo, type PlanDay, type PlanTurn, type CurrentPlanDay } from '../../../lib/api/client'
 import type { ItineraryItem } from '../../../lib/validation/schemas'
 import { MIN_TRIP_DAYS } from '../planning/createTripForDestination'
+import { requestedDayCount } from '../../../lib/itinerary/requestedDays'
 import { logger } from '../../../lib/logger'
 import { CHAT_GREETING, type ChatMessage } from './chatTypes'
 import { takeOpeningChat } from './chatHandoff'
@@ -106,7 +107,12 @@ export function useTripChat(
           .slice(0, MAX_CANDIDATES)
         const candidates = candidatePlaces.map((p) => ({ name: p.name, category: p.category, rating: p.rating, lat: p.lat, lng: p.lng }))
         const currentPlan = summarizeItinerary(currentItinerary)
-        const planDays = Math.max(days, MIN_TRIP_DAYS)
+        // An explicit "make it N days" in the message changes the trip length —
+        // otherwise the model is told the current count and can never expand it
+        // (and the plan gets clamped back). This is what makes a chat length
+        // change actually update the day tabs and dropdown, not just the text.
+        const requested = requestedDayCount(trimmed)
+        const planDays = Math.max(requested ?? days, MIN_TRIP_DAYS)
 
         const result = await sendChat(trimmed, planDays, candidates, {
           locationName,

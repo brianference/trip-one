@@ -2120,6 +2120,12 @@ body:has(.chronicle-page) label {
   color: var(--chronicle-text-tertiary);
 }
 
+.chronicle-landing-footer-links {
+  display: flex;
+  align-items: center;
+  gap: var(--chronicle-space-lg);
+}
+
 .chronicle-landing-footer-links a {
   font-family: var(--chronicle-font-mono);
   font-size: 13px;
@@ -2673,6 +2679,51 @@ body:has(.chronicle-page) label {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* ---------- Logo ---------- */
+.chronicle-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chronicle-logo-mark {
+  flex: none;
+}
+
+.chronicle-logo-route {
+  fill: var(--chronicle-gold);
+}
+
+.chronicle-logo-line {
+  stroke: var(--chronicle-gold);
+}
+
+.chronicle-logo-pin {
+  stroke: var(--chronicle-teal);
+}
+
+.chronicle-logo-dot {
+  fill: var(--chronicle-teal);
+}
+
+.chronicle-logo-word {
+  font-family: var(--chronicle-font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--chronicle-text-primary);
+  line-height: 1;
+}
+
+.chronicle-logo-one {
+  color: var(--chronicle-teal);
+}
+
+.chronicle-hero-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--chronicle-space-md);
 }
 
 /* Trip export toolbar (print / calendar). */

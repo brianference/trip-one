@@ -1,7 +1,10 @@
 import { z } from 'zod'
+import { isRateLimited } from '../lib/rateLimitGuard'
+import type { Env } from '../lib/supabaseAdmin'
 import { logger } from '../../src/lib/logger'
 
 const currencyQuerySchema = z.string().trim().regex(/^[A-Z]{3}$/)
+const CURRENCY_PER_HOUR = 120
 
 function json(body: unknown, status: number) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
@@ -18,10 +21,14 @@ function json(body: unknown, status: number) {
  * @returns JSON response: `{ rate }` on success (rate is null if Frankfurter
  * doesn't recognize the currency), or `{ error }` with 400 for an invalid query
  */
-export async function onRequestGet({ request }: { request: Request }): Promise<Response> {
+export async function onRequestGet({ env, request }: { env: Env; request: Request }): Promise<Response> {
   const to = new URL(request.url).searchParams.get('to') ?? ''
   const parsed = currencyQuerySchema.safeParse(to)
   if (!parsed.success) return json({ error: 'invalid currency code' }, 400)
+
+  if (await isRateLimited(env, request, 'currency', CURRENCY_PER_HOUR)) {
+    return json({ rate: null }, 200)
+  }
 
   try {
     const res = await fetch(`https://api.frankfurter.dev/v1/latest?from=USD&to=${parsed.data}`)

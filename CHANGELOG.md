@@ -3,6 +3,26 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v6.2.0 — Logo, chat length fix, hardening
+
+### Fixed
+- **"Change it to N days" in chat now actually works.** The chat prompt was
+  hard-coded to the current day count and the plan was clamped back to it, so
+  asking for 9 days kept 3. The chat now detects an explicit length request and
+  re-plans for it, updating the day tabs and the length dropdown — not just the
+  reply text.
+- **Footer** — spacing between the Privacy and GitHub links (they were mashed
+  together).
+
+### Added
+- **A real logo** — a route of stops leading into a destination pin, plus the
+  wordmark; used in the homepage hero, footer, and favicon.
+- **CI** — a GitHub Actions workflow runs typecheck + tests + build on every
+  push and PR, with a status badge in the README.
+- **Rate limits** on the previously-open endpoints: trip creation (30/hr),
+  autocomplete (240/hr), and currency (120/hr), via a shared fail-open guard.
+- A LinkedIn launch post draft in `docs/LAUNCH-POST.md`.
+
 ## v6.1.0 — Export and safer chat relocate
 
 ### Added

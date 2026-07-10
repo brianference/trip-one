@@ -1,5 +1,7 @@
 # Trip One
 
+[![CI](https://github.com/brianference/trip-one/actions/workflows/ci.yml/badge.svg)](https://github.com/brianference/trip-one/actions/workflows/ci.yml)
+
 **A public, grounded AI trip planner.** Describe a trip in one sentence and it
 builds a real, day-by-day itinerary from actual places — then you refine it by
 chatting. No account, no signup.
