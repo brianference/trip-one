@@ -60,7 +60,9 @@ describe('useTripChat', () => {
     // …and appended to the itinerary (one per day), with a concrete reply.
     expect(onAddStops).toHaveBeenCalled()
     expect(onAddStops.mock.calls[0][0][0].name).toBe('Sushi Ota')
-    expect(result.current.messages.some((m) => m.text.includes('Added Sushi Ota (Day 1)'))).toBe(true)
+    // The reply carries the added place as a tappable chip (name + day).
+    const addedMsg = result.current.messages.find((m) => m.places && m.places.length > 0)
+    expect(addedMsg?.places?.[0]).toMatchObject({ name: 'Sushi Ota', day: 1 })
   })
 
   it('a "search" turn that finds nothing says so and does not apply a plan', async () => {

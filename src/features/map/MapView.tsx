@@ -44,6 +44,12 @@ interface Props {
    * render does NOT tear down and rebuild the Leaflet map.
    */
   onSelectMarker?: (marker: MapMarker) => void
+  /**
+   * A place to pan/zoom to and highlight (its popup opens) — set when the user
+   * taps a stop or an added-place chip in the chat. The `nonce` makes repeated
+   * taps on the same place re-trigger. Panning does NOT rebuild the map.
+   */
+  focusLatLng?: { lat: number; lng: number; nonce: number } | null
 }
 
 // Below this size (in degrees), a bounding box is treated as effectively a
@@ -87,13 +93,17 @@ function buildPopupEl(text: string): HTMLDivElement {
   return popupEl
 }
 
-export function MapView({ lat, lng, label, markers, boundingBox, route, height = 300, onSelectMarker }: Props) {
+export function MapView({ lat, lng, label, markers, boundingBox, route, height = 300, onSelectMarker, focusLatLng }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   // Keep the latest select handler in a ref so marker clicks always call the
   // current one WITHOUT adding it to the effect deps (which would rebuild the
   // whole map on every parent render).
   const onSelectRef = useRef(onSelectMarker)
   onSelectRef.current = onSelectMarker
+  // The live map + its markers-by-coordinate, so a focus request can pan and
+  // open the right popup without rebuilding the map.
+  const mapRef = useRef<L.Map | null>(null)
+  const markersRef = useRef<Map<string, L.Marker>>(new Map())
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -106,6 +116,8 @@ export function MapView({ lat, lng, label, markers, boundingBox, route, height =
     // animation entirely removes every code path that can reach that
     // handler, not just the one this app's own code triggers.
     const map = L.map(containerRef.current, { zoomAnimation: false }).setView([lat, lng], 12)
+    mapRef.current = map
+    markersRef.current = new Map()
     // CartoDB's free Voyager tiles (no API key required) render cleaner
     // typography and a lighter, less visually noisy basemap than raw OSM
     // tiles, while still crediting OpenStreetMap as the underlying data.
@@ -121,10 +133,11 @@ export function MapView({ lat, lng, label, markers, boundingBox, route, height =
     for (const marker of markers ?? []) {
       const color = CATEGORY_COLORS[marker.category] ?? DEFAULT_MARKER_COLOR
       const markerIcon = buildPinIcon(color, iconForCategory(marker.category))
-      L.marker([marker.lat, marker.lng], { icon: markerIcon })
+      const m = L.marker([marker.lat, marker.lng], { icon: markerIcon })
         .addTo(map)
         .bindPopup(buildPopupEl(`${marker.label} (${marker.category})`))
         .on('click', () => onSelectRef.current?.(marker))
+      markersRef.current.set(`${marker.lat.toFixed(5)},${marker.lng.toFixed(5)}`, m)
     }
 
     if (route && route.length > 1) {
@@ -157,8 +170,19 @@ export function MapView({ lat, lng, label, markers, boundingBox, route, height =
 
     return () => {
       map.remove()
+      mapRef.current = null
     }
   }, [lat, lng, label, markers, boundingBox, route])
+
+  // Pan to and highlight a focused place (from a stop or chat-chip tap) without
+  // rebuilding the map. Runs after the build effect, so a focus set alongside a
+  // marker change still wins.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !focusLatLng) return
+    map.setView([focusLatLng.lat, focusLatLng.lng], Math.max(map.getZoom(), 15), { animate: false })
+    markersRef.current.get(`${focusLatLng.lat.toFixed(5)},${focusLatLng.lng.toFixed(5)}`)?.openPopup()
+  }, [focusLatLng])
 
   return <div ref={containerRef} aria-label={`Map of ${label}`} style={{ height: `${height}px`, width: '100%' }} />
 }

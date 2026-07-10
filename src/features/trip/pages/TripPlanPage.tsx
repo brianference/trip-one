@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ItineraryItem } from '../../../lib/validation/schemas'
 import { useTripContext } from '../useTripContext'
 import { useTripStore } from '../../../store/tripStore'
@@ -32,7 +32,26 @@ export function TripPlanPage() {
     useItineraryActions(trip.id)
   const [selectedDay, setSelectedDay] = useState(1)
   const [selected, setSelected] = useState<PlaceQuery | null>(null)
+  const [mapFocus, setMapFocus] = useState<{ lat: number; lng: number; nonce: number } | null>(null)
   const { detail, loading, error } = usePlaceDetail(selected)
+
+  // Reveal a stop or a place tapped in the map / a chat "Added" chip.
+  const focusStop = (item: { text?: string; name?: string; lat?: number; lng?: number; category?: string }) => {
+    const name = item.text ?? item.name ?? ''
+    setSelected(placeQueryFor({ name, lat: item.lat, lng: item.lng, category: item.category }))
+    if (item.lat != null && item.lng != null) setMapFocus({ lat: item.lat, lng: item.lng, nonce: Date.now() })
+  }
+
+  // A chat "Added …" chip (or any focus request) reveals the place here.
+  const focusPlace = useTripStore((s) => s.focusPlace)
+  const clearFocusPlace = useTripStore((s) => s.clearFocusPlace)
+  useEffect(() => {
+    if (!focusPlace) return
+    if (focusPlace.day) setSelectedDay(focusPlace.day)
+    setSelected(placeQueryFor({ name: focusPlace.name, lat: focusPlace.lat, lng: focusPlace.lng, category: focusPlace.category }))
+    if (focusPlace.lat != null && focusPlace.lng != null) setMapFocus({ lat: focusPlace.lat, lng: focusPlace.lng, nonce: focusPlace.nonce })
+    clearFocusPlace()
+  }, [focusPlace, clearFocusPlace])
 
   const dayGroups = useMemo(() => {
     const groups = new Map<number, { item: ItineraryItem; index: number }[]>()
@@ -96,6 +115,7 @@ export function TripPlanPage() {
         onSelectMarker={(marker) =>
           setSelected(placeQueryFor({ name: marker.label, placeId: marker.placeId, lat: marker.lat, lng: marker.lng, category: marker.category }))
         }
+        focusLatLng={mapFocus}
       />
 
       <section className="chronicle-plan-day" aria-label={`Day ${selectedDay} stops`} key={`${selectedDay}-${itinerary.length}`}>
@@ -124,9 +144,7 @@ export function TripPlanPage() {
             onMove={moveStop}
             onMoveToDay={moveToDay}
             onSetTime={setStopTime}
-            onOpen={(item) =>
-              setSelected(placeQueryFor({ name: item.text, lat: item.lat, lng: item.lng, category: item.category }))
-            }
+            onOpen={(item) => focusStop(item)}
             onRemove={removeStop}
           />
         ) : (

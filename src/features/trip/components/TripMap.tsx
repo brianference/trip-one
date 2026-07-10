@@ -23,6 +23,7 @@ export function TripMap({
   onSelectDay,
   showDayStops,
   onSelectStop,
+  focusLatLng,
 }: {
   location: LocationResult
   itinerary: ItineraryItem[]
@@ -37,6 +38,8 @@ export function TripMap({
   showDayStops?: boolean
   /** When set, each day stop becomes a button that opens the place's detail. */
   onSelectStop?: (item: ItineraryItem) => void
+  /** Pan/highlight this coordinate when it changes (tap a stop or chat chip). */
+  focusLatLng?: { lat: number; lng: number; nonce: number } | null
 }) {
   const [internalDay, setInternalDay] = useState(1)
   const selectedDay = controlledDay ?? internalDay
@@ -75,6 +78,7 @@ export function TripMap({
         route={route}
         height={height}
         onSelectMarker={onSelectMarker}
+        focusLatLng={focusLatLng}
       />
       {markers.length > 0 && <MapLegend className="chronicle-map-legend" />}
       {showDayStops && (

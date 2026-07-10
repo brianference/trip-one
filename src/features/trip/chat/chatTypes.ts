@@ -1,3 +1,12 @@
+/** A place named in an assistant message, tappable to reveal it on the Plan page. */
+export interface ChatPlace {
+  name: string
+  lat?: number
+  lng?: number
+  category?: string
+  day: number
+}
+
 /** A single message in the itinerary planning chat. */
 export interface ChatMessage {
   id: string
@@ -5,6 +14,8 @@ export interface ChatMessage {
   text: string
   /** Epoch ms; used for the timestamp line. */
   ts: number
+  /** Places the assistant just added, rendered as tappable chips under the text. */
+  places?: ChatPlace[]
 }
 
 /**

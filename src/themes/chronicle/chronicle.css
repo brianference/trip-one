@@ -3246,6 +3246,43 @@ body:has(.chronicle-page) label {
   cursor: default;
 }
 
+/* Tappable place chips under a chat "Added …" message. */
+.chronicle-chat-places {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: var(--chronicle-space-sm);
+}
+
+.chronicle-chat-place {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--chronicle-border-subtle);
+  border-radius: var(--chronicle-radius-pill);
+  background: var(--chronicle-bg-surface);
+  color: var(--chronicle-teal);
+  font-family: var(--chronicle-font-body);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.chronicle-chat-place:hover,
+.chronicle-chat-place:focus-visible {
+  border-color: var(--chronicle-teal);
+  background: color-mix(in srgb, var(--chronicle-teal) 10%, transparent);
+}
+
+.chronicle-chat-place-day {
+  font-family: var(--chronicle-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--chronicle-text-tertiary);
+}
+
 .chronicle-chat-composer {
   display: flex;
   gap: var(--chronicle-space-sm);

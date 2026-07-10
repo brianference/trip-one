@@ -4,7 +4,7 @@ import type { ItineraryItem } from '../../../lib/validation/schemas'
 import { MIN_TRIP_DAYS } from '../planning/createTripForDestination'
 import { requestedDayCount } from '../../../lib/itinerary/requestedDays'
 import { logger } from '../../../lib/logger'
-import { CHAT_GREETING, type ChatMessage } from './chatTypes'
+import { CHAT_GREETING, type ChatMessage, type ChatPlace } from './chatTypes'
 import { takeOpeningChat } from './chatHandoff'
 import { loadChat, saveChat } from './chatStorage'
 
@@ -19,8 +19,8 @@ function nextId(): string {
   return `m${Date.now()}-${messageCounter}`
 }
 
-function makeMessage(role: ChatMessage['role'], text: string): ChatMessage {
-  return { id: nextId(), role, text, ts: Date.now() }
+function makeMessage(role: ChatMessage['role'], text: string, places?: ChatPlace[]): ChatMessage {
+  return { id: nextId(), role, text, ts: Date.now(), ...(places && places.length > 0 ? { places } : {}) }
 }
 
 /** Summarize the current itinerary by day so the planner edits rather than rebuilds. */
@@ -158,10 +158,16 @@ export function useTripChat(
           const dayCount = Math.max(planDays, 1)
           const toAdd = found.slice(0, dayCount)
           const added = onAddStops?.(toAdd, dayCount) ?? toAdd.map((p, i) => ({ name: p.name, day: (i % dayCount) + 1 }))
-          const list = added.map((a) => `${a.name} (Day ${a.day})`).join(', ')
+          const chatPlaces: ChatPlace[] = toAdd.map((p, i) => ({
+            name: p.name,
+            lat: p.lat,
+            lng: p.lng,
+            category: p.category,
+            day: added[i]?.day ?? (i % dayCount) + 1,
+          }))
           setMessages((prev) => [
             ...prev,
-            makeMessage('assistant', `Added ${list} — they're on your map and itinerary now. Tap any stop to see details and where it is.`),
+            makeMessage('assistant', `Added these to your trip — tap any to open it on the map:`, chatPlaces),
           ])
           return
         }

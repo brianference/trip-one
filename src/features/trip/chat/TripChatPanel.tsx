@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ChatMessage } from './chatTypes'
+import type { ChatMessage, ChatPlace } from './chatTypes'
 import { chatStartersFor } from './chatTypes'
 import { ChatMessageBubble } from './ChatMessageBubble'
 import { ThinkingIndicator } from './ThinkingIndicator'
@@ -22,6 +22,7 @@ export function TripChatPanel({
   pendingRelocate,
   onConfirmRelocate,
   onCancelRelocate,
+  onPlaceClick,
 }: {
   messages: ChatMessage[]
   isThinking: boolean
@@ -36,6 +37,8 @@ export function TripChatPanel({
   pendingRelocate?: { destination: string } | null
   onConfirmRelocate?: () => void
   onCancelRelocate?: () => void
+  /** Tapping an added-place chip reveals it on the Plan page. */
+  onPlaceClick?: (place: ChatPlace) => void
 }) {
   const [draft, setDraft] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
@@ -85,7 +88,7 @@ export function TripChatPanel({
 
       <div className="chronicle-chat-messages" ref={listRef} role="log" aria-live="polite" aria-busy={isThinking}>
         {messages.map((m) => (
-          <ChatMessageBubble key={m.id} message={m} />
+          <ChatMessageBubble key={m.id} message={m} onPlaceClick={onPlaceClick} />
         ))}
         {isThinking && <ThinkingIndicator />}
       </div>

@@ -76,6 +76,17 @@ export function TripChatDock({
     [addStops, pathname, navigate, trip.id],
   )
 
+  // Tapping an added-place chip in the chat: mark it as the focused place (the
+  // Plan page opens its detail, selects its day, and pans the map) and jump to
+  // the Plan page if we're not already there.
+  const handlePlaceClick = useCallback(
+    (place: { name: string; lat?: number; lng?: number; category?: string; day: number }) => {
+      useTripStore.getState().focusOnPlace(place)
+      if (!pathname.endsWith('/plan')) navigate(`/trip/${trip.id}/plan`)
+    },
+    [pathname, navigate, trip.id],
+  )
+
   const handleUndo = useCallback(() => {
     if (undoSnapshot) restorePlan(undoSnapshot.itinerary, undoSnapshot.days)
     setUndoSnapshot(null)
@@ -152,6 +163,7 @@ export function TripChatDock({
           pendingRelocate={chat.pendingRelocate}
           onConfirmRelocate={() => void chat.confirmRelocate()}
           onCancelRelocate={chat.cancelRelocate}
+          onPlaceClick={handlePlaceClick}
         />
       </aside>
     </>
