@@ -21,6 +21,8 @@ export interface TripRow {
   design_style: string
   created_at: string
   trip_length_days?: number | null
+  /** Optional trip start date (YYYY-MM-DD), for date labels and date-aligned weather. */
+  start_date?: string | null
 }
 
 function headers(env: Env, extra: Record<string, string> = {}) {
@@ -139,7 +141,7 @@ export async function getTrip(env: Env, id: string): Promise<TripRow | null> {
 export async function updateTrip(
   env: Env,
   id: string,
-  patch: Partial<Pick<TripRow, 'itinerary' | 'design_style' | 'trip_length_days'>>,
+  patch: Partial<Pick<TripRow, 'itinerary' | 'design_style' | 'trip_length_days' | 'start_date'>>,
 ): Promise<TripRow> {
   const res = await fetch(`${env.SUPABASE_URL}/rest/v1/trips?id=eq.${id}`, {
     method: 'PATCH',

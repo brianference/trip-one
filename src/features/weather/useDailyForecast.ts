@@ -21,7 +21,7 @@ export interface DailyForecast {
  * @param lng - Longitude of the trip location
  * @param days - Number of days to request (clamped to Open-Meteo's 1-16 range)
  */
-export function useDailyForecast(lat: number, lng: number, days: number) {
+export function useDailyForecast(lat: number, lng: number, days: number, startDate?: string) {
   const [data, setData] = useState<DailyForecast[] | null>(null)
   const [loading, setLoading] = useState(true)
   const clampedDays = Math.min(Math.max(days, 1), 16)
@@ -29,8 +29,17 @@ export function useDailyForecast(lat: number, lng: number, days: number) {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
+    // When an in-range trip start date is given, request exactly those days
+    // (start_date..end_date); otherwise the next N days from now.
+    let range = `forecast_days=${clampedDays}`
+    if (startDate) {
+      const end = new Date(`${startDate}T00:00:00`)
+      end.setDate(end.getDate() + clampedDays - 1)
+      const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`
+      range = `start_date=${startDate}&end_date=${endStr}`
+    }
     fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max&temperature_unit=fahrenheit&forecast_days=${clampedDays}`,
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max&temperature_unit=fahrenheit&${range}`,
     )
       .then((res) => {
         if (!res.ok) throw new Error(`Open-Meteo daily request failed: ${res.status}`)
@@ -59,7 +68,7 @@ export function useDailyForecast(lat: number, lng: number, days: number) {
     return () => {
       cancelled = true
     }
-  }, [lat, lng, clampedDays])
+  }, [lat, lng, clampedDays, startDate])
 
   return { data, loading }
 }

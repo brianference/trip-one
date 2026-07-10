@@ -128,6 +128,22 @@
   flex-wrap: wrap;
 }
 
+.chronicle-trip-controls {
+  display: flex;
+  gap: var(--chronicle-space-md);
+  flex-wrap: wrap;
+}
+
+.chronicle-trip-controls input[type='date'] {
+  font-family: var(--chronicle-font-mono);
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--chronicle-border-subtle);
+  border-radius: var(--chronicle-radius-sm);
+  background: var(--chronicle-bg-surface);
+  color: var(--chronicle-text-primary);
+}
+
 .chronicle-share-btn {
   flex: none;
   min-height: 40px;

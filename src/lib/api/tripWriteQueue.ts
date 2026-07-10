@@ -19,7 +19,7 @@ import { logger } from '../logger'
  * the caller's `onError` so the UI can surface them.
  */
 
-type Patch = { itinerary?: ItineraryItem[]; tripLengthDays?: number | null }
+type Patch = { itinerary?: ItineraryItem[]; tripLengthDays?: number | null; startDate?: string | null }
 type Queue = { inFlight: boolean; pending: Patch | null; onError?: (err: unknown) => void }
 
 const queues = new Map<string, Queue>()

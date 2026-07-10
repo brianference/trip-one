@@ -38,6 +38,7 @@ export function useTripData(tripId: string) {
           locationSlug: loadedTrip.locationSlug,
           itinerary: loadedTrip.itinerary,
           tripLengthDays: loadedTrip.tripLengthDays,
+          startDate: loadedTrip.startDate ?? null,
         })
         return fetchLocation(loadedTrip.locationSlug).then((loc) => {
           if (!cancelled) setLocation(loc)

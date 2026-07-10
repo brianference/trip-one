@@ -14,7 +14,7 @@ import { logger } from '../../../lib/logger'
  * can't race and overwrite each other, and a failed save flips the store's
  * `saveError` flag (cleared optimistically here) so the UI can show it.
  */
-function persist(tripId: string, patch: { itinerary?: ItineraryItem[]; tripLengthDays?: number | null }) {
+function persist(tripId: string, patch: { itinerary?: ItineraryItem[]; tripLengthDays?: number | null; startDate?: string | null }) {
   useTripStore.getState().setSaveError(false)
   queueTripWrite(tripId, patch, () => useTripStore.getState().setSaveError(true))
 }
@@ -139,5 +139,11 @@ export function useItineraryActions(tripId: string) {
     persist(tripId, { itinerary: items, tripLengthDays: days })
   }
 
-  return { itinerary, tripLengthDays, adding, addStop, addFromThingToDo, removeStop, moveStop, setTripLength, applyPlan }
+  /** Sets (or clears) the trip's start date, persisting it and updating the store. */
+  function setStartDate(date: string | null) {
+    useTripStore.getState().setStartDate(date)
+    persist(tripId, { startDate: date })
+  }
+
+  return { itinerary, tripLengthDays, adding, addStop, addFromThingToDo, removeStop, moveStop, setTripLength, setStartDate, applyPlan }
 }

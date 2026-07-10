@@ -8,6 +8,7 @@ const patchSchema = z.object({
   itinerary: z.array(itineraryItemSchema).optional(),
   design_style: z.enum(['bento', 'chronicle', 'field-guide', 'liquid-glass', 'trail-ledger']).optional(),
   trip_length_days: z.number().int().min(1).max(60).nullable().optional(),
+  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'expected YYYY-MM-DD').nullable().optional(),
 }).strict()
 
 function json(body: unknown, status: number) {

@@ -45,6 +45,8 @@ export interface Trip {
   designStyle: DesignStyle
   /** Total number of days the traveler plans for this trip, or null/absent if not set yet. */
   tripLengthDays?: number | null
+  /** Trip start date (YYYY-MM-DD), or null/absent if not set. */
+  startDate?: string | null
 }
 
 function fromRow(row: {
@@ -53,6 +55,7 @@ function fromRow(row: {
   itinerary: ItineraryItem[]
   design_style: DesignStyle
   trip_length_days?: number | null
+  start_date?: string | null
 }): Trip {
   return {
     id: row.id,
@@ -60,6 +63,7 @@ function fromRow(row: {
     itinerary: row.itinerary,
     designStyle: row.design_style,
     tripLengthDays: row.trip_length_days ?? null,
+    startDate: row.start_date ?? null,
   }
 }
 
@@ -321,7 +325,7 @@ export async function getTrip(id: string): Promise<Trip> {
 
 export async function updateTrip(
   id: string,
-  patch: Partial<{ itinerary: ItineraryItem[]; designStyle: DesignStyle; tripLengthDays: number | null }>,
+  patch: Partial<{ itinerary: ItineraryItem[]; designStyle: DesignStyle; tripLengthDays: number | null; startDate: string | null }>,
 ): Promise<Trip> {
   const res = await fetch(`/api/trips/${id}`, {
     method: 'PATCH',
@@ -330,6 +334,7 @@ export async function updateTrip(
       ...(patch.itinerary ? { itinerary: patch.itinerary } : {}),
       ...(patch.designStyle ? { design_style: patch.designStyle } : {}),
       ...(patch.tripLengthDays !== undefined ? { trip_length_days: patch.tripLengthDays } : {}),
+      ...(patch.startDate !== undefined ? { start_date: patch.startDate } : {}),
     }),
   })
   const body = await res.json()
