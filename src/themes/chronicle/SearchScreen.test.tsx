@@ -85,7 +85,7 @@ describe('Chronicle SearchScreen', () => {
       </MemoryRouter>,
     )
     expect(screen.getByRole('heading', { name: /describe your trip\. we build it\./i })).toBeInTheDocument()
-    expect(screen.getByText('Live weather')).toBeInTheDocument()
-    expect(screen.getByText('A real trip page')).toBeInTheDocument()
+    expect(screen.getByText('Grounded AI')).toBeInTheDocument()
+    expect(screen.getByText('Refine by chat')).toBeInTheDocument()
   })
 })

@@ -1,11 +1,13 @@
 import type { ItineraryItem } from '../../../lib/validation/schemas'
-import { badgeFor, directionsUrl } from '../../../lib/itinerary/badges'
+import { roleFor, slotLabel, directionsUrl } from '../../../lib/itinerary/badges'
 
 const DOT_COLOR: Record<string, string> = { fixed: '#a5d088', travel: '#ffd700', option: '#5ba3ff' }
 
-/** One itinerary stop: time, type badge, directions link, move/remove controls. */
+/** One itinerary stop: time (or soft slot), role badge, directions link, move/remove controls. */
 export function ItineraryEntryRow({
   item,
+  position,
+  total,
   isFirst,
   isLast,
   onMoveEarlier,
@@ -13,17 +15,22 @@ export function ItineraryEntryRow({
   onRemove,
 }: {
   item: ItineraryItem
+  position: number
+  total: number
   isFirst: boolean
   isLast: boolean
   onMoveEarlier: () => void
   onMoveLater: () => void
   onRemove: () => void
 }) {
-  const badge = badgeFor(item)
+  const badge = roleFor(item)
+  // Always show something in the time column: the clock time, or a soft
+  // time-of-day slot ("Morning", "Evening") derived from the stop's position.
+  const timeLabel = item.time?.trim() ? item.time : slotLabel(position, total)
   return (
     <li className="chronicle-entry">
       <span data-testid={`timeline-dot-${item.type}`} style={{ background: DOT_COLOR[item.type] }} />
-      <span className="chronicle-entry-time">{item.time}</span>
+      <span className={`chronicle-entry-time${item.time?.trim() ? '' : ' chronicle-entry-time--soft'}`}>{timeLabel}</span>
       <span className={`chronicle-badge chronicle-badge--${badge.tone}`}>{badge.label}</span>
       <span className="chronicle-entry-text">{item.text}</span>
       <a

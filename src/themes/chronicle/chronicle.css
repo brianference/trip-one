@@ -119,6 +119,53 @@
   --chronicle-shadow-card: 0 1px 0 rgba(0, 0, 0, 0.5), 0 12px 24px -14px rgba(0, 0, 0, 0.6);
 }
 
+/* ---------- Share trip + save hint + recents ---------- */
+.chronicle-overview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--chronicle-space-md);
+  flex-wrap: wrap;
+}
+
+.chronicle-share-btn {
+  flex: none;
+  min-height: 40px;
+  padding: 0 var(--chronicle-space-md);
+  border: 1px solid var(--chronicle-teal);
+  border-radius: var(--chronicle-radius-pill);
+  background: none;
+  color: var(--chronicle-teal);
+  font-family: var(--chronicle-font-mono);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.chronicle-share-btn:hover {
+  background: var(--chronicle-teal);
+  color: var(--chronicle-bg-canvas);
+}
+
+.chronicle-save-hint {
+  margin: 4px 0 var(--chronicle-space-md);
+  font-family: var(--chronicle-font-body);
+  font-size: 13px;
+  color: var(--chronicle-text-tertiary);
+}
+
+.chronicle-recents {
+  max-width: 680px;
+  margin: 0 auto var(--chronicle-space-2xl);
+  text-align: left;
+}
+
+.chronicle-recents-list {
+  margin-top: var(--chronicle-space-md);
+}
+
 /* ---------- Legal pages (privacy) ---------- */
 .chronicle-legal {
   max-width: 760px;
@@ -556,6 +603,14 @@
   letter-spacing: 0.04em;
   color: var(--chronicle-gold);
   min-width: 3.5em;
+}
+
+/* Soft time-of-day label (no clock time) reads as a quieter hint. */
+.chronicle-entry-time--soft {
+  font-family: var(--chronicle-font-body);
+  font-style: italic;
+  letter-spacing: 0;
+  color: var(--chronicle-text-tertiary);
 }
 
 .chronicle-entry-text {

@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, Outlet, Link } from 'react-router-dom'
 import { useTripData } from './hooks/useTripData'
 import { TripNav } from './TripNav'
 import { TripChatDock } from './chat/TripChatDock'
 import { SaveErrorBanner } from './components/SaveErrorBanner'
+import { recordRecentTrip } from './recentTrips'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
 
 /** Start with the dock open on desktop-width screens, collapsed on mobile. */
@@ -22,6 +23,12 @@ export function TripShell() {
   const { id } = useParams<{ id: string }>()
   const { trip, location, loading, error } = useTripData(id ?? '')
   const [chatOpen, setChatOpen] = useState(initialChatOpen)
+
+  // Remember this trip for the homepage "Continue" list once it has a name.
+  const tripName = location?.displayName
+  useEffect(() => {
+    if (id && tripName) recordRecentTrip(id, tripName)
+  }, [id, tripName])
 
   if (!id) return null
 

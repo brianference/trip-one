@@ -23,6 +23,8 @@ export function ItineraryDayGroup({
           <ItineraryEntryRow
             key={`${item.time}-${item.text}-${index}`}
             item={item}
+            position={entryPos}
+            total={entries.length}
             isFirst={entryPos === 0}
             isLast={entryPos === entries.length - 1}
             onMoveEarlier={() => onMove(entries, entryPos, -1)}

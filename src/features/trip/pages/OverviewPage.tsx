@@ -1,18 +1,15 @@
-import { useNavigate } from 'react-router-dom'
-import type { PlanDay, ThingToDo } from '../../../lib/api/client'
 import { useTripContext } from '../useTripContext'
 import { useTripStore } from '../../../store/tripStore'
-import { useItineraryActions } from '../hooks/useItineraryActions'
 import { useForecast } from '../../weather/useForecast'
 import { useDailyForecast } from '../../weather/useDailyForecast'
 import { packingTips } from '../../weather/packingTips'
-import { AiPlanner } from '../components/AiPlanner'
 import { WeatherNow } from '../components/WeatherNow'
 import { ForecastStrip } from '../components/ForecastStrip'
 import { PackingTips } from '../components/PackingTips'
 import { LocalInfoCard } from '../components/LocalInfoCard'
 import { PreviewCard } from '../components/PreviewCard'
 import { TripMap } from '../components/TripMap'
+import { ShareTrip } from '../components/ShareTrip'
 
 const DEFAULT_FORECAST_DAYS = 5
 const NEXT_UP_COUNT = 3
@@ -31,8 +28,6 @@ export function OverviewPage() {
   const itinerary = useTripStore((s) => s.itinerary)
   const tripLengthDays = useTripStore((s) => s.tripLengthDays)
   const displayName = location?.displayName ?? trip.locationSlug
-  const navigate = useNavigate()
-  const { applyPlan } = useItineraryActions(trip.id)
 
   const { data: forecast } = useForecast(location?.lat ?? 0, location?.lng ?? 0)
   const { data: dailyForecast } = useDailyForecast(location?.lat ?? 0, location?.lng ?? 0, DEFAULT_FORECAST_DAYS)
@@ -41,14 +36,13 @@ export function OverviewPage() {
   const nextStops = itinerary.slice(0, NEXT_UP_COUNT)
   const nearby = location?.thingsToDo.slice(0, NEARBY_PREVIEW_COUNT) ?? []
 
-  function handleAiPlan(plan: PlanDay[], days: number, candidatePlaces: ThingToDo[]) {
-    applyPlan(plan, candidatePlaces, days)
-    navigate(`/trip/${trip.id}/itinerary`)
-  }
-
   return (
     <article className="chronicle-chapter">
-      <h1>{displayName}</h1>
+      <div className="chronicle-overview-header">
+        <h1>{displayName}</h1>
+        <ShareTrip tripId={trip.id} tripName={displayName} />
+      </div>
+      <p className="chronicle-save-hint">This link is your trip — bookmark or share it to come back. No account needed.</p>
 
       {location && (
         <PreviewCard title="Map & days" to={`/trip/${trip.id}/plan`} linkLabel="Open trip plan">
@@ -63,8 +57,6 @@ export function OverviewPage() {
           <PackingTips tips={tips} />
         </>
       )}
-
-      {location && <AiPlanner places={location.thingsToDo} defaultDays={tripLengthDays ?? 3} onPlan={handleAiPlan} />}
 
       <ul className="chronicle-quick-stats">
         <li>

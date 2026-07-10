@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { badgeFor, directionsUrl } from './badges'
+import { badgeFor, directionsUrl, roleFor, slotLabel } from './badges'
 
 describe('badgeFor', () => {
   it('labels a dinner-text item as Dinner regardless of type', () => {
@@ -22,5 +22,29 @@ describe('badgeFor', () => {
 describe('directionsUrl', () => {
   it('builds a real Google Maps directions URL for the destination', () => {
     expect(directionsUrl('Eiffel Tower')).toBe('https://www.google.com/maps/dir/?api=1&destination=Eiffel%20Tower')
+  })
+})
+
+describe('roleFor', () => {
+  it('maps categories to user-meaningful roles', () => {
+    expect(roleFor({ type: 'option', text: 'Museum', category: 'museum' }).label).toBe('Attraction')
+    expect(roleFor({ type: 'option', text: 'Sushi Ota', category: 'restaurant' }).label).toBe('Meal')
+    expect(roleFor({ type: 'option', text: 'Blue Bottle', category: 'cafe' }).label).toBe('Break')
+    expect(roleFor({ type: 'travel', text: 'Take the metro', category: undefined }).label).toBe('Transit')
+  })
+
+  it('reads meal intent from the text when the category is missing', () => {
+    expect(roleFor({ type: 'option', text: 'Dinner in Shinjuku', category: undefined }).label).toBe('Meal')
+  })
+})
+
+describe('slotLabel', () => {
+  it('distributes stops across the day', () => {
+    expect(slotLabel(0, 4)).toBe('Morning')
+    expect(slotLabel(3, 4)).toBe('Evening')
+  })
+
+  it('handles a single-stop day', () => {
+    expect(slotLabel(0, 1)).toBe('Morning')
   })
 })

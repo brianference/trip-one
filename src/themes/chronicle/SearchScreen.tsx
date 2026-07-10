@@ -6,15 +6,16 @@ import { logger } from '../../lib/logger'
 import { DEMO_TRIPS } from '../../lib/api/demoIds'
 import { buildStarterItinerary } from '../../lib/itinerary/buildStarterItinerary'
 import { HomeAiPlanner } from '../../features/trip/components/HomeAiPlanner'
+import { getRecentTrips } from '../../features/trip/recentTrips'
 
 const AUTOCOMPLETE_DEBOUNCE_MS = 300
 const AUTOCOMPLETE_MIN_LENGTH = 2
 
 const FEATURES = [
-  { title: 'Live weather', description: 'Current conditions and a real 5-day forecast the moment you search, so you know what to pack.' },
-  { title: 'A real trip page', description: 'Home, Itinerary, Map, Things to do, and Info — separate pages, not one long scroll to hunt through.' },
-  { title: 'Real things to do', description: 'Tripadvisor and Google Places, ranked by rating and how close they are.' },
-  { title: 'Starts pre-planned', description: 'Your itinerary auto-fills with the top-rated nearby spots the moment you search.' },
+  { title: 'Grounded AI', description: 'Describe your trip in a sentence and get a real day-by-day plan — every stop a real place, never invented.' },
+  { title: 'Day plan + map', description: 'One Plan page: the map, each day’s stops, and nearby places to add — toggle days to see the route.' },
+  { title: 'Real weather', description: 'Current conditions and a 5-day forecast, each day linking to its hourly forecast, plus packing tips.' },
+  { title: 'Refine by chat', description: 'Ask the assistant to add food, relax a day, or change destination — it re-plans from real places.' },
 ]
 
 /**
@@ -30,6 +31,8 @@ export function SearchScreen() {
   const navigate = useNavigate()
   const setTrip = useTripStore((s) => s.setTrip)
   const containerRef = useRef<HTMLDivElement>(null)
+  // Trips opened before on this device — a no-account "continue" list.
+  const [recentTrips] = useState(() => getRecentTrips())
   // Autocomplete should only fire from real typing. When we set the query
   // programmatically (selecting a suggestion, or submitting), this suppresses
   // the debounced re-fetch — otherwise the dropdown re-opened ~300ms after a
@@ -179,10 +182,29 @@ export function SearchScreen() {
         </div>
       </section>
 
+      {recentTrips.length > 0 && (
+        <section className="chronicle-recents" aria-labelledby="chronicle-recents-heading">
+          <p className="chronicle-kicker">Continue</p>
+          <h2 id="chronicle-recents-heading">Pick up where you left off.</h2>
+          <ul className="chronicle-ready-trips chronicle-recents-list">
+            {recentTrips.map((t) => (
+              <li key={t.id}>
+                <Link to={`/trip/${t.id}`} className="chronicle-ready-trip">
+                  <span className="chronicle-ready-trip-city">{t.name}</span>
+                  <span className="chronicle-ready-trip-blurb">Open your trip →</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="chronicle-features" aria-labelledby="chronicle-features-heading">
         <p className="chronicle-kicker">What you get</p>
         <h2 id="chronicle-features-heading">Four things, done well.</h2>
-        <p className="chronicle-section-sub">No dashboards to configure. No accounts. Search, and it's there.</p>
+        <p className="chronicle-section-sub">
+          Every stop is a real place from Google and Tripadvisor — never invented. No account, no signup.
+        </p>
         <div className="chronicle-feature-grid">
           {FEATURES.map((feature) => (
             <div className="chronicle-feature-tile" key={feature.title}>
