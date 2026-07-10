@@ -103,7 +103,13 @@ export function TripShell() {
       <TripChatDock trip={trip} location={mergedLocation} open={chatOpen} onOpenChange={setChatOpen} onAddPlaces={addPlaces} />
       <div className="chronicle-trip-header">
         <TripNav tripId={id} variant="pill" currentTempF={forecast?.temperatureF ?? null} />
-        <CurrencyTool code={currencyCode} rate={currencyRate} />
+        <div className="chronicle-header-utility">
+          <CurrencyTool code={currencyCode} rate={currencyRate} />
+          {/* Mobile chat launcher (the bottom nav hides the desktop FAB). */}
+          <button type="button" className="chronicle-header-chat" onClick={() => setChatOpen(true)} aria-label="Open the trip chat">
+            <span aria-hidden="true">✨</span> Chat
+          </button>
+        </div>
       </div>
       <SaveErrorBanner />
       <main className="chronicle-book">

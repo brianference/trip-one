@@ -34,18 +34,20 @@ describe('useTripChat', () => {
     expect(result.current.messages.map((m) => m.text)).toEqual(['a foodie trip', 'Here is your foodie trip.'])
   })
 
-  it('a "search" turn looks up real places nearby, adds them to the map, and re-plans with them', async () => {
+  it('a "search" turn looks up real places nearby, adds them to the map, and appends them to the itinerary', async () => {
     const sushi: ThingToDo = { name: 'Sushi Ota', category: 'restaurant', source: 'places', rating: 4.6, lat: 32.75, lng: -117.2 }
-    // First turn: the model asks to search; second turn (after augmenting the
-    // pool with the found sushi place) returns a grounded plan using index 0.
-    vi.spyOn(client, 'sendChat')
-      .mockResolvedValueOnce({ action: 'search', message: 'Let me find sushi…', days: null, destination: null, searchQuery: 'sushi restaurant' })
-      .mockResolvedValueOnce({ action: 'plan', message: 'Added a great sushi spot.', days: [{ day: 1, placeIndexes: [0] }], destination: null, searchQuery: null })
+    vi.spyOn(client, 'sendChat').mockResolvedValueOnce({
+      action: 'search',
+      message: 'Let me find sushi…',
+      days: null,
+      destination: null,
+      searchQuery: 'sushi restaurant',
+    })
     const searchSpy = vi.spyOn(client, 'searchPlacesNearby').mockResolvedValue([sushi])
-    const onApply = vi.fn()
     const onAddPlaces = vi.fn()
+    const onAddStops = vi.fn((ps: { name: string }[]) => ps.map((p, i) => ({ name: p.name, day: i + 1 })))
     const { result } = renderHook(() =>
-      useTripChat('t', places, 3, 'San Diego, California', onApply, vi.fn(), 32.7, -117.1, onAddPlaces),
+      useTripChat('t', places, 3, 'San Diego, California', vi.fn(), vi.fn(), 32.7, -117.1, onAddPlaces, onAddStops),
     )
 
     await act(async () => {
@@ -53,13 +55,12 @@ describe('useTripChat', () => {
     })
 
     expect(searchSpy).toHaveBeenCalledWith('sushi restaurant', 32.7, -117.1)
-    // The found sushi place is added to the map…
+    // The found sushi place is shown on the map…
     expect(onAddPlaces).toHaveBeenCalledWith([sushi])
-    // …and the re-plan applies with the sushi place first in the pool (index 0).
-    expect(onApply).toHaveBeenCalledTimes(1)
-    const [, pool] = onApply.mock.calls[0]
-    expect(pool[0].name).toBe('Sushi Ota')
-    expect(result.current.messages.some((m) => m.text.includes('Added: Sushi Ota'))).toBe(true)
+    // …and appended to the itinerary (one per day), with a concrete reply.
+    expect(onAddStops).toHaveBeenCalled()
+    expect(onAddStops.mock.calls[0][0][0].name).toBe('Sushi Ota')
+    expect(result.current.messages.some((m) => m.text.includes('Added Sushi Ota (Day 1)'))).toBe(true)
   })
 
   it('a "search" turn that finds nothing says so and does not apply a plan', async () => {

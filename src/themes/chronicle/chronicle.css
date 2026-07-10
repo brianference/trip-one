@@ -1311,18 +1311,45 @@ body:has(.chronicle-page) label {
   font-weight: 600;
 }
 
-/* Currency converter — a section inside the header card, set off by a hairline
-   divider rather than being its own separate card. */
+/* Utility cluster (currency + mobile chat button) inside the header card, set
+   off from the nav by a hairline divider on desktop. */
+.chronicle-header-utility {
+  display: flex;
+  align-items: center;
+  gap: var(--chronicle-space-sm);
+  flex: none;
+  padding-left: var(--chronicle-space-md);
+  border-left: 1px solid var(--chronicle-border-hairline);
+}
+
 .chronicle-currency-tool {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  flex: none;
-  padding-left: var(--chronicle-space-md);
-  border-left: 1px solid var(--chronicle-border-hairline);
   font-family: var(--chronicle-font-mono);
   font-size: 12px;
   color: var(--chronicle-text-secondary);
+}
+
+/* Chat launcher — hidden on desktop/tablet (the floating "Plan by chat" button
+   handles those); shown in the mobile bottom shell where the FAB would collide
+   with the tab bar. */
+.chronicle-header-chat {
+  display: none;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  min-height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--chronicle-radius-pill);
+  background: var(--chronicle-teal);
+  color: var(--chronicle-bg-canvas);
+  font-family: var(--chronicle-font-mono);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  cursor: pointer;
 }
 
 .chronicle-currency-eq strong {
@@ -2566,45 +2593,57 @@ body:has(.chronicle-page) label {
    a real app shell, so any page is one thumb-reach tap away. Reuses the same
    NavLinks (icon + label + active state); only its position changes. */
 @media (max-width: 720px) {
-  /* The nav detaches to the bottom bar, so the header is no longer a card — it
-     just carries the currency converter at the top. */
+  /* The whole header becomes a fixed bottom app shell: a utility strip
+     (currency + Chat launcher) stacked directly above the tab bar. */
   .chronicle-trip-header {
-    position: static;
-    display: flex;
-    justify-content: center;
-    margin: 0;
-    padding: 0;
-    background: none;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-  }
-
-  /* Currency stands alone as a small pill at the top (no divider/card context). */
-  .chronicle-currency-tool {
-    flex: none;
-    padding: 6px 12px;
-    border: 1px solid var(--chronicle-border-hairline);
-    border-radius: var(--chronicle-radius-pill);
-    background: var(--chronicle-bg-surface);
-  }
-
-  .chronicle-section-nav {
     position: fixed;
     top: auto;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 900;
-    margin: 0;
+    display: flex;
+    flex-direction: column-reverse; /* utility strip on top, tabs at the bottom */
     max-width: none;
-    gap: 0;
-    padding: 4px 0 calc(4px + env(safe-area-inset-bottom));
-    /* Re-add the bar surface (the base nav no longer carries card styling). */
+    margin: 0;
+    padding: 0 0 env(safe-area-inset-bottom);
     background: var(--chronicle-bg-surface);
+    border: none;
     border-top: 1px solid var(--chronicle-border-hairline);
     border-radius: 0;
     box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.12);
+  }
+
+  /* Hide the whole shell behind the full-screen chat sheet. */
+  body.trip-chat-open .chronicle-trip-header {
+    display: none;
+  }
+
+  /* Utility strip: currency (left) + Chat launcher (right), divided from tabs. */
+  .chronicle-header-utility {
+    width: 100%;
+    justify-content: space-between;
+    padding: 6px 12px;
+    border-left: none;
+    border-bottom: 1px solid var(--chronicle-border-hairline);
+  }
+
+  .chronicle-header-chat {
+    display: inline-flex;
+  }
+
+  /* The tab row is now a static child of the fixed shell (not itself fixed). */
+  .chronicle-section-nav {
+    position: static;
+    width: 100%;
+    margin: 0;
+    max-width: none;
+    gap: 0;
+    padding: 4px 0;
+    background: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
   }
 
   .chronicle-section-nav-item {
@@ -2625,23 +2664,23 @@ body:has(.chronicle-page) label {
     box-shadow: inset 0 2px 0 var(--chronicle-teal);
   }
 
-  /* The footer link row is redundant with the bottom tab bar. */
+  /* The footer link row is redundant with the bottom shell. */
   .chronicle-footer-links {
     display: none;
   }
 
-  /* Content clears the fixed bar (≈60px + safe area). */
+  /* Content clears the two-row bottom shell (utility ≈44 + tabs ≈56). */
   .chronicle-page {
-    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+    padding-bottom: calc(116px + env(safe-area-inset-bottom));
   }
 
-  /* Raise the chat FAB and the update toast above the tab bar. */
+  /* The floating FAB is replaced by the Chat button in the shell. */
   .chronicle-chat-fab {
-    bottom: calc(72px + env(safe-area-inset-bottom));
+    display: none;
   }
 
   .chronicle-update-toast {
-    bottom: calc(80px + env(safe-area-inset-bottom));
+    bottom: calc(124px + env(safe-area-inset-bottom));
   }
 
   /* When the full-screen chat sheet is open, the tab bar underneath is just

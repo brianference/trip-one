@@ -63,6 +63,7 @@ export function useTripChat(
   locationLat?: number,
   locationLng?: number,
   onAddPlaces?: (places: ThingToDo[]) => void,
+  onAddStops?: (places: { name: string; lat?: number; lng?: number; category?: string }[], dayCount: number) => { name: string; day: number }[],
 ) {
   // Seed from the homepage handoff, else a saved conversation, else a greeting.
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
@@ -150,32 +151,18 @@ export function useTripChat(
             return
           }
           onAddPlaces?.(found)
-          // Found places first (so the planner uses them), then the existing
-          // pool, deduped by name and capped to the request limit.
-          const seen = new Set<string>()
-          const augmented: ThingToDo[] = []
-          for (const p of [...found.slice(0, 15), ...candidatePlaces]) {
-            const key = p.name.toLowerCase()
-            if (seen.has(key)) continue
-            seen.add(key)
-            augmented.push(p)
-            if (augmented.length >= MAX_CANDIDATES) break
-          }
-          const result2 = await sendChat(
-            trimmed,
-            planDays,
-            augmented.map((p) => ({ name: p.name, category: p.category, rating: p.rating, lat: p.lat, lng: p.lng })),
-            { locationName, conversation: priorTurns, itinerary: currentPlan.length > 0 ? currentPlan : undefined },
-          )
-          let searchReply = result2.message || `Here are some ${query} spots I found nearby.`
-          if (result2.action === 'plan' && result2.days) {
-            onApplyPlan(result2.days, augmented, planDays)
-            const newNames = result2.days.flatMap((d) => d.placeIndexes.map((i) => augmented[i]?.name).filter((n): n is string => !!n))
-            const existing = new Set(currentItinerary.map((it) => it.text))
-            const added = newNames.filter((n) => !existing.has(n))
-            if (added.length > 0) searchReply += `\n\nAdded: ${added.join(', ')}.`
-          }
-          setMessages((prev) => [...prev, makeMessage('assistant', searchReply)])
+          // Add the top results directly, one per day across the trip. This is
+          // deterministic — asking the planner to re-plan around the results was
+          // unreliable (it sometimes searched again and added nothing), so the
+          // find always lands on real days now, with a concrete "Added: …" reply.
+          const dayCount = Math.max(planDays, 1)
+          const toAdd = found.slice(0, dayCount)
+          const added = onAddStops?.(toAdd, dayCount) ?? toAdd.map((p, i) => ({ name: p.name, day: (i % dayCount) + 1 }))
+          const list = added.map((a) => `${a.name} (Day ${a.day})`).join(', ')
+          setMessages((prev) => [
+            ...prev,
+            makeMessage('assistant', `Added ${list} — they're on your map and itinerary now. Tap any stop to see details and where it is.`),
+          ])
           return
         }
 
@@ -204,7 +191,7 @@ export function useTripChat(
         setIsThinking(false)
       }
     },
-    [messages, isThinking, places, days, locationName, onApplyPlan, onRelocate, locationLat, locationLng, onAddPlaces],
+    [messages, isThinking, places, days, locationName, onApplyPlan, onRelocate, locationLat, locationLng, onAddPlaces, onAddStops],
   )
 
   /** Confirms a pending destination change — rebuilds the trip and navigates. */

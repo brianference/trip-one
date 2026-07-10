@@ -39,7 +39,7 @@ export function TripChatDock({
   const { pathname } = useLocation()
   const itinerary = useTripStore((s) => s.itinerary)
   const tripLengthDays = useTripStore((s) => s.tripLengthDays)
-  const { applyPlan, restorePlan } = useItineraryActions(trip.id)
+  const { applyPlan, restorePlan, addStops } = useItineraryActions(trip.id)
   const places = location?.thingsToDo ?? []
   const [showToast, setShowToast] = useState(false)
   // The itinerary + length snapshotted just before the last chat-driven plan
@@ -60,6 +60,20 @@ export function TripChatDock({
       if (!pathname.endsWith('/plan')) navigate(`/trip/${trip.id}/plan`)
     },
     [applyPlan, pathname, navigate, trip.id],
+  )
+
+  // Same wrapper for a nearby-search add: snapshot for Undo, append the stops,
+  // flash the toast, and jump to the Plan page so the additions are visible.
+  const addStopsWithNav = useCallback(
+    (newPlaces: { name: string; lat?: number; lng?: number; category?: string }[], dayCount: number) => {
+      const store = useTripStore.getState()
+      setUndoSnapshot({ itinerary: store.itinerary, days: store.tripLengthDays })
+      const added = addStops(newPlaces, dayCount)
+      setShowToast(true)
+      if (!pathname.endsWith('/plan')) navigate(`/trip/${trip.id}/plan`)
+      return added
+    },
+    [addStops, pathname, navigate, trip.id],
   )
 
   const handleUndo = useCallback(() => {
@@ -106,6 +120,7 @@ export function TripChatDock({
     location?.lat,
     location?.lng,
     onAddPlaces,
+    addStopsWithNav,
   )
 
   return (

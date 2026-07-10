@@ -91,6 +91,30 @@ export function useItineraryActions(tripId: string) {
     persist(tripId, { itinerary: next })
   }
 
+  /**
+   * Appends several found places to the itinerary, spread one-per-day across the
+   * trip (round-robin), without re-clustering. Used by the chat's nearby search
+   * ("add a beach", "add sushi") so the results reliably land on real days and
+   * the chat can report exactly what went where. Returns each addition's day.
+   */
+  function addStops(newPlaces: { name: string; lat?: number; lng?: number; category?: string }[], dayCount: number): { name: string; day: number }[] {
+    const days = Math.max(dayCount, 1)
+    const additions: ItineraryItem[] = newPlaces.map((p, i) => ({
+      time: '',
+      text: p.name,
+      type: 'option',
+      q: p.name,
+      lat: p.lat,
+      lng: p.lng,
+      category: p.category,
+      day: (i % days) + 1,
+    }))
+    const next = [...itinerary, ...additions]
+    useTripStore.getState().setItinerary(next)
+    persist(tripId, { itinerary: next })
+    return additions.map((a) => ({ name: a.text, day: a.day ?? 1 }))
+  }
+
   function removeStop(index: number) {
     organizeAndPersist(
       itinerary.filter((_, i) => i !== index),
@@ -192,5 +216,5 @@ export function useItineraryActions(tripId: string) {
     persist(tripId, { itinerary: items, tripLengthDays: days })
   }
 
-  return { itinerary, tripLengthDays, adding, addStop, addFromThingToDo, addToDay, removeStop, moveStop, moveToDay, setStopTime, setTripLength, setStartDate, applyPlan, restorePlan }
+  return { itinerary, tripLengthDays, adding, addStop, addFromThingToDo, addToDay, addStops, removeStop, moveStop, moveToDay, setStopTime, setTripLength, setStartDate, applyPlan, restorePlan }
 }
