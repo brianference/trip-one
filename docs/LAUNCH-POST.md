@@ -5,21 +5,27 @@ are just section markers for editing and aren't meant to be posted._
 
 ---
 
-I built an AI trip planner that never makes up a place. It's live, it's free, and there's no signup: **https://trip-one.pages.dev**
+I built an AI trip planner where the AI never makes up a place. It's live, it's free, and there's no signup: **https://trip-one.pages.dev**
 
-Most "AI travel planners" hand you a confident itinerary full of restaurants that closed in 2019 or museums that never existed. Trip One takes the opposite bet. You describe your trip in one sentence, and it builds a real, day-by-day plan from actual places — then you refine the whole thing by chatting with it.
+Here's the whole loop: you describe your trip in one sentence — "a relaxed 4 days in Lisbon, food and history" — and an AI builds a real, day-by-day itinerary from actual nearby places. Then you **plan the rest by chatting with it**. "Add specialty coffee shops to each day." "Make it 9 days." "Move the museum to day two." "Actually, make it Rome." The assistant re-plans in seconds, tells you what it changed, and confirms before anything drastic.
 
-The core idea is **grounded generation**: the model never writes a place name. It's handed a numbered list of real places (from Google Places and Tripadvisor) and may only pick and order them by index. Anything outside the list gets dropped. So a bad or hallucinated response degrades to a smaller real plan, never a fake one. No invented restaurants, ratings, hours, or reviews.
+The part I care most about is how the AI is built. The core idea is **grounded generation**: the model never writes a place name. It's handed a numbered list of real places (from Google Places and Tripadvisor) and may only pick and order them by index. Anything outside the list is dropped. So a bad or hallucinated response degrades to a smaller real plan, never a fake one — no invented restaurants, ratings, hours, or reviews. The chat is fenced the same way: it can't claim it added a kind of place that isn't actually in the nearby list.
 
-The feature I'm proudest of: a **phrasebook in 32 languages with real neural text-to-speech**. Every phrase has a speaker button that pronounces it in the destination's own voice, so you can actually hear "where is the bathroom?" in Japanese, Thai, or Arabic instead of guessing at a romanization. Most apps fall back to the browser's robotic built-in voice, which mangles non-Latin scripts. Trip One serves pre-generated Microsoft Edge neural-TTS clips per phrase, and gracefully falls back to browser speech only if a clip can't load. It's a small thing that makes the app feel genuinely useful the moment you land somewhere.
+That combination — a genuinely conversational planner, with hard guardrails so it can't invent — is the thing most "AI travel" tools get wrong. They're either a static prompt-and-pray itinerary or a confident hallucination machine. This is neither.
 
-What else it does:
+**The AI, concretely**
 
-🗺️ One sentence in, a real day-by-day itinerary out, every stop an actual place nearby
-💬 Refine by chat: add food, add coffee, relax a day, move a stop to another day, extend the trip, or switch cities, and it re-plans from real places and confirms before it swaps your trip
-📍 Tap any stop for photos, ratings, reviews, hours, and directions, then add it straight to a specific day
-🧭 A map with per-day routes, walking distance and time per day, and per-day summary chips
-🌤️ Real current weather, a 5-day forecast, and packing tips for your dates
+💬 Conversational planning is the main interaction, not a gimmick: add or remove stops, change the pace, extend or shorten the trip, swap cities, add coffee or food — all in plain language, re-planned from real places
+🧠 Grounded generation: index-only, schema-validated model output with a normalization layer that drops anything ungrounded, so the failure mode is "less," never "wrong"
+✨ Every change is reviewable: the assistant lists what it added and confirms before it rebuilds or relocates your trip
+
+**Everything else it does**
+
+📍 Tap any stop for photos, ratings, reviews, hours, and directions, then add it to a specific day
+🧭 A map with per-day routes, walking distance and time per day, plus per-day summary chips
+🌤️ Real weather — current conditions in the nav, a 5-day forecast, and packing tips for your dates
+💱 A built-in currency converter for non-US destinations (type an amount, see the live local total)
+🗣️ A phrasebook in 32 languages with real neural text-to-speech, so you can actually hear "where is the bathroom?" in Japanese, Thai, or Arabic instead of guessing at a romanization
 📅 Export to your calendar (.ics) or a clean print/PDF
 📱 Mobile-first, no account, your trip is just a shareable link
 

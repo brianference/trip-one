@@ -3,6 +3,29 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v7.0.0 — Currency converter, live temp, real coffee, new wordmark
+
+### Added
+- **Currency converter in the header.** On non-US destinations, a compact
+  USD → local converter sits in the trip header — type an amount, see the live
+  local total (e.g. $1 = 6.77 CNY). Hidden for US/USD trips and when the rate
+  can't be fetched.
+- **Live temperature in the nav.** The Weather nav item now shows the
+  destination's current temperature, so conditions are visible from any page
+  without opening Weather.
+
+### Fixed
+- **"Add coffee shops" actually adds coffee shops.** Dedicated coffee shops
+  carry Google's `cafe` type and rarely surfaced in the restaurant search, so
+  they were never in the grounded candidate pool — the assistant would claim it
+  added them while nothing changed. The Places search now includes cafes, and
+  the chat is fenced from claiming it added a kind of place that isn't in the
+  real nearby list.
+
+### Changed
+- **New wordmark** — the logo is now set in Sora with the emphasis carried by
+  weight (light "Trip", bold "One") beside the Route Pin mark.
+
 ## v6.2.0 — Logo, chat length fix, hardening
 
 ### Fixed
