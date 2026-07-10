@@ -35,7 +35,7 @@ export function OverviewPage() {
   const { applyPlan } = useItineraryActions(trip.id)
 
   const { data: forecast } = useForecast(location?.lat ?? 0, location?.lng ?? 0)
-  const { data: dailyForecast } = useDailyForecast(location?.lat ?? 0, location?.lng ?? 0, tripLengthDays ?? DEFAULT_FORECAST_DAYS)
+  const { data: dailyForecast } = useDailyForecast(location?.lat ?? 0, location?.lng ?? 0, DEFAULT_FORECAST_DAYS)
   const tips = dailyForecast ? packingTips(dailyForecast) : []
 
   const nextStops = itinerary.slice(0, NEXT_UP_COUNT)
@@ -52,7 +52,7 @@ export function OverviewPage() {
       <WeatherNow forecast={forecast} />
       {dailyForecast && dailyForecast.length > 0 && (
         <>
-          <ForecastStrip days={dailyForecast} />
+          <ForecastStrip days={dailyForecast} displayName={displayName} />
           <PackingTips tips={tips} />
         </>
       )}

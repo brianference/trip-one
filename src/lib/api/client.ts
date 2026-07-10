@@ -162,7 +162,7 @@ export interface ChatResult {
 export async function sendChat(
   message: string,
   days: number,
-  places: { name: string; category: string; rating?: number }[],
+  places: { name: string; category: string; rating?: number; lat?: number; lng?: number }[],
   opts?: { locationName?: string; itinerary?: CurrentPlanDay[]; conversation?: PlanTurn[] },
 ): Promise<ChatResult> {
   const res = await fetch('/api/chat', {
@@ -220,7 +220,7 @@ export async function extractTripIntent(text: string): Promise<TripIntent> {
 export async function generatePlan(
   intent: string,
   days: number,
-  places: { name: string; category: string; rating?: number }[],
+  places: { name: string; category: string; rating?: number; lat?: number; lng?: number }[],
   opts?: { conversation?: PlanTurn[]; currentPlan?: CurrentPlanDay[] },
 ): Promise<PlanResult> {
   const res = await fetch('/api/plan', {

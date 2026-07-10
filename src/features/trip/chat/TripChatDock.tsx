@@ -1,5 +1,7 @@
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { LocationResult, Trip } from '../../../lib/api/client'
+import type { LocationResult, Trip, PlanDay } from '../../../lib/api/client'
+import type { ThingToDo } from '../../../lib/api/client'
 import { useTripStore } from '../../../store/tripStore'
 import { useItineraryActions } from '../hooks/useItineraryActions'
 import { useTripChat } from './useTripChat'
@@ -34,6 +36,23 @@ export function TripChatDock({
   const tripLengthDays = useTripStore((s) => s.tripLengthDays)
   const { applyPlan } = useItineraryActions(trip.id)
   const places = location?.thingsToDo ?? []
+  const [showToast, setShowToast] = useState(false)
+
+  // Wrap applyPlan so a chat-driven itinerary change always flashes a toast —
+  // otherwise, on a page other than the itinerary, the update is invisible.
+  const applyWithToast = useCallback(
+    (plan: PlanDay[], candidatePlaces: ThingToDo[], days: number) => {
+      applyPlan(plan, candidatePlaces, days)
+      setShowToast(true)
+    },
+    [applyPlan],
+  )
+
+  useEffect(() => {
+    if (!showToast) return
+    const t = setTimeout(() => setShowToast(false), 3000)
+    return () => clearTimeout(t)
+  }, [showToast])
 
   async function handleRelocate(destination: string, interests: string) {
     const built = await createTripForDestination(destination, interests, tripLengthDays)
@@ -49,10 +68,15 @@ export function TripChatDock({
     navigate(`/trip/${built.tripId}`)
   }
 
-  const chat = useTripChat(trip.id, places, tripLengthDays ?? 3, location?.displayName, applyPlan, handleRelocate)
+  const chat = useTripChat(trip.id, places, tripLengthDays ?? 3, location?.displayName, applyWithToast, handleRelocate)
 
   return (
     <>
+      {showToast && (
+        <div className="chronicle-update-toast" role="status">
+          ✓ Itinerary updated
+        </div>
+      )}
       {!open && (
         <button type="button" className="chronicle-chat-fab" onClick={() => onOpenChange(true)}>
           <span aria-hidden="true">✨</span> Plan by chat

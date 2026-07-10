@@ -17,7 +17,15 @@ const chatRequestSchema = z.object({
   days: z.number().int().min(1).max(14),
   locationName: z.string().max(200).optional(),
   places: z
-    .array(z.object({ name: z.string().min(1).max(200), category: z.string().min(1).max(100), rating: z.number().optional() }))
+    .array(
+      z.object({
+        name: z.string().min(1).max(200),
+        category: z.string().min(1).max(100),
+        rating: z.number().optional(),
+        lat: z.number().optional(),
+        lng: z.number().optional(),
+      }),
+    )
     .min(1)
     .max(40),
   itinerary: z

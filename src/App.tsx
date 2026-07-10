@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ThemeToggle } from './components/ThemeToggle'
+import { ScrollToTop } from './components/ScrollToTop'
 import { PrivacyPage } from './features/legal/PrivacyPage'
 import { SearchScreen } from './themes/chronicle/SearchScreen'
 import { TripShell } from './features/trip/TripShell'
@@ -20,6 +21,7 @@ import './themes/chronicle/chronicle.css'
 export default function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <ThemeToggle />
       <Routes>
         <Route

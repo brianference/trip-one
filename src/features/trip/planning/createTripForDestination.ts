@@ -41,7 +41,7 @@ export async function createTripForDestination(destination: string, interests: s
   const plan = await generatePlan(
     interests,
     days,
-    candidatePlaces.map((p) => ({ name: p.name, category: p.category, rating: p.rating })),
+    candidatePlaces.map((p) => ({ name: p.name, category: p.category, rating: p.rating, lat: p.lat, lng: p.lng })),
   )
   const itinerary = planToItinerary(plan.days, candidatePlaces)
   await updateTrip(trip.id, { itinerary, tripLengthDays: days })

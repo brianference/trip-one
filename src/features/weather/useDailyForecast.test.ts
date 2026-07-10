@@ -24,8 +24,8 @@ describe('useDailyForecast', () => {
     const { result } = renderHook(() => useDailyForecast(53.35, -6.26, 2))
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.data).toEqual([
-      { date: '2026-07-10', hiF: 75, loF: 55, condition: 'Overcast', precipPercent: 20 },
-      { date: '2026-07-11', hiF: 80, loF: 58, condition: 'Rain', precipPercent: 70 },
+      { date: '2026-07-10', hiF: 75, loF: 55, condition: 'Overcast', code: 3, precipPercent: 20 },
+      { date: '2026-07-11', hiF: 80, loF: 58, condition: 'Rain', code: 61, precipPercent: 70 },
     ])
   })
 

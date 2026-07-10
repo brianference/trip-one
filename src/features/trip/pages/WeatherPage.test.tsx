@@ -62,9 +62,9 @@ describe('WeatherPage', () => {
     expect(screen.getByRole('link', { name: /getting around/i })).toBeInTheDocument()
   })
 
-  it('requests at least a week of forecast even for a short trip', () => {
+  it('requests a 5-day forecast regardless of trip length', () => {
     mockContext()
-    useTripStore.setState({ itinerary: [], tripLengthDays: 2 })
+    useTripStore.setState({ itinerary: [], tripLengthDays: 9 })
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current: { temperature_2m: 52, weather_code: 3 } }) })
     vi.stubGlobal('fetch', fetchMock)
 
@@ -75,6 +75,6 @@ describe('WeatherPage', () => {
     )
 
     const dailyCall = fetchMock.mock.calls.find(([url]) => typeof url === 'string' && url.includes('daily='))
-    expect(dailyCall?.[0]).toContain('forecast_days=7')
+    expect(dailyCall?.[0]).toContain('forecast_days=5')
   })
 })

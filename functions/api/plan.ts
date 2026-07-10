@@ -28,6 +28,8 @@ const planRequestSchema = z.object({
         name: z.string().min(1).max(200),
         category: z.string().min(1).max(100),
         rating: z.number().optional(),
+        lat: z.number().optional(),
+        lng: z.number().optional(),
       }),
     )
     .min(1)

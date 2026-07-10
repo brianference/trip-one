@@ -98,7 +98,7 @@ export function useTripChat(
         const candidatePlaces = [...places]
           .sort((a, b) => (b.rating ?? -Infinity) - (a.rating ?? -Infinity))
           .slice(0, MAX_CANDIDATES)
-        const candidates = candidatePlaces.map((p) => ({ name: p.name, category: p.category, rating: p.rating }))
+        const candidates = candidatePlaces.map((p) => ({ name: p.name, category: p.category, rating: p.rating, lat: p.lat, lng: p.lng }))
         const currentPlan = summarizeItinerary(currentItinerary)
         const planDays = Math.max(days, MIN_TRIP_DAYS)
 

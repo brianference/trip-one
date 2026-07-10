@@ -7,6 +7,8 @@ export interface DailyForecast {
   hiF: number
   loF: number
   condition: string
+  /** Raw WMO weather code, used to pick the day's emoji (optional; display-only). */
+  code?: number
   precipPercent: number | null
 }
 
@@ -42,6 +44,7 @@ export function useDailyForecast(lat: number, lng: number, days: number) {
           hiF: daily.temperature_2m_max[i],
           loF: daily.temperature_2m_min[i],
           condition: WMO_CONDITIONS[daily.weather_code[i]] ?? 'Unknown',
+          code: daily.weather_code[i] ?? -1,
           precipPercent: daily.precipitation_probability_max?.[i] ?? null,
         }))
         setData(parsed)
