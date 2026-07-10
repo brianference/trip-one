@@ -26,11 +26,14 @@ export function TripChatDock({
   location,
   open,
   onOpenChange,
+  onAddPlaces,
 }: {
   trip: Trip
   location: LocationResult | null
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Adds places the chat found on demand (nearby search) to the map + pool. */
+  onAddPlaces?: (places: ThingToDo[]) => void
 }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -93,7 +96,17 @@ export function TripChatDock({
     navigate(`/trip/${built.tripId}`)
   }
 
-  const chat = useTripChat(trip.id, places, tripLengthDays ?? 3, location?.displayName, applyWithToast, handleRelocate)
+  const chat = useTripChat(
+    trip.id,
+    places,
+    tripLengthDays ?? 3,
+    location?.displayName,
+    applyWithToast,
+    handleRelocate,
+    location?.lat,
+    location?.lng,
+    onAddPlaces,
+  )
 
   return (
     <>

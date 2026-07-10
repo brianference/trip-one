@@ -41,7 +41,8 @@ That combination — a genuinely conversational planner, with hard guardrails so
 
 **API & data integrations**
 
-- 🗺️ Google Places — nearby attractions, restaurants and cafes, plus rich Place Details (photos, reviews, hours, phone)
+- 🧠 OpenAI (`gpt-4o-mini`) — the conversational planner and chat, with schema-validated, index-only (grounded) output so it can only order real places, never invent them
+- 🗺️ Google Places — nearby attractions, restaurants and cafes, on-demand text search for any kind of place, plus rich Place Details (photos, reviews, hours, phone)
 - 🧳 Tripadvisor — additional nearby points of interest
 - 🌍 OpenStreetMap / Nominatim — geocoding and location autocomplete
 - 🌤️ Open-Meteo — current conditions and multi-day forecast

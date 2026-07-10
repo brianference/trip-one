@@ -32,8 +32,13 @@ interface PlacesResult {
   types: string[]
   rating?: number
   vicinity?: string
+  /** Text Search returns a full address here rather than `vicinity`. */
+  formatted_address?: string
   geometry?: { location?: { lat?: number; lng?: number } }
 }
+
+// How many text-search results to keep (enough to fill a multi-day plan).
+const TEXT_SEARCH_LIMIT = 20
 
 /**
  * Category for a result, given which search it came from. For the restaurant
@@ -104,6 +109,49 @@ export async function searchPlaces(lat: number, lng: number, apiKey: string): Pr
     return merged
   } catch (err) {
     logger.error('places search failed', err)
+    return []
+  }
+}
+
+/** Category for a free-text result: promote a real food/drink type, else the first type. */
+function categorizeTextResult(types: string[]): string {
+  return FOOD_TYPES.find((t) => types.includes(t)) ?? types.find((t) => t !== 'point_of_interest' && t !== 'establishment') ?? types[0] ?? 'attraction'
+}
+
+/**
+ * Free-text Google Places search near a coordinate — "sushi restaurant",
+ * "rooftop bar", "vegan cafe", etc. — so the chat can add ANY kind of place the
+ * fixed nearby pool doesn't already cover. Returns real, correctly-typed
+ * results (never fabricated); fails soft to an empty list.
+ * @param query - The traveler's requested kind of place
+ * @param lat - Latitude to bias the search toward
+ * @param lng - Longitude to bias the search toward
+ * @param apiKey - Google Places API key
+ */
+export async function textSearchPlaces(query: string, lat: number, lng: number, apiKey: string): Promise<ThingToDo[]> {
+  const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${lat},${lng}&radius=${SEARCH_RADIUS_M}&key=${apiKey}`
+  try {
+    const res = await fetch(url)
+    if (!res.ok) {
+      logger.warn('places text search non-ok response', { status: res.status })
+      return []
+    }
+    const body = (await res.json()) as { results?: PlacesResult[] }
+    return (body.results ?? [])
+      .filter((item) => !(item.types ?? []).includes('lodging'))
+      .slice(0, TEXT_SEARCH_LIMIT)
+      .map((item) => ({
+        name: item.name,
+        category: categorizeTextResult(item.types ?? []),
+        source: 'places' as const,
+        rating: item.rating,
+        address: item.vicinity ?? item.formatted_address,
+        lat: item.geometry?.location?.lat,
+        lng: item.geometry?.location?.lng,
+        placeId: item.place_id,
+      }))
+  } catch (err) {
+    logger.error('places text search failed', err)
     return []
   }
 }

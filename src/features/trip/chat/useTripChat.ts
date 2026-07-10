@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { sendChat, type ThingToDo, type PlanDay, type PlanTurn, type CurrentPlanDay } from '../../../lib/api/client'
+import { sendChat, searchPlacesNearby, type ThingToDo, type PlanDay, type PlanTurn, type CurrentPlanDay } from '../../../lib/api/client'
 import type { ItineraryItem } from '../../../lib/validation/schemas'
 import { MIN_TRIP_DAYS } from '../planning/createTripForDestination'
 import { requestedDayCount } from '../../../lib/itinerary/requestedDays'
@@ -60,6 +60,9 @@ export function useTripChat(
   locationName: string | undefined,
   onApplyPlan: (plan: PlanDay[], candidatePlaces: ThingToDo[], days: number) => void,
   onRelocate: (destination: string, interests: string) => Promise<void>,
+  locationLat?: number,
+  locationLng?: number,
+  onAddPlaces?: (places: ThingToDo[]) => void,
 ) {
   // Seed from the homepage handoff, else a saved conversation, else a greeting.
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
@@ -131,6 +134,51 @@ export function useTripChat(
           return
         }
 
+        if (result.action === 'search' && result.searchQuery && locationLat != null && locationLng != null) {
+          // The traveler asked for a KIND of place the fixed pool doesn't cover
+          // (a cuisine, a venue type). Acknowledge, then look it up for real via
+          // Google Places, add the results to the map + candidate pool, and
+          // re-plan so the itinerary actually gets those places.
+          const query = result.searchQuery
+          setMessages((prev) => [...prev, makeMessage('assistant', result.message?.trim() || `Let me find some ${query} nearby…`)])
+          const found = await searchPlacesNearby(query, locationLat, locationLng)
+          if (found.length === 0) {
+            setMessages((prev) => [
+              ...prev,
+              makeMessage('assistant', `I couldn’t find ${query} near ${locationName ?? 'here'}. Want to try something else?`),
+            ])
+            return
+          }
+          onAddPlaces?.(found)
+          // Found places first (so the planner uses them), then the existing
+          // pool, deduped by name and capped to the request limit.
+          const seen = new Set<string>()
+          const augmented: ThingToDo[] = []
+          for (const p of [...found.slice(0, 15), ...candidatePlaces]) {
+            const key = p.name.toLowerCase()
+            if (seen.has(key)) continue
+            seen.add(key)
+            augmented.push(p)
+            if (augmented.length >= MAX_CANDIDATES) break
+          }
+          const result2 = await sendChat(
+            trimmed,
+            planDays,
+            augmented.map((p) => ({ name: p.name, category: p.category, rating: p.rating, lat: p.lat, lng: p.lng })),
+            { locationName, conversation: priorTurns, itinerary: currentPlan.length > 0 ? currentPlan : undefined },
+          )
+          let searchReply = result2.message || `Here are some ${query} spots I found nearby.`
+          if (result2.action === 'plan' && result2.days) {
+            onApplyPlan(result2.days, augmented, planDays)
+            const newNames = result2.days.flatMap((d) => d.placeIndexes.map((i) => augmented[i]?.name).filter((n): n is string => !!n))
+            const existing = new Set(currentItinerary.map((it) => it.text))
+            const added = newNames.filter((n) => !existing.has(n))
+            if (added.length > 0) searchReply += `\n\nAdded: ${added.join(', ')}.`
+          }
+          setMessages((prev) => [...prev, makeMessage('assistant', searchReply)])
+          return
+        }
+
         let replyText = result.message || 'Done — your itinerary is updated.'
         if (result.action === 'plan' && result.days) {
           onApplyPlan(result.days, candidatePlaces, planDays)
@@ -156,7 +204,7 @@ export function useTripChat(
         setIsThinking(false)
       }
     },
-    [messages, isThinking, places, days, locationName, onApplyPlan, onRelocate],
+    [messages, isThinking, places, days, locationName, onApplyPlan, onRelocate, locationLat, locationLng, onAddPlaces],
   )
 
   /** Confirms a pending destination change — rebuilds the trip and navigates. */

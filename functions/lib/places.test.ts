@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { searchPlaces } from './places'
+import { searchPlaces, textSearchPlaces } from './places'
 
 describe('places searchPlaces', () => {
   afterEach(() => vi.restoreAllMocks())
@@ -107,6 +107,37 @@ describe('places searchPlaces', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(dup))
     const results = await searchPlaces(40.4, -3.7, 'k')
     expect(results.filter((r) => r.name === 'Central Market')).toHaveLength(1)
+  })
+
+  it('text-searches for a specific kind of place and maps real results (with formatted_address)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        results: [
+          {
+            place_id: 's1',
+            name: 'Sushi Saito',
+            types: ['restaurant', 'food', 'point_of_interest'],
+            rating: 4.9,
+            formatted_address: '1-1 Roppongi, Tokyo',
+            geometry: { location: { lat: 35.66, lng: 139.73 } },
+          },
+          { place_id: 'h1', name: 'Hotel Sushi Bar', types: ['lodging', 'restaurant'] },
+        ],
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const results = await textSearchPlaces('sushi restaurant', 35.68, 139.76, 'k')
+    expect(fetchMock.mock.calls[0][0]).toContain('/textsearch/json')
+    expect(fetchMock.mock.calls[0][0]).toContain('query=sushi%20restaurant')
+    // The lodging result is dropped; the real sushi place is mapped as food.
+    expect(results.map((r) => r.name)).toEqual(['Sushi Saito'])
+    expect(results[0]).toMatchObject({ category: 'restaurant', source: 'places', rating: 4.9, address: '1-1 Roppongi, Tokyo', lat: 35.66, lng: 139.73, placeId: 's1' })
+  })
+
+  it('text search returns an empty array on a non-ok response instead of throwing', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) }))
+    expect(await textSearchPlaces('ramen', 0, 0, 'k')).toEqual([])
   })
 
   it('captures per-item lat/lng from the geometry.location field when present', async () => {

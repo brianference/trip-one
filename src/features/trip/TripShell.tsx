@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, Outlet, Link } from 'react-router-dom'
+import type { ThingToDo } from '../../lib/api/client'
 import { useTripData } from './hooks/useTripData'
 import { TripNav } from './TripNav'
 import { TripChatDock } from './chat/TripChatDock'
@@ -28,6 +29,24 @@ export function TripShell() {
   const { id } = useParams<{ id: string }>()
   const { trip, location, loading, error } = useTripData(id ?? '')
   const [chatOpen, setChatOpen] = useState(initialChatOpen)
+  // Places the chat found on demand (a nearby "sushi" / "rooftop bar" search)
+  // are merged into the location so they show on the map and stay available to
+  // later turns. Reset when switching trips.
+  const [extraPlaces, setExtraPlaces] = useState<ThingToDo[]>([])
+  useEffect(() => setExtraPlaces([]), [id])
+  const addPlaces = useCallback(
+    (found: ThingToDo[]) =>
+      setExtraPlaces((prev) => {
+        const seen = new Set([...prev, ...(location?.thingsToDo ?? [])].map((p) => p.name.toLowerCase()))
+        return [...prev, ...found.filter((p) => !seen.has(p.name.toLowerCase()))]
+      }),
+    [location],
+  )
+  const mergedLocation = useMemo(
+    () => (location ? { ...location, thingsToDo: [...location.thingsToDo, ...extraPlaces] } : null),
+    [location, extraPlaces],
+  )
+
   // Current temperature for the nav's Weather item — visible from any page.
   const { data: forecast } = useForecast(location?.lat ?? 0, location?.lng ?? 0)
   // Destination currency (for the header converter), resolved once here.
@@ -81,7 +100,7 @@ export function TripShell() {
 
   return (
     <div className={`chronicle-page chronicle-trip-page${chatOpen ? ' chronicle-trip-page--chat-open' : ''}`}>
-      <TripChatDock trip={trip} location={location} open={chatOpen} onOpenChange={setChatOpen} />
+      <TripChatDock trip={trip} location={mergedLocation} open={chatOpen} onOpenChange={setChatOpen} onAddPlaces={addPlaces} />
       <div className="chronicle-trip-header">
         <TripNav tripId={id} variant="pill" currentTempF={forecast?.temperatureF ?? null} />
         <CurrencyTool code={currencyCode} rate={currencyRate} />
@@ -89,7 +108,7 @@ export function TripShell() {
       <SaveErrorBanner />
       <main className="chronicle-book">
         <ErrorBoundary label="Trip">
-          <Outlet context={{ trip, location }} />
+          <Outlet context={{ trip, location: mergedLocation }} />
         </ErrorBoundary>
       </main>
       <footer className="chronicle-page-footer">

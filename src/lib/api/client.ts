@@ -142,13 +142,15 @@ export interface PlanResult {
   message: string
 }
 
-/** One conversational turn: a re-plan, a plain answer, or a request to switch destination. */
+/** One conversational turn: a re-plan, an answer, a destination switch, or a nearby search. */
 export interface ChatResult {
-  action: 'plan' | 'answer' | 'relocate'
+  action: 'plan' | 'answer' | 'relocate' | 'search'
   message: string
   days: PlanDay[] | null
   /** For `relocate`: the new destination to switch the trip to. */
   destination: string | null
+  /** For `search`: a phrase to look up nearby ("sushi restaurant") and add to the pool. */
+  searchQuery: string | null
 }
 
 /**
@@ -176,8 +178,35 @@ export async function sendChat(
   })
   const body = await res.json()
   if (!res.ok) throw new Error(body.error ?? 'failed to reach the assistant')
-  const action = body.action === 'plan' || body.action === 'relocate' ? body.action : 'answer'
-  return { action, message: typeof body.message === 'string' ? body.message : '', days: body.days ?? null, destination: body.destination ?? null }
+  const action =
+    body.action === 'plan' || body.action === 'relocate' || body.action === 'search' ? body.action : 'answer'
+  return {
+    action,
+    message: typeof body.message === 'string' ? body.message : '',
+    days: body.days ?? null,
+    destination: body.destination ?? null,
+    searchQuery: body.searchQuery ?? null,
+  }
+}
+
+/**
+ * Free-text search for real places of a given kind near a coordinate, via this
+ * app's `/api/places-search` proxy (Google Places Text Search server-side).
+ * Lets the chat add any kind of place — "sushi", "rooftop bar", "vegan cafe" —
+ * that the fixed nearby pool doesn't already cover. Fails soft to an empty list.
+ * @param query - The kind of place to find ("sushi restaurant")
+ * @param lat - Latitude to bias the search toward
+ * @param lng - Longitude to bias the search toward
+ */
+export async function searchPlacesNearby(query: string, lat: number, lng: number): Promise<ThingToDo[]> {
+  try {
+    const res = await fetch(`/api/places-search?q=${encodeURIComponent(query)}&lat=${lat}&lng=${lng}`)
+    if (!res.ok) return []
+    const body = (await res.json()) as { places?: ThingToDo[] }
+    return Array.isArray(body.places) ? body.places : []
+  } catch {
+    return []
+  }
 }
 
 export interface TripIntent {

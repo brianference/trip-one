@@ -34,10 +34,51 @@ describe('useTripChat', () => {
     expect(result.current.messages.map((m) => m.text)).toEqual(['a foodie trip', 'Here is your foodie trip.'])
   })
 
+  it('a "search" turn looks up real places nearby, adds them to the map, and re-plans with them', async () => {
+    const sushi: ThingToDo = { name: 'Sushi Ota', category: 'restaurant', source: 'places', rating: 4.6, lat: 32.75, lng: -117.2 }
+    // First turn: the model asks to search; second turn (after augmenting the
+    // pool with the found sushi place) returns a grounded plan using index 0.
+    vi.spyOn(client, 'sendChat')
+      .mockResolvedValueOnce({ action: 'search', message: 'Let me find sushi…', days: null, destination: null, searchQuery: 'sushi restaurant' })
+      .mockResolvedValueOnce({ action: 'plan', message: 'Added a great sushi spot.', days: [{ day: 1, placeIndexes: [0] }], destination: null, searchQuery: null })
+    const searchSpy = vi.spyOn(client, 'searchPlacesNearby').mockResolvedValue([sushi])
+    const onApply = vi.fn()
+    const onAddPlaces = vi.fn()
+    const { result } = renderHook(() =>
+      useTripChat('t', places, 3, 'San Diego, California', onApply, vi.fn(), 32.7, -117.1, onAddPlaces),
+    )
+
+    await act(async () => {
+      await result.current.send('add sushi places', [])
+    })
+
+    expect(searchSpy).toHaveBeenCalledWith('sushi restaurant', 32.7, -117.1)
+    // The found sushi place is added to the map…
+    expect(onAddPlaces).toHaveBeenCalledWith([sushi])
+    // …and the re-plan applies with the sushi place first in the pool (index 0).
+    expect(onApply).toHaveBeenCalledTimes(1)
+    const [, pool] = onApply.mock.calls[0]
+    expect(pool[0].name).toBe('Sushi Ota')
+    expect(result.current.messages.some((m) => m.text.includes('Added: Sushi Ota'))).toBe(true)
+  })
+
+  it('a "search" turn that finds nothing says so and does not apply a plan', async () => {
+    vi.spyOn(client, 'sendChat').mockResolvedValueOnce({ action: 'search', message: 'Looking…', days: null, destination: null, searchQuery: 'sushi restaurant' })
+    vi.spyOn(client, 'searchPlacesNearby').mockResolvedValue([])
+    const onApply = vi.fn()
+    const { result } = renderHook(() => useTripChat('t', places, 3, 'San Diego, California', onApply, vi.fn(), 32.7, -117.1, vi.fn()))
+
+    await act(async () => {
+      await result.current.send('add sushi', [])
+    })
+    expect(onApply).not.toHaveBeenCalled()
+    expect(result.current.messages.some((m) => /couldn.t find sushi restaurant/i.test(m.text))).toBe(true)
+  })
+
   it('a plan-edit applies the grounded plan and appends the reply', async () => {
     const chatSpy = vi
       .spyOn(client, 'sendChat')
-      .mockResolvedValue({ action: 'plan', message: 'Added Balboa Park.', days: [{ day: 1, placeIndexes: [0] }], destination: null })
+      .mockResolvedValue({ action: 'plan', message: 'Added Balboa Park.', days: [{ day: 1, placeIndexes: [0] }], destination: null, searchQuery: null })
     const onApply = vi.fn()
     const { result } = hook(onApply)
 
@@ -56,7 +97,7 @@ describe('useTripChat', () => {
   })
 
   it('an answer appends the reply WITHOUT changing the plan', async () => {
-    vi.spyOn(client, 'sendChat').mockResolvedValue({ action: 'answer', message: 'Balboa Park is great for kids.', days: null, destination: null })
+    vi.spyOn(client, 'sendChat').mockResolvedValue({ action: 'answer', message: 'Balboa Park is great for kids.', days: null, destination: null, searchQuery: null })
     const onApply = vi.fn()
     const { result } = hook(onApply)
 
@@ -74,6 +115,7 @@ describe('useTripChat', () => {
       message: 'Switching to Las Vegas!',
       days: null,
       destination: 'Las Vegas, Nevada',
+      searchQuery: null,
     })
     const onApply = vi.fn()
     const onRelocate = vi.fn().mockResolvedValue(undefined)
@@ -97,6 +139,7 @@ describe('useTripChat', () => {
       message: '',
       days: null,
       destination: 'Las Vegas, Nevada',
+      searchQuery: null,
     })
     const onRelocate = vi.fn().mockResolvedValue(undefined)
     const { result } = hook(vi.fn(), onRelocate)
@@ -117,6 +160,7 @@ describe('useTripChat', () => {
       message: '',
       days: null,
       destination: 'Las Vegas, Nevada',
+      searchQuery: null,
     })
     const onRelocate = vi.fn().mockResolvedValue(undefined)
     const { result } = hook(vi.fn(), onRelocate)
@@ -135,7 +179,7 @@ describe('useTripChat', () => {
   it('enforces the 3-day minimum when planning', async () => {
     const chatSpy = vi
       .spyOn(client, 'sendChat')
-      .mockResolvedValue({ action: 'plan', message: 'ok', days: [{ day: 1, placeIndexes: [0] }], destination: null })
+      .mockResolvedValue({ action: 'plan', message: 'ok', days: [{ day: 1, placeIndexes: [0] }], destination: null, searchQuery: null })
     const { result } = renderHook(() => useTripChat('t', places, 1, 'San Diego', vi.fn(), vi.fn()))
     await act(async () => {
       await result.current.send('plan it', [])
