@@ -2708,15 +2708,18 @@ body:has(.chronicle-page) label {
   fill: var(--chronicle-teal);
 }
 
+/* Wordmark: Sora, with the emphasis carried by weight (light "Trip", bold
+   "One") plus the teal accent — not color alone. */
 .chronicle-logo-word {
-  font-family: var(--chronicle-font-display);
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-family: 'Sora', var(--chronicle-font-body), sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.02em;
   color: var(--chronicle-text-primary);
   line-height: 1;
 }
 
 .chronicle-logo-one {
+  font-weight: 700;
   color: var(--chronicle-teal);
 }
 
