@@ -40,6 +40,26 @@ interface PlacesResult {
 // How many text-search results to keep (enough to fill a multi-day plan).
 const TEXT_SEARCH_LIMIT = 20
 
+// Google's text-search `location`+`radius` is only a BIAS, not a hard filter:
+// a query with few local matches ("aquarium" near a small island) happily
+// returns globally-famous ones (a Florida or Cleveland aquarium for a Corfu
+// trip). We hard-drop anything farther than this from the trip center so an
+// "added nearby" place is actually nearby. 80km is generous enough for a
+// national park's spread-out points of interest while still excluding results
+// on another continent.
+const TEXT_SEARCH_MAX_KM = 80
+
+/** Great-circle distance between two lat/lng points, in kilometres. */
+export function distanceKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
+  const R = 6371
+  const dLat = ((bLat - aLat) * Math.PI) / 180
+  const dLng = ((bLng - aLng) * Math.PI) / 180
+  const lat1 = (aLat * Math.PI) / 180
+  const lat2 = (bLat * Math.PI) / 180
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(h))
+}
+
 /**
  * Category for a result, given which search it came from. For the restaurant
  * search we promote any food type to the front (a real eatery often lists
@@ -139,6 +159,13 @@ export async function textSearchPlaces(query: string, lat: number, lng: number, 
     const body = (await res.json()) as { results?: PlacesResult[] }
     return (body.results ?? [])
       .filter((item) => !(item.types ?? []).includes('lodging'))
+      // Hard-drop results outside the trip's vicinity — text search only biases
+      // toward the coordinate, so far-flung matches slip in without this.
+      .filter((item) => {
+        const plat = item.geometry?.location?.lat
+        const plng = item.geometry?.location?.lng
+        return plat != null && plng != null && distanceKm(lat, lng, plat, plng) <= TEXT_SEARCH_MAX_KM
+      })
       .slice(0, TEXT_SEARCH_LIMIT)
       .map((item) => ({
         name: item.name,

@@ -73,20 +73,24 @@ export function PlaceDetailPanel({
   return (
     <div className="chronicle-place-overlay" role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
       <div className="chronicle-place-sheet" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="chronicle-place-close" onClick={onClose} aria-label="Close details">
-          ×
-        </button>
+        {/* Pinned header — the title and close button stay put while the body
+            scrolls, so the × is always reachable on a long review list. */}
+        <div className="chronicle-place-head">
+          <h2 className="chronicle-place-title">{title}</h2>
+          <button type="button" className="chronicle-place-close" onClick={onClose} aria-label="Close details">
+            ×
+          </button>
+        </div>
 
-        <h2 className="chronicle-place-title">{title}</h2>
+        <div className="chronicle-place-scroll">
+          {loading && <p className="chronicle-rate-line">Loading details…</p>}
+          {error && (
+            <p role="alert" className="chronicle-ai-error">
+              {error}
+            </p>
+          )}
 
-        {loading && <p className="chronicle-rate-line">Loading details…</p>}
-        {error && (
-          <p role="alert" className="chronicle-ai-error">
-            {error}
-          </p>
-        )}
-
-        {detail && (
+          {detail && (
           <div className="chronicle-place-body">
             {detail.photoRefs.length > 0 && (
               <div className="chronicle-place-photos">
@@ -161,41 +165,46 @@ export function PlaceDetailPanel({
               </div>
             )}
           </div>
-        )}
+          )}
+        </div>
 
-        {onAddToDay &&
-          (onPlanDay != null ? (
-            <div className="chronicle-place-plan">
-              <span className="chronicle-place-on-plan">✓ On Day {onPlanDay}</span>
-              {onRemoveFromPlan && (
-                <button type="button" className="chronicle-place-remove" onClick={onRemoveFromPlan}>
-                  Remove from trip
+        {/* Pinned action footer — the primary CTAs never hide under the mobile
+            nav bar or require scrolling the full review list to reach. */}
+        <div className="chronicle-place-foot">
+          {onAddToDay &&
+            (onPlanDay != null ? (
+              <div className="chronicle-place-plan">
+                <span className="chronicle-place-on-plan">✓ On Day {onPlanDay}</span>
+                {onRemoveFromPlan && (
+                  <button type="button" className="chronicle-place-remove" onClick={onRemoveFromPlan}>
+                    Remove from trip
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="chronicle-place-plan">
+                {dayCount && dayCount > 1 && (
+                  <label className="chronicle-place-day-pick">
+                    <span className="chronicle-sr-only">Day</span>
+                    <select value={pickDay} onChange={(e) => setPickDay(Number(e.target.value))}>
+                      {Array.from({ length: dayCount }, (_, i) => i + 1).map((d) => (
+                        <option key={d} value={d}>
+                          Day {d}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                <button type="button" className="chronicle-place-add" onClick={() => onAddToDay(dayCount && dayCount > 1 ? pickDay : 1)}>
+                  {dayCount && dayCount > 1 ? `Add to Day ${pickDay}` : 'Add to trip'}
                 </button>
-              )}
-            </div>
-          ) : (
-            <div className="chronicle-place-plan">
-              {dayCount && dayCount > 1 && (
-                <label className="chronicle-place-day-pick">
-                  <span className="chronicle-sr-only">Day</span>
-                  <select value={pickDay} onChange={(e) => setPickDay(Number(e.target.value))}>
-                    {Array.from({ length: dayCount }, (_, i) => i + 1).map((d) => (
-                      <option key={d} value={d}>
-                        Day {d}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-              <button type="button" className="chronicle-place-add" onClick={() => onAddToDay(dayCount && dayCount > 1 ? pickDay : 1)}>
-                {dayCount && dayCount > 1 ? `Add to Day ${pickDay}` : 'Add to trip'}
-              </button>
-            </div>
-          ))}
+              </div>
+            ))}
 
-        <a className="chronicle-place-directions" href={directionsHref} target="_blank" rel="noopener noreferrer">
-          Get Directions
-        </a>
+          <a className="chronicle-place-directions" href={directionsHref} target="_blank" rel="noopener noreferrer">
+            Get Directions
+          </a>
+        </div>
       </div>
     </div>
   )

@@ -7,6 +7,7 @@ import { TripChatDock } from './chat/TripChatDock'
 import { TripSkeleton } from './components/TripSkeleton'
 import { SaveErrorBanner } from './components/SaveErrorBanner'
 import { CurrencyTool } from './components/CurrencyTool'
+import { Logo } from '../../components/Logo'
 import { recordRecentTrip } from './recentTrips'
 import { useForecast } from '../weather/useForecast'
 import { currencyForDisplayName } from '../localinfo/currencyByCountry'
@@ -101,14 +102,25 @@ export function TripShell() {
   return (
     <div className={`chronicle-page chronicle-trip-page${chatOpen ? ' chronicle-trip-page--chat-open' : ''}`}>
       <TripChatDock trip={trip} location={mergedLocation} open={chatOpen} onOpenChange={setChatOpen} onAddPlaces={addPlaces} />
+      {/* Mobile-only compact top bar: brand + at-a-glance temp and currency.
+          Hidden on desktop, where the same currency lives in the header card. */}
+      <div className="chronicle-trip-topbar">
+        <Link to="/" className="chronicle-topbar-brand" aria-label="Trip One home">
+          <Logo size={20} />
+        </Link>
+        <div className="chronicle-topbar-meta">
+          {forecast?.temperatureF != null && (
+            <span className="chronicle-topbar-temp">
+              <span aria-hidden="true">☀</span> {Math.round(forecast.temperatureF)}°
+            </span>
+          )}
+          <CurrencyTool code={currencyCode} rate={currencyRate} />
+        </div>
+      </div>
       <div className="chronicle-trip-header">
         <TripNav tripId={id} variant="pill" currentTempF={forecast?.temperatureF ?? null} />
         <div className="chronicle-header-utility">
           <CurrencyTool code={currencyCode} rate={currencyRate} />
-          {/* Mobile chat launcher (the bottom nav hides the desktop FAB). */}
-          <button type="button" className="chronicle-header-chat" onClick={() => setChatOpen(true)} aria-label="Open the trip chat">
-            <span aria-hidden="true">✨</span> Chat
-          </button>
         </div>
       </div>
       <SaveErrorBanner />

@@ -140,6 +140,26 @@ describe('places searchPlaces', () => {
     expect(await textSearchPlaces('ramen', 0, 0, 'k')).toEqual([])
   })
 
+  it('drops text-search results outside the trip vicinity (bias, not filter, returns far-flung matches)', async () => {
+    // Searching "aquarium" near Corfu (39.62, 19.92): Google's text search
+    // biases but still returns globally-famous aquariums with no local match.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          results: [
+            { place_id: 'c', name: 'Corfu Aquarium', types: ['aquarium'], geometry: { location: { lat: 39.59, lng: 19.91 } } },
+            { place_id: 'f', name: 'The Florida Aquarium', types: ['aquarium'], geometry: { location: { lat: 27.94, lng: -82.44 } } },
+            { place_id: 'v', name: 'Greater Cleveland Aquarium', types: ['aquarium'], geometry: { location: { lat: 41.49, lng: -81.7 } } },
+          ],
+        }),
+      }),
+    )
+    const results = await textSearchPlaces('aquarium', 39.62, 19.92, 'k')
+    expect(results.map((r) => r.name)).toEqual(['Corfu Aquarium'])
+  })
+
   it('captures per-item lat/lng from the geometry.location field when present', async () => {
     vi.stubGlobal(
       'fetch',

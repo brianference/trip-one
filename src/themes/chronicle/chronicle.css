@@ -930,12 +930,11 @@
   color: var(--chronicle-teal);
 }
 
-/* Place detail: add-to-day / on-plan CTA */
+/* Place detail: add-to-day / on-plan CTA (first row of the pinned footer). */
 .chronicle-place-plan {
   display: flex;
   align-items: center;
   gap: var(--chronicle-space-sm);
-  margin-top: var(--chronicle-space-md);
 }
 
 .chronicle-place-day-pick select {
@@ -1331,25 +1330,59 @@ body:has(.chronicle-page) label {
   color: var(--chronicle-text-secondary);
 }
 
-/* Chat launcher — hidden on desktop/tablet (the floating "Plan by chat" button
-   handles those); shown in the mobile bottom shell where the FAB would collide
-   with the tab bar. */
-.chronicle-header-chat {
+/* Mobile-only top bar (brand + at-a-glance temp/currency). Hidden on desktop,
+   where the header card carries the currency and the page title is the brand.
+   Shown by the ≤720px block below as a slim sticky chrome strip. */
+.chronicle-trip-topbar {
   display: none;
+  position: sticky;
+  top: 0;
+  z-index: 40;
   align-items: center;
-  gap: 5px;
+  justify-content: space-between;
+  gap: var(--chronicle-space-sm);
+  /* Clear the fixed theme toggle (44px at right:12px) on the right edge. */
+  padding: 8px 64px 8px 14px;
+  background: var(--chronicle-bg-surface);
+  border-bottom: 1px solid var(--chronicle-border-hairline);
+}
+
+.chronicle-topbar-brand {
   flex: none;
-  min-height: 34px;
-  padding: 0 14px;
-  border: none;
-  border-radius: var(--chronicle-radius-pill);
-  background: var(--chronicle-teal);
-  color: var(--chronicle-bg-canvas);
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.chronicle-topbar-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.chronicle-topbar-temp {
+  flex: none;
   font-family: var(--chronicle-font-mono);
-  font-weight: 600;
   font-size: 12px;
-  letter-spacing: 0.03em;
-  cursor: pointer;
+  font-weight: 600;
+  color: var(--chronicle-gold);
+  white-space: nowrap;
+}
+
+/* Keep the compact converter on one line in the slim top bar. */
+.chronicle-topbar .chronicle-currency-tool {
+  gap: 4px;
+  font-size: 11px;
+}
+
+.chronicle-topbar .chronicle-currency-eq {
+  white-space: nowrap;
+}
+
+.chronicle-topbar .chronicle-currency-input {
+  width: 3.4em;
+  min-height: 28px;
 }
 
 .chronicle-currency-eq strong {
@@ -2232,11 +2265,15 @@ body:has(.chronicle-page) label {
 
 .chronicle-place-sheet {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: 560px;
-  max-height: 88vh;
-  overflow-y: auto;
-  padding: var(--chronicle-space-lg);
+  /* Cap the sheet to the visible viewport (dvh accounts for mobile browser
+     chrome) so the pinned header and footer are always on-screen; the body
+     between them scrolls. */
+  max-height: 88dvh;
+  overflow: hidden;
   background: var(--chronicle-bg-surface);
   border-radius: var(--chronicle-radius-lg) var(--chronicle-radius-lg) 0 0;
   animation: chronicle-place-slide 0.24s ease-out;
@@ -2251,10 +2288,34 @@ body:has(.chronicle-page) label {
   }
 }
 
+/* Pinned header: title + close button, always visible while the body scrolls. */
+.chronicle-place-head {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--chronicle-space-sm);
+  padding: var(--chronicle-space-lg) var(--chronicle-space-lg) var(--chronicle-space-sm);
+  border-bottom: 1px solid var(--chronicle-border-hairline);
+}
+
+/* The scrollable middle — everything between the pinned header and footer. */
+.chronicle-place-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--chronicle-space-md) var(--chronicle-space-lg);
+}
+
+/* Pinned footer: primary CTAs stay reachable without scrolling the reviews. */
+.chronicle-place-foot {
+  flex: none;
+  padding: var(--chronicle-space-md) var(--chronicle-space-lg) calc(var(--chronicle-space-md) + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--chronicle-border-hairline);
+  background: var(--chronicle-bg-surface);
+}
+
 .chronicle-place-close {
-  position: absolute;
-  top: var(--chronicle-space-sm);
-  right: var(--chronicle-space-sm);
+  flex: none;
   width: 44px;
   height: 44px;
   border: none;
@@ -2267,7 +2328,9 @@ body:has(.chronicle-page) label {
 }
 
 .chronicle-place-title {
-  margin: 0 48px 8px 0;
+  flex: 1;
+  margin: 0;
+  padding-top: 4px;
   font-family: var(--chronicle-font-display);
   font-weight: 900;
   font-style: italic;
@@ -2593,8 +2656,20 @@ body:has(.chronicle-page) label {
    a real app shell, so any page is one thumb-reach tap away. Reuses the same
    NavLinks (icon + label + active state); only its position changes. */
 @media (max-width: 720px) {
-  /* The whole header becomes a fixed bottom app shell: a utility strip
-     (currency + Chat launcher) stacked directly above the tab bar. */
+  /* Option D app shell: a slim brand/utility bar pinned to the top, a
+     tabs-only bar pinned to the bottom, and a floating Chat button between
+     them — chrome top and bottom, content (map-forward) in the middle. */
+  .chronicle-trip-topbar {
+    display: flex;
+  }
+
+  /* Hide the top bar behind the full-screen chat sheet. */
+  body.trip-chat-open .chronicle-trip-topbar {
+    display: none;
+  }
+
+  /* The header is now purely the bottom tab bar (currency moved to the top
+     bar; the Chat launcher is the floating FAB). */
   .chronicle-trip-header {
     position: fixed;
     top: auto;
@@ -2603,7 +2678,6 @@ body:has(.chronicle-page) label {
     bottom: 0;
     z-index: 900;
     display: flex;
-    flex-direction: column-reverse; /* utility strip on top, tabs at the bottom */
     max-width: none;
     margin: 0;
     padding: 0 0 env(safe-area-inset-bottom);
@@ -2619,20 +2693,12 @@ body:has(.chronicle-page) label {
     display: none;
   }
 
-  /* Utility strip: currency (left) + Chat launcher (right), divided from tabs. */
+  /* Currency lives in the top bar on mobile — drop it from the bottom bar. */
   .chronicle-header-utility {
-    width: 100%;
-    justify-content: space-between;
-    padding: 6px 12px;
-    border-left: none;
-    border-bottom: 1px solid var(--chronicle-border-hairline);
+    display: none;
   }
 
-  .chronicle-header-chat {
-    display: inline-flex;
-  }
-
-  /* The tab row is now a static child of the fixed shell (not itself fixed). */
+  /* The tab row fills the fixed bottom bar. */
   .chronicle-section-nav {
     position: static;
     width: 100%;
@@ -2669,18 +2735,26 @@ body:has(.chronicle-page) label {
     display: none;
   }
 
-  /* Content clears the two-row bottom shell (utility ≈44 + tabs ≈56). */
+  /* Content clears the single-row bottom tab bar (≈57px + safe area). */
   .chronicle-page {
-    padding-bottom: calc(116px + env(safe-area-inset-bottom));
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
   }
 
-  /* The floating FAB is replaced by the Chat button in the shell. */
-  .chronicle-chat-fab {
-    display: none;
+  /* Float the Chat launcher just above the tab bar (Option D), instead of
+     hiding it — it's the only way to reach the chat on mobile. The
+     .chronicle-trip-page prefix lifts specificity above the base
+     .chronicle-chat-fab rule, which is defined later in the file (media
+     queries don't add specificity, so source order would otherwise win). */
+  .chronicle-trip-page .chronicle-chat-fab {
+    display: inline-flex;
+    left: auto;
+    right: 16px;
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    z-index: 905;
   }
 
   .chronicle-update-toast {
-    bottom: calc(124px + env(safe-area-inset-bottom));
+    bottom: calc(132px + env(safe-area-inset-bottom));
   }
 
   /* When the full-screen chat sheet is open, the tab bar underneath is just

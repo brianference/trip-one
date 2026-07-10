@@ -1,5 +1,11 @@
 import type { ThingToDo } from './mergeThingsToDo'
+import { distanceKm } from './places'
 import { logger } from '../../src/lib/logger'
+
+// Same vicinity cap as the Places text search: Tripadvisor's latLong is only a
+// bias, so a themed query with no local match returns far-flung results that
+// must be dropped before they land on the map as "nearby".
+const TA_TEXT_MAX_KM = 80
 
 /**
  * Search the Tripadvisor content API for attractions near a coordinate.
@@ -84,7 +90,11 @@ export async function textSearchThingsToDo(query: string, lat: number, lng: numb
         }
       }),
     )
-    return detailed.filter((x): x is ThingToDo => x !== null)
+    return detailed
+      .filter((x): x is ThingToDo => x !== null)
+      // Drop enriched hits that turned out to be on another continent; keep
+      // those without coordinates (they can't be far-flung on the map anyway).
+      .filter((x) => x.lat == null || x.lng == null || distanceKm(lat, lng, x.lat, x.lng) <= TA_TEXT_MAX_KM)
   } catch (err) {
     logger.error('tripadvisor text search failed', err)
     return []
