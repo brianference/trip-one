@@ -9,7 +9,7 @@ I built an AI trip planner where the AI never makes up a place. It's live, it's 
 
 Here's the whole loop: you describe your trip in one sentence — "a relaxed 4 days in Lisbon, food and history" — and an AI builds a real, day-by-day itinerary from actual nearby places. Then you **plan the rest by chatting with it**. "Add specialty coffee shops to each day." "Find a rooftop bar and a space museum." "Make it 9 days." "Move the museum to day two." "Actually, make it Rome." The assistant re-plans in seconds, tells you what it changed, and confirms before anything drastic.
 
-The part I care most about is how the AI is built. The core idea is **grounded generation**: the model never writes a place name. It's handed a numbered list of real places (from Google Places and Tripadvisor) and may only pick and order them by index. Anything outside the list is dropped. So a bad or hallucinated response degrades to a smaller real plan, never a fake one — no invented restaurants, ratings, hours, or reviews. The chat is fenced the same way: it can't claim it added a kind of place that isn't actually in the nearby list.
+The part I care most about is how the AI is built. The core idea is **grounded generation**: the model never writes a place name. It's handed a numbered list of real places (from Google Places and Tripadvisor) and may only pick and order them by index. Anything outside the list is dropped. So a bad or hallucinated response degrades to a smaller real plan, never a fake one — no invented restaurants, ratings, hours, or reviews. And when you ask for something the list doesn't have, it doesn't fake it and it doesn't refuse — it goes and searches for the real thing.
 
 That combination — a genuinely conversational planner, with hard guardrails so it can't invent — is the thing most "AI travel" tools get wrong. They're either a static prompt-and-pray itinerary or a confident hallucination machine. This is neither.
 
@@ -44,7 +44,7 @@ That combination — a genuinely conversational planner, with hard guardrails so
 
 - 🧠 OpenAI (`gpt-4o-mini`) — the conversational planner and chat, with schema-validated, index-only (grounded) output so it can only order real places, never invent them
 - 🗺️ Google Places — nearby attractions, restaurants and cafes, on-demand text search for any kind of place, plus rich Place Details (photos, reviews, hours, phone)
-- 🧳 Tripadvisor — additional nearby points of interest
+- 🧳 Tripadvisor — additional nearby points of interest, and a text-search fallback for niche/thematic queries
 - 🌍 OpenStreetMap / Nominatim — geocoding and location autocomplete
 - 🌤️ Open-Meteo — current conditions and multi-day forecast
 - 💱 Frankfurter — live currency conversion for the destination
