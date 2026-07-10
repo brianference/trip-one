@@ -1,10 +1,15 @@
 import { z } from 'zod'
 import type { Env } from '../lib/supabaseAdmin'
 import { textSearchPlaces } from '../lib/places'
+import { textSearchThingsToDo } from '../lib/tripadvisor'
 import { isRateLimited } from '../lib/rateLimitGuard'
 import { logger } from '../../src/lib/logger'
 
-type PlacesSearchEnv = Env & { GOOGLE_PLACES_API_KEY?: string }
+type PlacesSearchEnv = Env & { GOOGLE_PLACES_API_KEY?: string; TRIPADVISOR_API_KEY?: string }
+
+// Below this many Google hits, also pull Tripadvisor so niche/thematic queries
+// ("space museum", "planetarium") that Google misses still surface real results.
+const GOOGLE_ENOUGH = 5
 
 // Paid Google call; gated per IP like the other Places-backed endpoints.
 const PLACES_SEARCH_PER_HOUR = 600
@@ -40,7 +45,21 @@ export async function onRequestGet({ env, request }: { env: PlacesSearchEnv; req
   }
 
   try {
-    const places = await textSearchPlaces(parsed.data.q, parsed.data.lat, parsed.data.lng, env.GOOGLE_PLACES_API_KEY)
+    const { q, lat, lng } = parsed.data
+    const places = await textSearchPlaces(q, lat, lng, env.GOOGLE_PLACES_API_KEY)
+
+    // Fall back to (or supplement with) Tripadvisor for thematic/niche queries
+    // Google returns little for, deduping by name.
+    if (places.length < GOOGLE_ENOUGH && env.TRIPADVISOR_API_KEY) {
+      const fromTa = await textSearchThingsToDo(q, lat, lng, env.TRIPADVISOR_API_KEY)
+      const seen = new Set(places.map((p) => p.name.toLowerCase()))
+      for (const p of fromTa) {
+        if (seen.has(p.name.toLowerCase())) continue
+        seen.add(p.name.toLowerCase())
+        places.push(p)
+      }
+    }
+
     return json({ places }, 200)
   } catch (err) {
     logger.error('places search failed', err)

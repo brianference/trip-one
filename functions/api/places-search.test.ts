@@ -29,6 +29,27 @@ describe('GET /api/places-search', () => {
     expect(body.places[0].name).toBe('Sushi Saito')
   })
 
+  it('falls back to Tripadvisor when Google returns few results', async () => {
+    vi.stubGlobal('fetch', (url: string) => {
+      const u = String(url)
+      if (u.includes('/rest/v1/request_log')) {
+        return Promise.resolve({ ok: true, headers: new Headers({ 'content-range': '*/1' }), json: async () => [] })
+      }
+      if (u.includes('/textsearch/json')) return Promise.resolve({ ok: true, json: async () => ({ results: [] }) })
+      if (u.includes('tripadvisor.com') && u.includes('/location/search')) {
+        return Promise.resolve({ ok: true, json: async () => ({ data: [{ location_id: '42', name: 'Space Expo' }] }) })
+      }
+      if (u.includes('tripadvisor.com') && u.includes('/location/42/details')) {
+        return Promise.resolve({ ok: true, json: async () => ({ latitude: '52.24', longitude: '4.47', rating: '4.1', category: { name: 'museum' } }) })
+      }
+      throw new Error(`unexpected fetch to ${url}`)
+    })
+    const res = await onRequestGet({ env: { ...env, TRIPADVISOR_API_KEY: 'ta' }, request: req('https://x/api/places-search?q=space%20museum&lat=52.1&lng=5.2') } as never)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.places.map((p: { name: string }) => p.name)).toContain('Space Expo')
+  })
+
   it('rejects a missing query', async () => {
     const res = await onRequestGet({ env, request: req('https://x/api/places-search?lat=1&lng=2') } as never)
     expect(res.status).toBe(400)
