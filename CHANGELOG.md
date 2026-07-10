@@ -3,6 +3,17 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v5.1.0 — Tappable places, spoken phrasebook
+
+### Added
+- **Itinerary stops are links.** Every stop name — in the day list, under the map,
+  and in the Overview "up next" and "nearby" previews — opens the rich place
+  detail (photos, rating, reviews, hours, directions) instead of being plain text.
+- **Spoken phrasebook.** Each phrase has a speaker button that pronounces it in
+  the destination language's voice via the browser's speech synthesis (no audio
+  files, works across all 30+ languages); the romanization is stripped so the
+  native script is spoken. Hidden when the device has no speech support.
+
 ## v5.0.0 — Plan surfaces, editable itinerary, UTF-8 integrity
 
 The trip page becomes a real planning tool: you can build and edit the

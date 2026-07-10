@@ -22,6 +22,7 @@ export function TripMap({
   selectedDay: controlledDay,
   onSelectDay,
   showDayStops,
+  onSelectStop,
 }: {
   location: LocationResult
   itinerary: ItineraryItem[]
@@ -32,8 +33,10 @@ export function TripMap({
   /** Controlled selected day — when provided, the parent owns the day (so a stop list can share it). */
   selectedDay?: number
   onSelectDay?: (day: number) => void
-  /** Render the selected day's stops as a read-only bulleted list under the map. */
+  /** Render the selected day's stops as a bulleted list under the map. */
   showDayStops?: boolean
+  /** When set, each day stop becomes a button that opens the place's detail. */
+  onSelectStop?: (item: ItineraryItem) => void
 }) {
   const [internalDay, setInternalDay] = useState(1)
   const selectedDay = controlledDay ?? internalDay
@@ -80,7 +83,14 @@ export function TripMap({
             <ul>
               {dayStops.map((item, i) => (
                 <li key={`${item.text}-${i}`}>
-                  {item.time && <span className="chronicle-preview-time">{item.time}</span>} {item.text}
+                  {item.time && <span className="chronicle-preview-time">{item.time}</span>}{' '}
+                  {onSelectStop ? (
+                    <button type="button" className="chronicle-map-day-stop" onClick={() => onSelectStop(item)}>
+                      {item.text}
+                    </button>
+                  ) : (
+                    item.text
+                  )}
                 </li>
               ))}
             </ul>

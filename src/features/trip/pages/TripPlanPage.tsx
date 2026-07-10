@@ -105,6 +105,9 @@ export function TripPlanPage() {
             onMove={moveStop}
             onMoveToDay={moveToDay}
             onSetTime={setStopTime}
+            onOpen={(item) =>
+              setSelected(placeQueryFor({ name: item.text, lat: item.lat, lng: item.lng, category: item.category }))
+            }
             onRemove={removeStop}
           />
         ) : (

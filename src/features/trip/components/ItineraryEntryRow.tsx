@@ -17,6 +17,7 @@ export function ItineraryEntryRow({
   isFirst,
   isLast,
   dayCount,
+  onOpen,
   onMoveEarlier,
   onMoveLater,
   onMoveToDay,
@@ -29,6 +30,8 @@ export function ItineraryEntryRow({
   isFirst: boolean
   isLast: boolean
   dayCount: number
+  /** Opens the place's rich detail (photos, reviews, hours). Makes the name a link. */
+  onOpen?: () => void
   onMoveEarlier: () => void
   onMoveLater: () => void
   onMoveToDay: (day: number) => void
@@ -47,7 +50,13 @@ export function ItineraryEntryRow({
         <span data-testid={`timeline-dot-${item.type}`} style={{ background: DOT_COLOR[item.type] }} />
         <span className={`chronicle-entry-time${item.time?.trim() ? '' : ' chronicle-entry-time--soft'}`}>{timeLabel}</span>
         <span className={`chronicle-badge chronicle-badge--${badge.tone}`}>{badge.label}</span>
-        <span className="chronicle-entry-text">{item.text}</span>
+        {onOpen ? (
+          <button type="button" className="chronicle-entry-text chronicle-entry-text--link" onClick={onOpen} title={`Details for ${item.text}`}>
+            {item.text}
+          </button>
+        ) : (
+          <span className="chronicle-entry-text">{item.text}</span>
+        )}
         <a
           className="chronicle-directions-link"
           href={directionsUrl(item.q ?? item.text)}

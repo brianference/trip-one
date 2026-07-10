@@ -72,6 +72,19 @@ describe('ItineraryEntryRow', () => {
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
   })
 
+  it('renders the stop name as a plain span (not a button) when onOpen is not given', () => {
+    render(<ItineraryEntryRow {...base} item={{ time: '', text: 'Some Place', type: 'option' }} />)
+    expect(screen.queryByRole('button', { name: 'Some Place' })).not.toBeInTheDocument()
+    expect(screen.getByText('Some Place')).toBeInTheDocument()
+  })
+
+  it('opens the place detail when the name link is clicked', () => {
+    const onOpen = vi.fn()
+    render(<ItineraryEntryRow {...base} item={{ time: '', text: 'Some Place', type: 'option' }} onOpen={onOpen} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Some Place' }))
+    expect(onOpen).toHaveBeenCalled()
+  })
+
   it('calls onRemove when the remove button is clicked', () => {
     const onRemove = vi.fn()
     render(<ItineraryEntryRow {...base} item={{ time: '08:00', text: 'Drop me', type: 'option' }} onRemove={onRemove} />)

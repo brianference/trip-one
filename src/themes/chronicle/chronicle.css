@@ -466,6 +466,41 @@
   font-family: var(--chronicle-font-body);
   font-size: 15px;
   color: var(--chronicle-text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--chronicle-space-sm);
+}
+
+.chronicle-phrase-translation {
+  flex: 1;
+}
+
+/* Speaker button: speaks the phrase in the destination language's voice. */
+.chronicle-phrase-speak {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--chronicle-border-hairline);
+  background: var(--chronicle-bg-surface-2);
+  color: var(--chronicle-text-secondary);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chronicle-phrase-speak:hover,
+.chronicle-phrase-speak:focus-visible {
+  border-color: var(--chronicle-teal);
+  background: color-mix(in srgb, var(--chronicle-teal) 12%, transparent);
+}
+
+.chronicle-phrase-speak:active {
+  transform: scale(0.94);
 }
 
 .chronicle-phrasebook-fallback-link {
@@ -2574,6 +2609,38 @@ body:has(.chronicle-page) label {
   font-size: 14px;
   line-height: 1.6;
   color: var(--chronicle-text-primary);
+}
+
+/* A place name rendered as an in-text link that opens the rich place detail.
+   Shared by the itinerary rows, the under-map day stops, and the Overview
+   preview lists — reads as a link, not a button chip. */
+.chronicle-entry-text--link,
+.chronicle-map-day-stop,
+.chronicle-preview-link {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--chronicle-teal);
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--chronicle-teal) 40%, transparent);
+  text-underline-offset: 2px;
+}
+
+.chronicle-entry-text--link {
+  flex: 1;
+}
+
+.chronicle-entry-text--link:hover,
+.chronicle-entry-text--link:focus-visible,
+.chronicle-map-day-stop:hover,
+.chronicle-map-day-stop:focus-visible,
+.chronicle-preview-link:hover,
+.chronicle-preview-link:focus-visible {
+  color: var(--chronicle-teal-hover);
+  text-decoration-color: currentColor;
 }
 
 /* The consolidated plan page's per-day section; pulses briefly when it changes

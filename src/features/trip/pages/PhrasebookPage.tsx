@@ -12,7 +12,8 @@ import { Phrasebook } from '../components/Phrasebook'
 export function PhrasebookPage() {
   const { trip, location } = useTripContext()
   const displayName = location?.displayName ?? trip.locationSlug
-  const phrases = phrasesForLanguage(languageForDisplayName(displayName))
+  const language = languageForDisplayName(displayName)
+  const phrases = phrasesForLanguage(language)
 
   return (
     <article className="chronicle-chapter">
@@ -20,7 +21,7 @@ export function PhrasebookPage() {
       {phrases && phrases.length > 0 ? (
         <>
           <p className="chronicle-rate-line">A few useful phrases for {displayName}.</p>
-          <Phrasebook phrases={phrases} />
+          <Phrasebook phrases={phrases} language={language} />
         </>
       ) : (
         <p className="chronicle-rate-line">

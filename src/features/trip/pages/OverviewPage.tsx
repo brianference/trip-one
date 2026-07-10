@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTripContext } from '../useTripContext'
 import { useTripStore } from '../../../store/tripStore'
 import { useForecast } from '../../weather/useForecast'
@@ -10,6 +11,9 @@ import { LocalInfoCard } from '../components/LocalInfoCard'
 import { PreviewCard } from '../components/PreviewCard'
 import { TripMap } from '../components/TripMap'
 import { ShareTrip } from '../components/ShareTrip'
+import { PlaceDetailPanel } from '../place/PlaceDetailPanel'
+import { usePlaceDetail, type PlaceQuery } from '../place/usePlaceDetail'
+import { placeQueryFor } from '../place/placeQuery'
 
 const DEFAULT_FORECAST_DAYS = 5
 const NEXT_UP_COUNT = 3
@@ -36,6 +40,9 @@ export function OverviewPage() {
   const nextStops = itinerary.slice(0, NEXT_UP_COUNT)
   const nearby = location?.thingsToDo.slice(0, NEARBY_PREVIEW_COUNT) ?? []
 
+  const [selected, setSelected] = useState<PlaceQuery | null>(null)
+  const { detail, loading, error } = usePlaceDetail(selected)
+
   return (
     <article className="chronicle-chapter">
       <div className="chronicle-overview-header">
@@ -46,7 +53,16 @@ export function OverviewPage() {
 
       {location && (
         <PreviewCard title="Map & days" to={`/trip/${trip.id}/plan`} linkLabel="Open trip plan">
-          <TripMap location={location} itinerary={itinerary} tripLengthDays={tripLengthDays} height={220} showDayStops />
+          <TripMap
+            location={location}
+            itinerary={itinerary}
+            tripLengthDays={tripLengthDays}
+            height={220}
+            showDayStops
+            onSelectStop={(item) =>
+              setSelected(placeQueryFor({ name: item.text, lat: item.lat, lng: item.lng, category: item.category }))
+            }
+          />
         </PreviewCard>
       )}
 
@@ -77,7 +93,14 @@ export function OverviewPage() {
           <ul className="chronicle-preview-list">
             {nextStops.map((item, i) => (
               <li key={`${item.text}-${i}`}>
-                {item.time && <span className="chronicle-preview-time">{item.time}</span>} {item.text}
+                {item.time && <span className="chronicle-preview-time">{item.time}</span>}{' '}
+                <button
+                  type="button"
+                  className="chronicle-preview-link"
+                  onClick={() => setSelected(placeQueryFor({ name: item.text, lat: item.lat, lng: item.lng, category: item.category }))}
+                >
+                  {item.text}
+                </button>
               </li>
             ))}
           </ul>
@@ -93,7 +116,11 @@ export function OverviewPage() {
         <PreviewCard title="Nearby" to={`/trip/${trip.id}/things-to-do`} linkLabel="Browse all things to do">
           <ul className="chronicle-preview-list">
             {nearby.map((item) => (
-              <li key={item.name}>{item.name}</li>
+              <li key={item.name}>
+                <button type="button" className="chronicle-preview-link" onClick={() => setSelected(placeQueryFor(item))}>
+                  {item.name}
+                </button>
+              </li>
             ))}
           </ul>
         </PreviewCard>
@@ -102,6 +129,10 @@ export function OverviewPage() {
       <PreviewCard title="Local info" to={`/trip/${trip.id}/weather`} linkLabel="Weather & info">
         <LocalInfoCard displayName={displayName} />
       </PreviewCard>
+
+      {selected && (
+        <PlaceDetailPanel query={selected} detail={detail} loading={loading} error={error} onClose={() => setSelected(null)} />
+      )}
     </article>
   )
 }
