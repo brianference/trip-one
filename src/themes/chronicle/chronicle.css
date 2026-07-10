@@ -2796,6 +2796,13 @@ body:has(.chronicle-page) label {
   border: 0;
 }
 
+/* Contain Leaflet's internal z-indexes (its controls/attribution use z-index
+   1000, which otherwise paints OVER the fixed mobile bottom shell). isolate
+   makes the whole map a single stacking context in normal flow. */
+.leaflet-container {
+  isolation: isolate;
+}
+
 /* ---------- Logo ---------- */
 .chronicle-logo {
   display: inline-flex;
