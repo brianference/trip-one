@@ -114,7 +114,7 @@ export function TripShell() {
               <span aria-hidden="true">☀</span> {Math.round(forecast.temperatureF)}°
             </span>
           )}
-          <CurrencyTool code={currencyCode} rate={currencyRate} />
+          <CurrencyTool code={currencyCode} rate={currencyRate} variant="compact" />
         </div>
       </div>
       <div className="chronicle-trip-header">

@@ -22,4 +22,12 @@ describe('CurrencyTool', () => {
     fireEvent.change(screen.getByLabelText('Amount in US dollars'), { target: { value: '10' } })
     expect(screen.getByText('9.2')).toBeInTheDocument()
   })
+
+  it('compact variant shows a static "$1 = rate CODE" chip with no input box', () => {
+    render(<CurrencyTool code="EUR" rate={0.87} variant="compact" />)
+    expect(screen.getByText('0.87')).toBeInTheDocument()
+    expect(screen.getByText(/\$1 =/)).toBeInTheDocument()
+    // No editable input in the slim top bar (that pushed the result off-screen).
+    expect(screen.queryByLabelText('Amount in US dollars')).not.toBeInTheDocument()
+  })
 })

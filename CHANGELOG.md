@@ -3,6 +3,16 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v9.0.1 — Mobile top-bar currency fix
+
+### Fixed
+- **Currency fits the mobile top bar.** The converter rendered its editable
+  input in the slim top bar, which pushed the "= 0.87 EUR" result off the right
+  edge of the screen on narrower phones. The top bar now shows a compact static
+  rate chip ("💱 $1 = 0.87 EUR"); the full interactive converter stays in the
+  desktop header. (A mis-typed CSS class prefix had also stopped the earlier
+  tightening rules from applying — corrected.)
+
 ## v9.0.0 — Mobile app shell
 
 ### Added

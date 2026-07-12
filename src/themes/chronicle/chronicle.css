@@ -1370,19 +1370,17 @@ body:has(.chronicle-page) label {
   white-space: nowrap;
 }
 
-/* Keep the compact converter on one line in the slim top bar. */
-.chronicle-topbar .chronicle-currency-tool {
-  gap: 4px;
-  font-size: 11px;
-}
-
-.chronicle-topbar .chronicle-currency-eq {
+/* The slim top bar shows a static rate chip ("💱 $1 = 0.87 EUR"), not the
+   interactive converter — an input box pushed the result off small screens. */
+.chronicle-currency-tool--compact {
   white-space: nowrap;
+  font-size: 11.5px;
+  gap: 4px;
 }
 
-.chronicle-topbar .chronicle-currency-input {
-  width: 3.4em;
-  min-height: 28px;
+.chronicle-currency-tool--compact .chronicle-currency-eq {
+  white-space: nowrap;
+  color: var(--chronicle-text-secondary);
 }
 
 .chronicle-currency-eq strong {
