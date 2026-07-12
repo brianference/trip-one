@@ -52,7 +52,7 @@ export function OverviewPage() {
       <p className="chronicle-save-hint">This link is your trip — bookmark or share it to come back. No account needed.</p>
 
       {location && (
-        <PreviewCard title="Map & days" to={`/trip/${trip.id}/plan`} linkLabel="Open trip plan">
+        <PreviewCard title="Map & days" to={`/trip/${trip.id}/plan`} linkLabel="Open trip plan" bleed>
           <TripMap
             location={location}
             itinerary={itinerary}

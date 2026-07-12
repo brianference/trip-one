@@ -23,9 +23,10 @@ describe('CurrencyTool', () => {
     expect(screen.getByText('9.2')).toBeInTheDocument()
   })
 
-  it('compact variant shows a static "$1 = rate CODE" chip with no input box', () => {
+  it('compact variant shows a static "$1 = €rate" chip (currency symbol) with no input box', () => {
     render(<CurrencyTool code="EUR" rate={0.87} variant="compact" />)
-    expect(screen.getByText('0.87')).toBeInTheDocument()
+    // Renders the currency symbol and value (e.g. "€0.87"), not the ISO code.
+    expect(screen.getByText(/€0\.87/)).toBeInTheDocument()
     expect(screen.getByText(/\$1 =/)).toBeInTheDocument()
     // No editable input in the slim top bar (that pushed the result off-screen).
     expect(screen.queryByLabelText('Amount in US dollars')).not.toBeInTheDocument()

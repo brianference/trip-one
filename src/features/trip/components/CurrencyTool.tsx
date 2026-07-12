@@ -19,13 +19,18 @@ export function CurrencyTool({ code, rate, variant = 'full' }: { code: string; r
   if (code === 'USD' || rate === null) return null
 
   if (variant === 'compact') {
-    const rounded = rate.toLocaleString(undefined, { maximumFractionDigits: 2 })
+    // Format the rate in the destination currency so it shows the real symbol
+    // (€, £, ¥…) rather than the ISO code, matching the wordmark's clean look.
+    const local = (() => {
+      try {
+        return rate.toLocaleString(undefined, { style: 'currency', currency: code, maximumFractionDigits: 2 })
+      } catch {
+        return `${rate.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${code}`
+      }
+    })()
     return (
-      <span className="chronicle-currency-tool chronicle-currency-tool--compact" aria-label={`One US dollar is about ${rounded} ${code}`}>
-        <span className="chronicle-currency-icon" aria-hidden="true">💱</span>
-        <span className="chronicle-currency-eq">
-          $1 = <strong>{rounded}</strong> {code}
-        </span>
+      <span className="chronicle-currency-tool chronicle-currency-tool--compact" aria-label={`One US dollar is about ${local}`}>
+        $1 = <strong>{local}</strong>
       </span>
     )
   }

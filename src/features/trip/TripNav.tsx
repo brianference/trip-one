@@ -1,12 +1,15 @@
 import { NavLink } from 'react-router-dom'
 
-const ICON_PROPS = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
+// Lighter, cohesive line icons (Lucide-style, 1.75 stroke) — crisper at tab
+// size than the old 2px glyphs, and Phrasebook uses a translate mark so it
+// doesn't read as a duplicate of the Chat speech-bubble.
+const ICON_PROPS = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.75, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
 
 function HomeIcon() {
   return (
     <svg {...ICON_PROPS} aria-hidden="true">
-      <path d="M3 11.5 12 4l9 7.5" />
-      <path d="M5 10v10h14V10" />
+      <path d="m3 10.4 9-7 9 7" />
+      <path d="M5 9v10.5a.5.5 0 0 0 .5.5H9v-6h6v6h3.5a.5.5 0 0 0 .5-.5V9" />
     </svg>
   )
 }
@@ -14,8 +17,8 @@ function HomeIcon() {
 function MapIcon() {
   return (
     <svg {...ICON_PROPS} aria-hidden="true">
-      <path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z" />
-      <path d="M9 4v14M15 6v14" />
+      <path d="m9 4-6 2.2v13.6l6-2.2 6 2.2 6-2.2V3.8l-6 2.2z" />
+      <path d="M9 4v13.6M15 6.4V20" />
     </svg>
   )
 }
@@ -23,8 +26,9 @@ function MapIcon() {
 function WeatherIcon() {
   return (
     <svg {...ICON_PROPS} aria-hidden="true">
-      <path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.6 1.5A3.5 3.5 0 0 0 6.5 19Z" />
-      <path d="M8 5.5 8.7 6.7M12 3v1.5M16 5.5l-.7 1.2" />
+      <circle cx="8" cy="8.5" r="3.2" />
+      <path d="M8 2.6v1.4M3.4 8.5H2M8 13v1.4M13 8.5h1.4M4.6 5.1 3.6 4.1M12.4 5.1l1-1" />
+      <path d="M17.5 20a4 4 0 0 0 .2-8 5 5 0 0 0-9.4-.6A3.5 3.5 0 0 0 8.5 20z" />
     </svg>
   )
 }
@@ -32,8 +36,11 @@ function WeatherIcon() {
 function PhraseIcon() {
   return (
     <svg {...ICON_PROPS} aria-hidden="true">
-      <path d="M4 5h9v8H8l-3 3v-3H4Z" />
-      <path d="M13 9h7v6h-2v2l-2-2h-3Z" />
+      <path d="M4 5h8" />
+      <path d="M8 3v2c0 3.5-2 6.3-5 7.5" />
+      <path d="M5.5 9.2c.9 2 2.8 3.4 5 3.8" />
+      <path d="m13 21 4-9 4 9" />
+      <path d="M14.4 18h5.2" />
     </svg>
   )
 }

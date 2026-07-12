@@ -3,6 +3,20 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v9.0.2 — Full-bleed mobile map + brand chrome
+
+### Changed
+- **Full-width map on mobile.** The map was boxed inside a card inside a padded
+  chapter card, wasting horizontal space. On phones the outer chapter chrome is
+  now flat (no border/background) and the map bleeds edge-to-edge — the single
+  biggest use of screen space — while day tabs, legend, and text keep their
+  gutter.
+- **Currency reads as brand chrome.** The top-bar rate now shows the real
+  currency symbol in the wordmark's Sora font ("$1 = €0.87") instead of a mono
+  data chip with the ISO code.
+- **Refreshed navigation icons.** Lighter, cohesive line icons; Phrasebook now
+  uses a translate mark so it no longer mirrors the Chat speech-bubble.
+
 ## v9.0.1 — Mobile top-bar currency fix
 
 ### Fixed

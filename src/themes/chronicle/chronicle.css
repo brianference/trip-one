@@ -43,6 +43,9 @@
   --chronicle-font-display: 'Playfair Display', Georgia, serif;
   --chronicle-font-body: 'Source Serif 4', Georgia, serif;
   --chronicle-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  /* Brand/wordmark face (Sora) — reused by the mobile top bar so the currency
+     reads as part of the "Trip One" chrome, not a mono data chip. */
+  --chronicle-font-brand: 'Sora', var(--chronicle-font-body), sans-serif;
 
   /* ---- Spacing (4px base) ---- */
   --chronicle-space-xs: 4px;
@@ -244,6 +247,12 @@
 }
 
 /* ---------- Base ---------- */
+/* Reset the default 8px body margin so the app fills the viewport — otherwise
+   the full-bleed mobile map (and every fixed bar) is inset by 8px. */
+body {
+  margin: 0;
+}
+
 .chronicle-page {
   font-family: var(--chronicle-font-body);
   background: var(--chronicle-bg-canvas);
@@ -1363,24 +1372,29 @@ body:has(.chronicle-page) label {
 
 .chronicle-topbar-temp {
   flex: none;
-  font-family: var(--chronicle-font-mono);
-  font-size: 12px;
+  font-family: var(--chronicle-font-brand);
+  font-size: 13px;
   font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--chronicle-gold);
   white-space: nowrap;
 }
 
-/* The slim top bar shows a static rate chip ("💱 $1 = 0.87 EUR"), not the
-   interactive converter — an input box pushed the result off small screens. */
+/* The slim top bar shows a static rate chip ("$1 = €0.87") in the wordmark
+   font, not the interactive converter — an input box pushed the result off
+   small screens, and mono read as a data widget rather than brand chrome. */
 .chronicle-currency-tool--compact {
   white-space: nowrap;
-  font-size: 11.5px;
-  gap: 4px;
+  font-family: var(--chronicle-font-brand);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--chronicle-text-secondary);
 }
 
-.chronicle-currency-tool--compact .chronicle-currency-eq {
-  white-space: nowrap;
-  color: var(--chronicle-text-secondary);
+.chronicle-currency-tool--compact strong {
+  font-weight: 700;
+  color: var(--chronicle-text-primary);
 }
 
 .chronicle-currency-eq strong {
@@ -2759,6 +2773,56 @@ body:has(.chronicle-page) label {
      noise (and would sit under the chat input) — hide it. */
   body.trip-chat-open .chronicle-section-nav {
     display: none;
+  }
+}
+
+/* Mobile: flatten the page chrome so the map gets real width. The outer
+   "chapter" card loses its border/background/shadow and side padding, so
+   content sits flat on the canvas instead of a padded card-in-a-card, and the
+   map bleeds to both screen edges — the single biggest use of space on a
+   phone. */
+@media (max-width: 720px) {
+  .chronicle-page {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .chronicle-chapter,
+  .chronicle-chapter--wide {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+    padding: var(--chronicle-space-md);
+  }
+
+  /* Cancel the chapter's side padding and drop the frame's own side
+     border/rounding so the map reaches both edges (page side padding is 0). */
+  .chronicle-map-frame {
+    margin-left: calc(-1 * var(--chronicle-space-md));
+    margin-right: calc(-1 * var(--chronicle-space-md));
+    border-left: none;
+    border-right: none;
+    border-radius: 0;
+  }
+
+  /* Keep the tabs, legend, and preview stops off the very edges even though
+     the map itself is full-bleed. */
+  .chronicle-day-tabs,
+  .chronicle-map-legend,
+  .chronicle-map-day-stops {
+    padding-left: var(--chronicle-space-md);
+    padding-right: var(--chronicle-space-md);
+  }
+
+  /* The Overview "Map & days" card goes flat so its map can bleed too. */
+  .chronicle-preview-card--bleed {
+    max-width: none;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding-left: 0;
+    padding-right: 0;
   }
 }
 
