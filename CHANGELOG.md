@@ -3,6 +3,21 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v9.1.0 — Start a new trip + a real "building" state
+
+### Added
+- **Start a new trip from anywhere.** A "New trip" tab in the bottom/side nav
+  and a "＋ Start a new trip" button in the chat both jump to the homepage to
+  pick a new location — your current trip stays saved at its own link.
+- **A processing screen while a trip builds.** Planning from the homepage (AI
+  "Plan my trip" or "Go") now shows a full-screen overlay with animated map
+  pins and a live status ("Finding real places in Rome…"), so a multi-second
+  build clearly registers instead of a silent disabled button.
+
+### Changed
+- The Phrasebook nav tab is now labeled "Phrases" so five tabs sit comfortably
+  on a phone.
+
 ## v9.0.2 — Full-bleed mobile map + brand chrome
 
 ### Changed

@@ -45,6 +45,15 @@ function PhraseIcon() {
   )
 }
 
+function NewTripIcon() {
+  return (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 8.3v7.4M8.3 12h7.4" />
+    </svg>
+  )
+}
+
 /**
  * Real routes, not tabs-within-one-component and not anchor-scroll — each
  * link navigates to a distinct URL under `/trip/:id/*`, so back/forward and
@@ -53,11 +62,14 @@ function PhraseIcon() {
  */
 function tripPages(tripId: string) {
   // Map, itinerary, and things-to-do are one consolidated "Plan" page now.
+  // "New trip" leaves the current trip for the homepage, where you pick a new
+  // location — the current trip stays saved at its own link.
   return [
     { to: `/trip/${tripId}`, end: true, label: 'Home', Icon: HomeIcon },
     { to: `/trip/${tripId}/plan`, end: false, label: 'Plan', Icon: MapIcon },
     { to: `/trip/${tripId}/weather`, end: false, label: 'Weather', Icon: WeatherIcon },
-    { to: `/trip/${tripId}/phrasebook`, end: false, label: 'Phrasebook', Icon: PhraseIcon },
+    { to: `/trip/${tripId}/phrasebook`, end: false, label: 'Phrases', Icon: PhraseIcon },
+    { to: '/', end: true, label: 'New trip', Icon: NewTripIcon },
   ]
 }
 

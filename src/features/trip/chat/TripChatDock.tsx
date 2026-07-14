@@ -164,6 +164,7 @@ export function TripChatDock({
           onConfirmRelocate={() => void chat.confirmRelocate()}
           onCancelRelocate={chat.cancelRelocate}
           onPlaceClick={handlePlaceClick}
+          onNewTrip={() => navigate('/')}
         />
       </aside>
     </>

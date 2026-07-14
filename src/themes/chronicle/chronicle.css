@@ -2939,6 +2939,96 @@ body:has(.chronicle-page) label {
   isolation: isolate;
 }
 
+/* ---------- Building-trip overlay ---------- */
+/* Full-screen "we're on it" state for the homepage plan/browse flows, so a
+   multi-second trip build clearly registers instead of a silent disabled
+   button. */
+.chronicle-building-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--chronicle-space-lg);
+  background: color-mix(in srgb, var(--chronicle-bg-canvas) 86%, transparent);
+  backdrop-filter: blur(4px);
+  animation: chronicle-place-fade 0.2s ease-out;
+}
+
+.chronicle-building-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--chronicle-space-md);
+  width: min(340px, 100%);
+  padding: var(--chronicle-space-xl);
+  text-align: center;
+  background: var(--chronicle-bg-surface);
+  border: 1px solid var(--chronicle-border-hairline);
+  border-radius: var(--chronicle-radius-lg);
+  box-shadow: var(--chronicle-shadow-card);
+}
+
+.chronicle-building-anim {
+  display: flex;
+  gap: 12px;
+  padding-bottom: 6px;
+}
+
+.chronicle-building-pin {
+  width: 13px;
+  height: 13px;
+  border-radius: 50% 50% 50% 0;
+  background: var(--chronicle-teal);
+  transform: rotate(-45deg);
+  animation: chronicle-pin-bounce 1s ease-in-out infinite;
+}
+
+.chronicle-building-pin:nth-child(2) {
+  background: var(--chronicle-gold);
+  animation-delay: 0.16s;
+}
+
+.chronicle-building-pin:nth-child(3) {
+  background: var(--chronicle-danger);
+  animation-delay: 0.32s;
+}
+
+@keyframes chronicle-pin-bounce {
+  0%,
+  100% {
+    transform: rotate(-45deg) translateY(0);
+    opacity: 0.45;
+  }
+  50% {
+    transform: rotate(-45deg) translateY(-9px);
+    opacity: 1;
+  }
+}
+
+.chronicle-building-status {
+  margin: 0;
+  font-family: var(--chronicle-font-display);
+  font-weight: 800;
+  font-style: italic;
+  font-size: 19px;
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-building-sub {
+  margin: 0;
+  font-family: var(--chronicle-font-mono);
+  font-size: 12px;
+  color: var(--chronicle-text-tertiary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chronicle-building-pin {
+    animation-duration: 2s;
+  }
+}
+
 /* ---------- Logo ---------- */
 .chronicle-logo {
   display: inline-flex;
@@ -3252,6 +3342,31 @@ body:has(.chronicle-page) label {
   font-family: var(--chronicle-font-body);
   font-size: 13px;
   color: var(--chronicle-text-secondary);
+}
+
+/* "Start a new trip" — leaves the chat/trip for the homepage location picker. */
+.chronicle-chat-newtrip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: var(--chronicle-space-sm);
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--chronicle-border-subtle);
+  border-radius: var(--chronicle-radius-pill);
+  background: var(--chronicle-bg-surface-2);
+  color: var(--chronicle-teal);
+  font-family: var(--chronicle-font-mono);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.chronicle-chat-newtrip:hover,
+.chronicle-chat-newtrip:focus-visible {
+  border-color: var(--chronicle-teal);
+  color: var(--chronicle-teal-hover);
 }
 
 .chronicle-chat-messages {

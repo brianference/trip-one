@@ -23,6 +23,7 @@ export function TripChatPanel({
   onConfirmRelocate,
   onCancelRelocate,
   onPlaceClick,
+  onNewTrip,
 }: {
   messages: ChatMessage[]
   isThinking: boolean
@@ -39,6 +40,8 @@ export function TripChatPanel({
   onCancelRelocate?: () => void
   /** Tapping an added-place chip reveals it on the Plan page. */
   onPlaceClick?: (place: ChatPlace) => void
+  /** Start a fresh trip somewhere new (leaves for the homepage location picker). */
+  onNewTrip?: () => void
 }) {
   const [draft, setDraft] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
@@ -84,6 +87,11 @@ export function TripChatPanel({
         <p className="chronicle-ai-kicker">✨ Your AI Trip</p>
         <h2 className="chronicle-chat-title">Plan by chat</h2>
         <p className="chronicle-chat-subtitle">Refine your trip in plain language — every stop stays a real place nearby.</p>
+        {onNewTrip && (
+          <button type="button" className="chronicle-chat-newtrip" onClick={onNewTrip}>
+            <span aria-hidden="true">＋</span> Start a new trip
+          </button>
+        )}
       </header>
 
       <div className="chronicle-chat-messages" ref={listRef} role="log" aria-live="polite" aria-busy={isThinking}>

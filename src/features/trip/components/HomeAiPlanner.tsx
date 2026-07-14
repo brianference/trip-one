@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { extractTripIntent } from '../../../lib/api/client'
 import { createTripForDestination } from '../planning/createTripForDestination'
 import { stashOpeningChat } from '../chat/chatHandoff'
+import { TripBuildingOverlay } from './TripBuildingOverlay'
 import { logger } from '../../../lib/logger'
 
 // Full-sentence prompts (destination included) — tapping one plans a whole
@@ -73,7 +74,9 @@ export function HomeAiPlanner() {
   }
 
   return (
-    <form className="chronicle-home-ai" onSubmit={handleSubmit} aria-labelledby="chronicle-home-ai-heading">
+    <>
+      {busy && <TripBuildingOverlay status={status} />}
+      <form className="chronicle-home-ai" onSubmit={handleSubmit} aria-labelledby="chronicle-home-ai-heading">
       <p className="chronicle-ai-kicker">✨ Your AI Trip</p>
       <h2 id="chronicle-home-ai-heading" className="chronicle-home-ai-heading">
         Describe your trip
@@ -123,6 +126,7 @@ export function HomeAiPlanner() {
           {error}
         </p>
       )}
-    </form>
+      </form>
+    </>
   )
 }

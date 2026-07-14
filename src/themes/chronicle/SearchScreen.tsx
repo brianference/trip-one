@@ -6,6 +6,7 @@ import { logger } from '../../lib/logger'
 import { DEMO_TRIPS } from '../../lib/api/demoIds'
 import { buildStarterItinerary } from '../../lib/itinerary/buildStarterItinerary'
 import { HomeAiPlanner } from '../../features/trip/components/HomeAiPlanner'
+import { TripBuildingOverlay } from '../../features/trip/components/TripBuildingOverlay'
 import { getRecentTrips } from '../../features/trip/recentTrips'
 import { Logo } from '../../components/Logo'
 
@@ -26,6 +27,7 @@ const FEATURES = [
 export function SearchScreen() {
   const [query, setQuery] = useState('')
   const [busy, setBusy] = useState(false)
+  const [buildStatus, setBuildStatus] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -77,8 +79,10 @@ export function SearchScreen() {
     setBusy(true)
     setError(null)
     try {
+      setBuildStatus(`Finding real places in ${locationQuery.trim()}…`)
       const location = await fetchLocation(locationQuery)
       const trip = await createTrip(location.slug, 'chronicle')
+      setBuildStatus('Planning your first days…')
       const starterItinerary = buildStarterItinerary(location.thingsToDo)
       const updatedTrip = starterItinerary.length > 0 ? await updateTrip(trip.id, { itinerary: starterItinerary }) : trip
       setTrip(updatedTrip.id, updatedTrip.locationSlug, updatedTrip.itinerary, updatedTrip.designStyle)
@@ -88,6 +92,7 @@ export function SearchScreen() {
       setError(err instanceof Error ? err.message : 'something went wrong')
     } finally {
       setBusy(false)
+      setBuildStatus('')
     }
   }
 
@@ -110,6 +115,7 @@ export function SearchScreen() {
 
   return (
     <div className="chronicle-landing">
+      {busy && <TripBuildingOverlay status={buildStatus} />}
       <section className="chronicle-hero">
         <div className="chronicle-hero-logo">
           <Logo size={40} />

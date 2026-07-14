@@ -13,7 +13,9 @@ describe('TripNav', () => {
     expect(screen.getByRole('link', { name: /home/i })).toHaveAttribute('href', '/trip/t1')
     expect(screen.getByRole('link', { name: /plan/i })).toHaveAttribute('href', '/trip/t1/plan')
     expect(screen.getByRole('link', { name: /weather/i })).toHaveAttribute('href', '/trip/t1/weather')
-    expect(screen.getByRole('link', { name: /phrasebook/i })).toHaveAttribute('href', '/trip/t1/phrasebook')
+    expect(screen.getByRole('link', { name: /phrases/i })).toHaveAttribute('href', '/trip/t1/phrasebook')
+    // "New trip" leaves the current trip for the homepage location picker.
+    expect(screen.getByRole('link', { name: /new trip/i })).toHaveAttribute('href', '/')
     // Map, itinerary, and things-to-do are consolidated into the one Plan page.
     expect(screen.queryByRole('link', { name: /^map$/i })).not.toBeInTheDocument()
   })
