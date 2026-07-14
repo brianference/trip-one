@@ -14,6 +14,18 @@ chatting. No account, no signup.
 > the list is dropped, so a bad or hallucinated response degrades to a smaller
 > plan — never a fake one. No invented places, menus, ratings, or reviews.
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/home.png" width="30%" alt="Home — a San Diego trip with an edge-to-edge map and day tabs" />
+  &nbsp;
+  <img src="docs/screenshots/chat.png" width="30%" alt="Plan by chat — the grounded AI itinerary assistant" />
+  &nbsp;
+  <img src="docs/screenshots/phrasebook.png" width="30%" alt="Phrasebook — 32 languages with neural text-to-speech" />
+</p>
+
+<p align="center"><sub>Trip home with a full-bleed map · the "Plan by chat" assistant · the phrasebook with real text-to-speech</sub></p>
+
 ## What it does
 
 - **Describe your trip.** One sentence — "a fun 9-day San Diego trip with kids"
