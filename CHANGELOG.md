@@ -3,6 +3,36 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v10.0.0 — Mobile-first, end to end
+
+A major milestone consolidating the v9.x line into a stable, phone-first
+release. Everything below is live at https://trip-one.pages.dev.
+
+### Highlights
+- **A real mobile app shell.** A slim top bar (brand, live temperature, and a
+  currency rate in the wordmark font), a five-tab bottom bar, and an
+  **edge-to-edge map** — no more card-in-a-card boxing the map into a sliver.
+  The chat is one tap away via a floating button.
+- **Start a new trip from anywhere.** A "New trip" tab in the nav and a
+  "＋ Start a new trip" button in the chat jump to the homepage location
+  picker; your current trip stays saved at its own link.
+- **A processing screen while a trip builds.** Planning from the homepage shows
+  a full-screen overlay with animated map pins and a live status
+  ("Finding real places in Rome…") instead of a silent disabled button.
+- **Place details that behave on mobile.** The detail sheet has a pinned header
+  (always-reachable close) and a pinned action footer, capped to the screen and
+  scrolling inside itself.
+- **Nearby search stays nearby.** On-demand chat search is hard-filtered to the
+  trip's vicinity, so "add an aquarium" near Corfu never returns one in Florida.
+- Refreshed navigation icons and brand-consistent chrome throughout.
+
+### Under the hood
+- Grounded generation (index-only, schema-validated LLM output) so the planner
+  can only order real places, never invent them.
+- Cloudflare Pages Functions proxy and cache every third-party API behind a
+  Supabase cache and per-IP rate limits; keys never reach the browser.
+- 469 automated tests; typecheck + tests + build gate every push via CI.
+
 ## v9.1.0 — Start a new trip + a real "building" state
 
 ### Added
