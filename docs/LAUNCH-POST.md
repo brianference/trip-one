@@ -28,7 +28,7 @@ That combination — a genuinely conversational planner, with hard guardrails so
 💱 A built-in currency converter for non-US destinations (type an amount, see the live local total)
 🗣️ A phrasebook in 32 languages with real neural text-to-speech, so you can actually hear "where is the bathroom?" in Japanese, Thai, or Arabic instead of guessing at a romanization
 📅 Export to your calendar (.ics) or a clean print/PDF
-📱 A real mobile app shell: a slim top bar (brand, temperature, currency), a bottom tab bar, and a map-forward layout with the chat one tap away — no account, and your trip is just a shareable link
+📱 A real mobile app shell: a slim top bar (brand, temperature, live currency), a bottom tab bar, and an edge-to-edge map with the chat one tap away — no account, and your trip is just a shareable link
 
 ---
 
