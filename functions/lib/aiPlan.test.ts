@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildPlanPrompt, normalizePlan, extractPlanMessage, balanceDayFood, maxIncidentalFood } from './aiPlan'
+import { buildPlanPrompt, normalizePlan, extractPlanMessage, balanceDayFood, maxIncidentalFood, ensureAllDays } from './aiPlan'
 
 const candidates = [
   { name: 'Ramen Shop', category: 'restaurant', rating: 4.6 },
@@ -193,5 +193,42 @@ describe('balanceDayFood', () => {
     ]
     const out = balanceDayFood([{ day: 1, placeIndexes: [0, 1] }], noFood)
     expect(out[0].placeIndexes).toEqual([0, 1])
+  })
+})
+
+
+describe('ensureAllDays', () => {
+  const candidates = Array.from({ length: 30 }, (_, i) => ({
+    name: `Place ${i}`,
+    category: i % 4 === 0 ? 'restaurant' : 'tourist_attraction',
+    rating: 4 + (i % 5) / 10,
+  }))
+
+  it('spans every requested day even when the model planned only a few', () => {
+    const plan = [{ day: 1, placeIndexes: [0, 1] }, { day: 2, placeIndexes: [2] }]
+    const out = ensureAllDays(plan, candidates, 7)
+    expect(out.map((d) => d.day)).toEqual([1, 2, 3, 4, 5, 6, 7])
+  })
+
+  it('fills thin later days from unused candidates, never reusing a place', () => {
+    const out = ensureAllDays([{ day: 1, placeIndexes: [0] }], candidates, 5)
+    const all = out.flatMap((d) => d.placeIndexes)
+    expect(new Set(all).size).toBe(all.length)
+    // later days got real stops
+    expect(out[4].placeIndexes.length).toBeGreaterThan(0)
+  })
+
+  it('keeps the model own picks on their days', () => {
+    const out = ensureAllDays([{ day: 1, placeIndexes: [5] }, { day: 3, placeIndexes: [9] }], candidates, 3)
+    expect(out.find((d) => d.day === 1)?.placeIndexes).toContain(5)
+    expect(out.find((d) => d.day === 3)?.placeIndexes).toContain(9)
+  })
+
+  it('leaves a day thin rather than repeating when the pool is exhausted', () => {
+    const few = [{ name: 'A', category: 'park' }, { name: 'B', category: 'park' }]
+    const out = ensureAllDays([{ day: 1, placeIndexes: [0] }], few, 4)
+    expect(out.map((d) => d.day)).toEqual([1, 2, 3, 4])
+    const all = out.flatMap((d) => d.placeIndexes)
+    expect(new Set(all).size).toBe(all.length)
   })
 })

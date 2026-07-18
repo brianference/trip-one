@@ -31,6 +31,8 @@ interface PlacesResult {
   name: string
   types: string[]
   rating?: number
+  /** How many ratings the place has — the popularity signal, distinct from the average. */
+  user_ratings_total?: number
   vicinity?: string
   /** Text Search returns a full address here rather than `vicinity`. */
   formatted_address?: string
@@ -98,6 +100,7 @@ async function searchPlacesByType(lat: number, lng: number, type: string, apiKey
       category: pickCategory(item.types ?? [], type),
       source: 'places' as const,
       rating: item.rating,
+      numReviews: item.user_ratings_total,
       address: item.vicinity,
       lat: item.geometry?.location?.lat,
       lng: item.geometry?.location?.lng,
@@ -130,6 +133,51 @@ export async function searchPlaces(lat: number, lng: number, apiKey: string): Pr
   } catch (err) {
     logger.error('places search failed', err)
     return []
+  }
+}
+
+/**
+ * Verifies a specific named venue against Google Places and returns the single
+ * best real match near a coordinate, or null if nothing plausible is found.
+ *
+ * This is the grounding step for web-discovered venues: the model proposes a
+ * name ("Mangy Moose Saloon"), and this confirms it's a real place, pins its
+ * coordinates, and reads its rating/review count. A hallucinated or misremembered
+ * name simply returns null and is dropped, so the pool never gains a fake place.
+ *
+ * @param name - The venue name the guide/model produced
+ * @param lat - Trip centre latitude (search is biased here and far matches dropped)
+ * @param lng - Trip centre longitude
+ * @param apiKey - Google Places API key
+ */
+export async function findPlaceByName(name: string, lat: number, lng: number, apiKey: string): Promise<ThingToDo | null> {
+  const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(name)}&location=${lat},${lng}&radius=${SEARCH_RADIUS_M}&key=${apiKey}`
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return null
+    const body = (await res.json()) as { results?: PlacesResult[] }
+    const item = (body.results ?? [])[0]
+    if (!item) return null
+    const plat = item.geometry?.location?.lat
+    const plng = item.geometry?.location?.lng
+    // Must have real coordinates and be within the trip's vicinity — a text
+    // search for a name with no local match happily returns a same-named place
+    // on another continent.
+    if (plat == null || plng == null || distanceKm(lat, lng, plat, plng) > TEXT_SEARCH_MAX_KM) return null
+    return {
+      name: item.name,
+      category: categorizeTextResult(item.types ?? []),
+      source: 'places' as const,
+      rating: item.rating,
+      numReviews: item.user_ratings_total,
+      address: item.vicinity ?? item.formatted_address,
+      lat: plat,
+      lng: plng,
+      placeId: item.place_id,
+    }
+  } catch (err) {
+    logger.error('findPlaceByName failed', err)
+    return null
   }
 }
 
@@ -172,6 +220,7 @@ export async function textSearchPlaces(query: string, lat: number, lng: number, 
         category: categorizeTextResult(item.types ?? []),
         source: 'places' as const,
         rating: item.rating,
+        numReviews: item.user_ratings_total,
         address: item.vicinity ?? item.formatted_address,
         lat: item.geometry?.location?.lat,
         lng: item.geometry?.location?.lng,

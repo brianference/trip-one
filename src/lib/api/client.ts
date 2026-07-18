@@ -9,6 +9,8 @@ export interface ThingToDo {
   category: string
   source: 'tripadvisor' | 'places'
   rating?: number
+  /** Total ratings/reviews the place has (Google user_ratings_total / TA num_reviews). Used to rank by popularity. Absent when unknown. */
+  numReviews?: number
   address?: string
   /**
    * Per-item coordinates, present only for `places`-sourced entries (Google
@@ -261,11 +263,61 @@ export interface TripIntent {
   days: number | null
   /** A short interests/pace phrase to feed the planner. */
   interests: string
+  /** Who is travelling ("family with two kids", "group of guys"), for tailoring the plan. */
+  party?: string
+  /** The reason for the trip ("21st birthday"), or null. */
+  occasion?: string | null
+  /** Season the trip happens in ("winter"), inferred from the activity or dates, or null. */
+  season?: string | null
+  /** Audience filter: kids trips drop nightlife, adults trips drop kid attractions. */
+  audience?: 'kids' | 'adults' | 'general'
   /**
    * True when eating/drinking is a main point of the trip (a food tour, wine
    * tasting), so restaurants count as the itinerary rather than as filler.
    */
   foodFocused?: boolean
+}
+
+/**
+ * Finds real, verified venues a travel guide would recommend for THIS traveler
+ * — the specific places (Snow King tubing, Guinness Storehouse) that make a plan
+ * feel curated instead of generic. Every returned venue is a real Google Places
+ * result (the backend proposes names from web guides, then verifies each).
+ *
+ * Fails soft to an empty list, so a discovery hiccup quietly falls back to the
+ * nearby pool rather than blocking the trip.
+ * @param intent - The parsed trip intent (destination + profile)
+ * @param lat - Trip centre latitude
+ * @param lng - Trip centre longitude
+ */
+export async function fetchDiscoveredVenues(intent: TripIntent, lat: number, lng: number): Promise<ThingToDo[]> {
+  if (!intent.destination) return []
+  try {
+    const res = await fetch('/api/discover-venues', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        destination: intent.destination,
+        interests: intent.interests,
+        party: intent.party,
+        occasion: intent.occasion,
+        season: intent.season,
+        audience: intent.audience,
+        foodFocused: intent.foodFocused,
+        lat,
+        lng,
+      }),
+    })
+    if (!res.ok) return []
+    const body = await res.json()
+    const places: ThingToDo[] = (body.places ?? []).filter((t: ThingToDo) => isRequestedExperienceCategory(t.category))
+    return places.map((p) => ({ ...p, themed: true }))
+  } catch (err) {
+    logger.warn('venue discovery failed; falling back to the nearby pool', {
+      reason: err instanceof Error ? err.message : String(err),
+    })
+    return []
+  }
 }
 
 /**
@@ -300,11 +352,18 @@ export async function extractTripIntent(text: string): Promise<TripIntent> {
  * @returns The grounded plan and the planner's message
  * @throws If the request is invalid, rate limited, or the planner fails
  */
+export interface PlanProfile {
+  party?: string
+  occasion?: string | null
+  season?: string | null
+  audience?: 'kids' | 'adults' | 'general'
+}
+
 export async function generatePlan(
   intent: string,
   days: number,
-  places: { name: string; category: string; rating?: number; lat?: number; lng?: number; themed?: boolean }[],
-  opts?: { conversation?: PlanTurn[]; currentPlan?: CurrentPlanDay[] },
+  places: { name: string; category: string; rating?: number; numReviews?: number; lat?: number; lng?: number; themed?: boolean }[],
+  opts?: { conversation?: PlanTurn[]; currentPlan?: CurrentPlanDay[] } & PlanProfile,
 ): Promise<PlanResult> {
   const res = await fetch('/api/plan', {
     method: 'POST',

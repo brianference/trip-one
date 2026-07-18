@@ -43,7 +43,16 @@ export function HomeAiPlanner() {
       }
 
       setStatus(`Finding real places in ${intent.destination}…`)
-      const built = await createTripForDestination(intent.destination, intent.interests, intent.days, intent.foodFocused)
+      const built = await createTripForDestination({
+        destination: intent.destination,
+        interests: intent.interests,
+        requestedDays: intent.days,
+        party: intent.party,
+        occasion: intent.occasion,
+        season: intent.season,
+        audience: intent.audience,
+        foodFocused: intent.foodFocused,
+      })
       // Seed the itinerary chat with this opening exchange so refining feels
       // continuous — the traveler's sentence, then the planner's first reply.
       const now = Date.now()

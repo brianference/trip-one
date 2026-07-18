@@ -166,21 +166,26 @@ export function TripPlanPage() {
       {/* Full multi-day itinerary, hidden on screen and shown only when printing
           (the interactive view above shows one day at a time). */}
       <div className="chronicle-print-itinerary" aria-hidden="true">
-        {[...dayGroups.entries()]
-          .sort(([a], [b]) => a - b)
-          .map(([day, entries]) => (
+        {Array.from({ length: dayCount }, (_, i) => i + 1).map((day) => {
+          const entries = dayGroups.get(day) ?? []
+          return (
             <section key={day}>
               <h2>{dayHeading(startDate, day)}</h2>
               <ul>
-                {entries.map(({ item }, i) => (
-                  <li key={`${item.text}-${i}`}>
-                    {item.time?.trim() ? <span className="chronicle-print-time">{item.time}</span> : null}
-                    {item.text}
-                  </li>
-                ))}
+                {entries.length > 0 ? (
+                  entries.map(({ item }, i) => (
+                    <li key={`${item.text}-${i}`}>
+                      {item.time?.trim() ? <span className="chronicle-print-time">{item.time}</span> : null}
+                      {item.text}
+                    </li>
+                  ))
+                ) : (
+                  <li className="chronicle-print-free">Free day — explore or relax</li>
+                )}
               </ul>
             </section>
-          ))}
+          )
+        })}
       </div>
 
       {selected && (

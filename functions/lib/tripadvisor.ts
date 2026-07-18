@@ -17,6 +17,24 @@ const TA_TEXT_MAX_KM = 80
  * @param apiKey - Tripadvisor content API key
  * @returns A list of things to do, or an empty array on failure
  */
+// How many nearby attractions to enrich with a details call. nearby_search
+// returns names + ids but NO rating/review-count/coordinates, so without
+// enrichment every Tripadvisor attraction is unrated (and hidden by the
+// "rated only" default) and can't be ranked by popularity. Each details call
+// is paid once per location (the whole result is cached in D1).
+const NEARBY_ENRICH = 16
+
+/**
+ * Search the Tripadvisor content API for attractions near a coordinate, then
+ * enrich the top {@link NEARBY_ENRICH} with a details call to get the real
+ * rating, review count, and coordinates — so iconic attractions (a
+ * 50k-review landmark) can be ranked ahead of obscure ones. Fails soft: any
+ * non-ok response or thrown error yields an empty array.
+ * @param slug - The normalized location slug, used only for log context
+ * @param lat - Latitude to search near
+ * @param lng - Longitude to search near
+ * @param apiKey - Tripadvisor content API key
+ */
 export async function searchThingsToDo(
   slug: string,
   lat: number,
@@ -30,13 +48,47 @@ export async function searchThingsToDo(
       logger.warn('tripadvisor search non-ok response', { slug, status: res.status })
       return []
     }
-    const body = (await res.json()) as { data: Array<{ name: string; category?: { name: string }; rating?: string }> }
-    return (body.data ?? []).map((item) => ({
+    const body = (await res.json()) as { data?: Array<{ location_id?: string; name: string; category?: { name: string } }> }
+    const rows = body.data ?? []
+
+    const enriched = await Promise.all(
+      rows.slice(0, NEARBY_ENRICH).map(async (item): Promise<ThingToDo> => {
+        const base: ThingToDo = { name: item.name, category: item.category?.name ?? 'attraction', source: 'tripadvisor' as const }
+        if (!item.location_id) return base
+        try {
+          const detailUrl = `https://api.content.tripadvisor.com/api/v1/location/${item.location_id}/details?key=${apiKey}&language=en`
+          const dRes = await fetch(detailUrl, { headers: { Accept: 'application/json' } })
+          if (!dRes.ok) return base
+          const d = (await dRes.json()) as {
+            latitude?: string | number
+            longitude?: string | number
+            rating?: string | number
+            num_reviews?: string | number
+            category?: { name: string }
+          }
+          const latNum = d.latitude != null ? Number(d.latitude) : undefined
+          const lngNum = d.longitude != null ? Number(d.longitude) : undefined
+          return {
+            ...base,
+            category: d.category?.name ?? base.category,
+            rating: d.rating != null ? Number(d.rating) : undefined,
+            numReviews: d.num_reviews != null ? Number(d.num_reviews) : undefined,
+            lat: Number.isFinite(latNum) ? latNum : undefined,
+            lng: Number.isFinite(lngNum) ? lngNum : undefined,
+          }
+        } catch {
+          return base
+        }
+      }),
+    )
+    // Attractions past the enrichment cap still count as real things to do,
+    // just without rating/coords.
+    const rest = rows.slice(NEARBY_ENRICH).map((item) => ({
       name: item.name,
       category: item.category?.name ?? 'attraction',
       source: 'tripadvisor' as const,
-      rating: item.rating ? Number(item.rating) : undefined,
     }))
+    return [...enriched, ...rest]
   } catch (err) {
     logger.error('tripadvisor search failed', err)
     return []

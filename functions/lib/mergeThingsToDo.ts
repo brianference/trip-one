@@ -21,6 +21,19 @@ export interface ThingToDo {
    * Absent for Tripadvisor entries.
    */
   placeId?: string
+  /**
+   * Total number of ratings/reviews the place has, when the source provides it
+   * (Google's `user_ratings_total`, Tripadvisor's `num_reviews`). Used to rank
+   * by popularity so an iconic 50k-review attraction outranks an obscure but
+   * higher-starred cafe. Absent when unknown.
+   */
+  numReviews?: number
+  /**
+   * True when this place was surfaced by web-grounded discovery or an interest
+   * search (it matches the traveler's actual trip), rather than the generic
+   * nearby sweep. Carried through so the planner and pool can prioritise it.
+   */
+  themed?: boolean
 }
 
 /**

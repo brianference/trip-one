@@ -2,7 +2,7 @@ import { z } from 'zod'
 import type { Env } from '../lib/db'
 import { countRecentRequests, insertRequestLog } from '../lib/db'
 import { isUnderRateLimit, hashIp } from '../../src/lib/rateLimit'
-import { buildPlanPrompt, normalizePlan, extractPlanMessage, balanceDayFood } from '../lib/aiPlan'
+import { buildPlanPrompt, normalizePlan, extractPlanMessage, balanceDayFood, ensureAllDays } from '../lib/aiPlan'
 import { openAiResponseSchema } from '../lib/openAi'
 import { logger } from '../../src/lib/logger'
 
@@ -28,6 +28,7 @@ const planRequestSchema = z.object({
         name: z.string().min(1).max(200),
         category: z.string().min(1).max(100),
         rating: z.number().optional(),
+        numReviews: z.number().optional(),
         lat: z.number().optional(),
         lng: z.number().optional(),
         // Set when the place came from searching the traveler's own stated
@@ -37,7 +38,14 @@ const planRequestSchema = z.object({
       }),
     )
     .min(1)
-    .max(40),
+    // Long trips need a bigger pool to fill all their days, so this cap scales
+    // above the old 40.
+    .max(120),
+  // Who the trip is for and when, so the plan is audience/season-appropriate.
+  party: z.string().max(120).optional(),
+  occasion: z.string().max(120).nullable().optional(),
+  season: z.string().max(40).nullable().optional(),
+  audience: z.enum(['kids', 'adults', 'general']).optional(),
   // Optional conversational context (the itinerary chat). Absent for the
   // one-shot planner, present when the traveler is refining a plan by chat.
   conversation: z
@@ -74,7 +82,7 @@ export async function onRequestPost({ env, request }: { env: PlanEnv; request: R
 
   const parsed = planRequestSchema.safeParse(await request.json().catch(() => ({})))
   if (!parsed.success) return json({ error: 'invalid request' }, 400)
-  const { intent, days, places, conversation, currentPlan } = parsed.data
+  const { intent, days, places, party, occasion, season, audience, conversation, currentPlan } = parsed.data
 
   try {
     const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown'
@@ -86,7 +94,14 @@ export async function onRequestPost({ env, request }: { env: PlanEnv; request: R
     }
     await insertRequestLog(env, ipHash, 'plan')
 
-    const prompt = buildPlanPrompt({ intent, days, candidates: places, conversation, currentPlan })
+    const prompt = buildPlanPrompt({
+      intent,
+      days,
+      candidates: places,
+      profile: { party, occasion, season, audience },
+      conversation,
+      currentPlan,
+    })
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.OPENAI_API_KEY}` },
@@ -122,7 +137,13 @@ export async function onRequestPost({ env, request }: { env: PlanEnv; request: R
     // Deterministically guarantee each day has a meal, and trim any incidental
     // food the model padded the day with beyond its share.
     const withFood = balanceDayFood(plan, places)
-    return json({ days: withFood, message: extractPlanMessage(rawPlan) ?? DEFAULT_PLAN_MESSAGE }, 200)
+    // For a fresh plan, guarantee the itinerary spans all requested days
+    // (the model front-loads and leaves long trips short). Skip this for a
+    // conversational EDIT — re-filling days the traveler just trimmed would
+    // undo their change.
+    const isEdit = Boolean(currentPlan && currentPlan.length > 0)
+    const finalDays = isEdit ? withFood : ensureAllDays(withFood, places, days)
+    return json({ days: finalDays, message: extractPlanMessage(rawPlan) ?? DEFAULT_PLAN_MESSAGE }, 200)
   } catch (err) {
     logger.error('AI plan generation failed', err)
     return json({ error: 'internal error' }, 500)

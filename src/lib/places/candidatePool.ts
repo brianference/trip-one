@@ -1,4 +1,5 @@
 import { isFoodCategory } from './foodCategories'
+import { byPopularity } from './popularity'
 
 /**
  * Builds the candidate pool the grounded planner chooses from.
@@ -26,16 +27,29 @@ import { isFoodCategory } from './foodCategories'
  * trip look like a restaurant tour.
  */
 
-/** Total places offered to the planner. Bounded to keep the prompt affordable. */
+/** Baseline pool size; the real cap scales up with trip length (see {@link poolSizeForDays}). */
 export const MAX_CANDIDATES = 40
+/** Hard ceiling regardless of trip length, to keep the plan prompt affordable. */
+export const MAX_CANDIDATES_CAP = 110
 /** Generic food candidates offered per trip day — enough to pick real meals from. */
 export const FOOD_CANDIDATES_PER_DAY = 3
+
+/**
+ * Pool size for a trip of `days` days. A long trip needs more real candidates
+ * to fill every day — a 12-day trip built from a 40-place pool ran dry at day
+ * 7. Roughly 6 candidates per day (attractions + meals), floored at the
+ * baseline and capped so the prompt stays affordable.
+ */
+export function poolSizeForDays(days: number): number {
+  return Math.min(MAX_CANDIDATES_CAP, Math.max(MAX_CANDIDATES, Math.max(1, days) * 6))
+}
 
 /** The shape the pool needs; structural so both ThingToDo definitions satisfy it. */
 export interface PoolPlace {
   name: string
   category: string
   rating?: number
+  numReviews?: number
   themed?: boolean
 }
 
@@ -54,9 +68,6 @@ export interface PoolOptions {
   foodFocused?: boolean
 }
 
-function byRatingDesc(a: PoolPlace, b: PoolPlace): number {
-  return (b.rating ?? -Infinity) - (a.rating ?? -Infinity)
-}
 
 /**
  * Merges the fixed nearby pool with interest-driven results and selects a
@@ -74,7 +85,7 @@ export function buildCandidatePool<T extends PoolPlace>(
   days: number,
   opts: PoolOptions = {},
 ): T[] {
-  const { maxCandidates = MAX_CANDIDATES, foodFocused = false } = opts
+  const { maxCandidates = poolSizeForDays(days), foodFocused = false } = opts
   const seen = new Set<string>()
   const take = (item: T, isThemed: boolean): T | null => {
     const key = item.name.trim().toLowerCase()
@@ -86,7 +97,7 @@ export function buildCandidatePool<T extends PoolPlace>(
   // Themed places are the reason the traveler is going; they get first claim
   // on the pool and are never dropped for a higher-rated cafe.
   const themedPicks: T[] = []
-  for (const item of [...themed].sort(byRatingDesc)) {
+  for (const item of [...themed].sort(byPopularity)) {
     const candidate = take(item, true)
     if (candidate) themedPicks.push(candidate)
   }
@@ -94,7 +105,7 @@ export function buildCandidatePool<T extends PoolPlace>(
   const generalPicks: T[] = []
   const foodPicks: T[] = []
   const foodBudget = Math.max(1, days) * FOOD_CANDIDATES_PER_DAY
-  for (const item of [...nearby].sort(byRatingDesc)) {
+  for (const item of [...nearby].sort(byPopularity)) {
     const isFood = isFoodCategory(item.category)
     // On a food trip the restaurants ARE the attractions: promote them to
     // themed so they skip the cap and reach the planner as the point of the

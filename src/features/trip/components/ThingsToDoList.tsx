@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react'
 import type { ThingToDo } from '../../../lib/api/client'
+import { byPopularity } from '../../../lib/places/popularity'
 import { ThingToDoCard } from './ThingToDoCard'
+
+const TOP_LIMIT = 10
 
 type Group = 'all' | 'food' | 'sights' | 'outdoors' | 'museums'
 
@@ -41,15 +44,18 @@ export function ThingsToDoList({
 }) {
   const [filter, setFilter] = useState<Group>('all')
   const [showUnrated, setShowUnrated] = useState(false)
+  const [showAll, setShowAll] = useState(false)
 
   const hasUnrated = useMemo(() => thingsToDo.some((t) => t.rating == null), [thingsToDo])
 
-  const visible = useMemo(() => {
+  const ranked = useMemo(() => {
     return thingsToDo
       .filter((t) => filter === 'all' || groupOf(t.category) === filter)
       .filter((t) => showUnrated || t.rating != null)
-      .sort((a, b) => (b.rating ?? -Infinity) - (a.rating ?? -Infinity))
+      .sort(byPopularity)
   }, [thingsToDo, filter, showUnrated])
+
+  const visible = showAll ? ranked : ranked.slice(0, TOP_LIMIT)
 
   if (thingsToDo.length === 0) return <p className="chronicle-rate-line">No nearby suggestions yet.</p>
 
@@ -69,6 +75,11 @@ export function ThingsToDoList({
         {hasUnrated && (
           <button type="button" className="chronicle-ttd-showunrated" onClick={() => setShowUnrated((v) => !v)}>
             {showUnrated ? 'Hide unrated' : 'Show unrated'}
+          </button>
+        )}
+        {ranked.length > TOP_LIMIT && (
+          <button type="button" className="chronicle-ttd-showunrated" onClick={() => setShowAll((v) => !v)}>
+            {showAll ? `Show top ${TOP_LIMIT}` : `Show all ${ranked.length}`}
           </button>
         )}
       </div>

@@ -55,15 +55,20 @@ describe('POST /api/plan', () => {
     vi.unstubAllGlobals()
   })
 
-  it('returns a grounded plan referencing only supplied place indices', async () => {
+  it('returns a grounded plan spanning all days, referencing only supplied indices', async () => {
     vi.stubGlobal('fetch', mockOpenAi(JSON.stringify({ days: [{ day: 1, placeIndexes: [0] }, { day: 2, placeIndexes: [2] }] })))
     const res = await onRequestPost({ env: mkEnv(), request: req(validBody) } as never)
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body.days).toEqual([
-      { day: 1, placeIndexes: [0] },
-      { day: 2, placeIndexes: [2] },
-    ])
+    // The itinerary spans all requested days (validBody has days: 2).
+    expect(body.days.map((d: { day: number }) => d.day)).toEqual([1, 2])
+    // The model's own picks survive, and every index is a real supplied one.
+    const all = body.days.flatMap((d: { placeIndexes: number[] }) => d.placeIndexes)
+    expect(all).toContain(0)
+    expect(all).toContain(2)
+    expect(all.every((i: number) => i >= 0 && i < validBody.places.length)).toBe(true)
+    // No place is used twice across the plan.
+    expect(new Set(all).size).toBe(all.length)
   })
 
   it('drops hallucinated out-of-range indices before returning', async () => {

@@ -58,7 +58,7 @@ describe('HomeAiPlanner', () => {
     expect(intentSpy).toHaveBeenCalledWith('A fun 4-day San Diego trip with kids')
     expect(createSpy).toHaveBeenCalledWith('san-diego-california', 'chronicle')
     // the interests phrase (not the raw sentence) and the extracted day count drive the plan
-    expect(genSpy).toHaveBeenCalledWith('family with kids, lots of stops', 4, expect.any(Array))
+    expect(genSpy).toHaveBeenCalledWith('family with kids, lots of stops', 4, expect.any(Array), expect.any(Object))
     // the built itinerary is persisted with the day count before navigating
     expect(updateSpy).toHaveBeenCalledWith('trip-1', expect.objectContaining({ tripLengthDays: 4 }))
   })
@@ -93,7 +93,7 @@ describe('HomeAiPlanner', () => {
     fireEvent.change(screen.getByPlaceholderText(/San Diego/i), { target: { value: 'Lisbon food trip' } })
     fireEvent.click(screen.getByRole('button', { name: /plan my trip/i }))
 
-    await waitFor(() => expect(genSpy).toHaveBeenCalledWith('food', 3, expect.any(Array)))
+    await waitFor(() => expect(genSpy).toHaveBeenCalledWith('food', 3, expect.any(Array), expect.any(Object)))
   })
 
   it('shows an error and does not navigate when planning fails', async () => {
