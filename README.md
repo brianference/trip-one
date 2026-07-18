@@ -62,17 +62,17 @@ Browser (Vite + React + TS)
   │  every place shown is real; the AI only orders real places
   v
 Cloudflare Pages Functions  (functions/api/*)
-  |- /api/location        geocode + fetch real things-to-do (cached in Supabase)
+  |- /api/location        geocode + fetch real things-to-do (cached in D1)
   |- /api/plan            grounded day-by-day planner (indices into real places)
   |- /api/plan-intent     extract {destination, days, interests} from free text
   |- /api/chat            conversational turn -> plan-edit | answer | relocate
-  |- /api/place-details   Google Place Details, cached 30 days in Supabase
+  |- /api/place-details   Google Place Details, cached 30 days in D1
   |- /api/place-photo     photo proxy so the Google key never reaches the client
   |- /api/trips           create / read / update trips
   |- /api/currency        USD -> local rate
   |- /api/autocomplete    location suggestions
   v
-Supabase Postgres  (locations, trips, place_details, request_log)
+Cloudflare D1     (locations, trips, place_details, interest_places, request_log)
 OpenAI gpt-4o-mini . Google Places . Tripadvisor . Open-Meteo . OpenStreetMap
 ```
 
@@ -84,7 +84,7 @@ OpenAI gpt-4o-mini . Google Places . Tripadvisor . Open-Meteo . OpenStreetMap
   real candidate list; `normalizePlan` drops out-of-range/duplicate indices.
 - **Conversational assistant** (`/api/chat`): classifies each message as a
   plan edit, a question, or a destination change, and only re-plans when asked.
-- **Cost control:** rate limits per endpoint (IP hashed + salted), Supabase
+- **Cost control:** rate limits per endpoint (IP hashed + salted), D1
   caching for locations and place details, small prompts and token caps.
 
 ### Data model
@@ -98,7 +98,7 @@ OpenAI gpt-4o-mini . Google Places . Tripadvisor . Open-Meteo . OpenStreetMap
 ## Tech stack
 
 Vite, React 18, TypeScript (strict), Zustand, React Router v6, Leaflet, Zod,
-Supabase, Cloudflare Pages Functions. 378 tests (Vitest + Testing Library).
+Cloudflare D1 + Pages Functions. 515 tests (Vitest + Testing Library).
 No secrets in the client; strict Content-Security-Policy.
 
 ## Project layout
@@ -110,7 +110,7 @@ src/features/trip/     trip pages, chat, place detail, planning, hooks
 src/features/weather/  forecast hooks + packing tips
 src/lib/               api client, itinerary logic, validation, theme
 src/themes/chronicle/  the single active theme (CSS + landing page)
-supabase/migrations/   schema
+d1/schema.sql          D1 schema (supabase/migrations kept as history)
 docs/                  FEATURES, TEST-CASES, GAP-ASSESSMENT
 ```
 
@@ -127,7 +127,7 @@ npm test           # Vitest
 npm run build      # tsc -b && vite build
 ```
 
-Backend functions and secrets (OpenAI, Google, Supabase) run on Cloudflare
+Backend functions and secrets (OpenAI, Google, Tripadvisor) run on Cloudflare
 Pages; local API calls need those bindings. Secrets live in environment
 variables / `.dev.vars`, never in the repo.
 

@@ -9,4 +9,4 @@ compatibility_date = "2024-11-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "trip-one-db"
-database_id = "PLACEHOLDER_SET_AFTER_CREATE"
+database_id = "e419a900-cfb3-47f2-a49a-f505dd80e4e8"
