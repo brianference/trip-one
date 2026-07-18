@@ -1,5 +1,5 @@
-import type { Env } from '../../lib/supabaseAdmin'
-import { getTrip, updateTrip } from '../../lib/supabaseAdmin'
+import type { Env } from '../../lib/db'
+import { getTrip, updateTrip } from '../../lib/db'
 import { itineraryItemSchema } from '../../../src/lib/validation/schemas'
 import { logger } from '../../../src/lib/logger'
 import { z } from 'zod'

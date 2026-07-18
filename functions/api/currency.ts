@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { isRateLimited } from '../lib/rateLimitGuard'
-import type { Env } from '../lib/supabaseAdmin'
+import type { Env } from '../lib/db'
 import { logger } from '../../src/lib/logger'
 
 const currencyQuerySchema = z.string().trim().regex(/^[A-Z]{3}$/)

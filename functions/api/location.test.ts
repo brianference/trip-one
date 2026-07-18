@@ -1,272 +1,159 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { onRequestGet } from './location'
 import { logger } from '../../src/lib/logger'
+import { fakeD1, type FakeD1Config } from '../lib/testD1'
 
-const env = {
-  SUPABASE_URL: 'https://example.supabase.co',
-  SUPABASE_SERVICE_ROLE_KEY: 'key',
-  RATE_LIMIT_SALT: 'salt',
-  TRIPADVISOR_API_KEY: 'ta-key',
-  GOOGLE_PLACES_API_KEY: 'gp-key',
-}
+const API_KEYS = { TRIPADVISOR_API_KEY: 'ta-key', GOOGLE_PLACES_API_KEY: 'gp-key' }
 
 function req(url: string, ip = '203.0.113.5') {
   return new Request(url, { headers: { 'CF-Connecting-IP': ip } })
+}
+
+/** A D1 env whose location lookup returns `cachedRow` (a D1-shaped row or null) and COUNT returns `recent`. */
+function locEnv(cachedRow: Record<string, unknown> | null, recent = 1, extra: Partial<FakeD1Config> = {}) {
+  return fakeD1({
+    first: (sql) => {
+      if (sql.includes('FROM locations')) return cachedRow
+      if (sql.includes('COUNT(*)')) return { n: recent }
+      return null
+    },
+    extraEnv: API_KEYS,
+    ...extra,
+  }).env
+}
+
+/** A D1-shaped cached location row: things_to_do stored as JSON TEXT, as D1 returns it. */
+function cachedLocation(slug: string, thingsToDo: unknown[], extra: Record<string, unknown> = {}) {
+  return {
+    slug,
+    lat: 0,
+    lng: 0,
+    display_name: slug,
+    weather_baseline: null,
+    things_to_do: JSON.stringify(thingsToDo),
+    last_refreshed: '2026-01-01T00:00:00Z',
+    ...extra,
+  }
+}
+
+/** A fetch mock covering ONLY the external APIs (the DB no longer goes through fetch). */
+function externalFetch(googleResults: unknown[] = []) {
+  return vi.fn((url: string) => {
+    if (url.includes('nominatim.openstreetmap.org')) {
+      return Promise.resolve({ ok: true, json: async () => [{ lat: '10', lon: '20', display_name: 'Somewhere' }] })
+    }
+    if (url.includes('tripadvisor.com')) return Promise.resolve({ ok: true, json: async () => ({ data: [] }) })
+    if (url.includes('googleapis.com')) return Promise.resolve({ ok: true, json: async () => ({ results: googleResults }) })
+    throw new Error(`unexpected fetch to ${url}`)
+  })
 }
 
 describe('GET /api/location', () => {
   afterEach(() => vi.restoreAllMocks())
 
   it('returns 400 for a missing query', async () => {
-    const res = await onRequestGet({ env, request: req('https://x/api/location') } as never)
+    const res = await onRequestGet({ env: locEnv(null), request: req('https://x/api/location') } as never)
     expect(res.status).toBe(400)
   })
 
   it('returns the cached payload on a cache hit without calling external APIs', async () => {
-    const fetchMock = vi.fn((url: string) => {
-      if (url.includes('/rest/v1/locations')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => [
-            {
-              slug: 'dublin-ireland',
-              lat: 53.35,
-              lng: -6.26,
-              display_name: 'Dublin, Ireland',
-              things_to_do: [
-                { name: 'Trinity College', category: 'attraction', source: 'tripadvisor' },
-                { name: 'The Ivy', category: 'restaurant', source: 'places', lat: 53.34, lng: -6.26 },
-              ],
-            },
-          ],
-        })
-      }
-      throw new Error(`unexpected fetch to ${url}`)
-    })
+    const fetchMock = externalFetch()
     vi.stubGlobal('fetch', fetchMock)
+    const env = locEnv(
+      cachedLocation('dublin-ireland', [
+        { name: 'Trinity College', category: 'attraction', source: 'tripadvisor' },
+        { name: 'The Ivy', category: 'restaurant', source: 'places', lat: 53.34, lng: -6.26 },
+      ]),
+    )
     const res = await onRequestGet({ env, request: req('https://x/api/location?q=Dublin') } as never)
     expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.slug).toBe('dublin-ireland')
-    expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('tripadvisor'))).toBe(false)
+    expect((await res.json()).slug).toBe('dublin-ireland')
+    // Nothing external is called on a cache hit.
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('refreshes instead of trusting a cached row with zero things-to-do', async () => {
-    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
-      if (url.includes('/rest/v1/locations') && (!init || init.method === undefined)) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => [
-            { slug: 'yellowstone-demo', lat: 44.6, lng: -110.5, display_name: 'Yellowstone', things_to_do: [] },
-          ],
-        })
-      }
-      if (url.includes('/rest/v1/locations')) {
-        return Promise.resolve({ ok: true, json: async () => ({}) })
-      }
-      if (url.includes('/rest/v1/request_log')) {
-        return Promise.resolve({ ok: true, headers: new Headers({ 'content-range': '*/1' }), json: async () => [] })
-      }
-      if (url.includes('nominatim.openstreetmap.org')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => [{ lat: '44.6', lon: '-110.5', display_name: 'Yellowstone National Park, USA' }],
-        })
-      }
-      if (url.includes('tripadvisor.com')) return Promise.resolve({ ok: true, json: async () => ({ data: [] }) })
-      if (url.includes('googleapis.com')) return Promise.resolve({ ok: true, json: async () => ({ results: [] }) })
-      throw new Error(`unexpected fetch to ${url}`)
-    })
+    const fetchMock = externalFetch()
     vi.stubGlobal('fetch', fetchMock)
+    const env = locEnv(cachedLocation('yellowstone-demo', []))
     const res = await onRequestGet({ env, request: req('https://x/api/location?q=Yellowstone') } as never)
     expect(res.status).toBe(200)
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('nominatim.openstreetmap.org'))).toBe(true)
   })
 
   it('refreshes a cached row whose places-sourced entries predate per-item coordinate capture', async () => {
-    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
-      if (url.includes('/rest/v1/locations') && (!init || init.method === undefined)) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => [
-            {
-              slug: 'barcelona-spain',
-              lat: 41.38,
-              lng: 2.17,
-              display_name: 'Barcelona, Spain',
-              // Real, non-empty things-to-do — but the places-sourced entry
-              // has no lat/lng, meaning it was cached before coordinate
-              // capture existed. This should still trigger a refresh.
-              things_to_do: [{ name: 'Casa Batlló', category: 'tourist_attraction', source: 'places' }],
-            },
-          ],
-        })
-      }
-      if (url.includes('/rest/v1/locations')) {
-        return Promise.resolve({ ok: true, json: async () => ({}) })
-      }
-      if (url.includes('/rest/v1/request_log')) {
-        return Promise.resolve({ ok: true, headers: new Headers({ 'content-range': '*/1' }), json: async () => [] })
-      }
-      if (url.includes('nominatim.openstreetmap.org')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => [{ lat: '41.38', lon: '2.17', display_name: 'Barcelona, Spain' }],
-        })
-      }
-      if (url.includes('tripadvisor.com')) return Promise.resolve({ ok: true, json: async () => ({ data: [] }) })
-      if (url.includes('googleapis.com')) return Promise.resolve({ ok: true, json: async () => ({ results: [] }) })
-      throw new Error(`unexpected fetch to ${url}`)
-    })
+    const fetchMock = externalFetch()
     vi.stubGlobal('fetch', fetchMock)
+    // Real, non-empty things-to-do, but the places entry has no lat/lng.
+    const env = locEnv(
+      cachedLocation('barcelona-spain', [{ name: 'Casa Batlló', category: 'tourist_attraction', source: 'places' }]),
+    )
     const res = await onRequestGet({ env, request: req('https://x/api/location?q=Barcelona') } as never)
     expect(res.status).toBe(200)
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('nominatim.openstreetmap.org'))).toBe(true)
   })
 
-  it('refreshes a cached row that has no restaurant (predates the restaurant search) so meals can be scheduled', async () => {
-    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
-      if (url.includes('/rest/v1/locations') && (!init || init.method === undefined)) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => [
-            {
-              slug: 'rome-italy',
-              lat: 41.9,
-              lng: 12.5,
-              display_name: 'Rome, Italy',
-              // Attractions only, all with coords — but no restaurant, so it
-              // predates the restaurant search and should refresh.
-              things_to_do: [{ name: 'Colosseum', category: 'tourist_attraction', source: 'places', lat: 41.89, lng: 12.49 }],
-            },
-          ],
-        })
-      }
-      if (url.includes('/rest/v1/locations')) return Promise.resolve({ ok: true, json: async () => ({}) })
-      if (url.includes('/rest/v1/request_log')) {
-        return Promise.resolve({ ok: true, headers: new Headers({ 'content-range': '*/1' }), json: async () => [] })
-      }
-      if (url.includes('nominatim.openstreetmap.org')) {
-        return Promise.resolve({ ok: true, json: async () => [{ lat: '41.9', lon: '12.5', display_name: 'Rome, Italy' }] })
-      }
-      if (url.includes('tripadvisor.com')) return Promise.resolve({ ok: true, json: async () => ({ data: [] }) })
-      if (url.includes('googleapis.com')) return Promise.resolve({ ok: true, json: async () => ({ results: [] }) })
-      throw new Error(`unexpected fetch to ${url}`)
-    })
+  it('refreshes a cached row that has no restaurant so meals can be scheduled', async () => {
+    const fetchMock = externalFetch()
     vi.stubGlobal('fetch', fetchMock)
+    const env = locEnv(
+      cachedLocation('rome-italy', [
+        { name: 'Colosseum', category: 'tourist_attraction', source: 'places', lat: 41.89, lng: 12.49 },
+      ]),
+    )
     const res = await onRequestGet({ env, request: req('https://x/api/location?q=Rome') } as never)
     expect(res.status).toBe(200)
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('nominatim.openstreetmap.org'))).toBe(true)
   })
 
   it('refreshes a cached row whose place names are mojibake, and drops corrupt names from the fresh result', async () => {
-    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
-      if (url.includes('/rest/v1/locations') && (!init || init.method === undefined)) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => [
-            {
-              slug: 'beijing-china',
-              lat: 39.9,
-              lng: 116.4,
-              display_name: 'Beijing, China',
-              // Full, coord-bearing, restaurant-having row — but one name is
-              // garbled (lone surrogate). Only the mojibake check should force
-              // the refresh.
-              things_to_do: [
-                { name: '交泰殿', category: 'tourist_attraction', source: 'places', lat: 39.92, lng: 116.39 },
-                { name: '故宫\uDC8D物院', category: 'restaurant', source: 'places', lat: 39.91, lng: 116.39 },
-              ],
-            },
-          ],
-        })
-      }
-      if (url.includes('/rest/v1/locations')) return Promise.resolve({ ok: true, json: async () => ({}) })
-      if (url.includes('/rest/v1/request_log')) {
-        return Promise.resolve({ ok: true, headers: new Headers({ 'content-range': '*/1' }), json: async () => [] })
-      }
-      if (url.includes('nominatim.openstreetmap.org')) {
-        return Promise.resolve({ ok: true, json: async () => [{ lat: '39.9', lon: '116.4', display_name: 'Beijing, China' }] })
-      }
-      if (url.includes('tripadvisor.com')) return Promise.resolve({ ok: true, json: async () => ({ data: [] }) })
-      if (url.includes('googleapis.com')) {
-        // Fresh Places result includes one clean and one still-garbled name;
-        // the corrupt one must be dropped before caching/returning.
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            results: [
-              { name: 'Family Li Imperial Cuisine', types: ['restaurant'], place_id: 'a', geometry: { location: { lat: 39.91, lng: 116.42 } } },
-              { name: '天\uDC9D厅', types: ['restaurant'], place_id: 'b', geometry: { location: { lat: 39.88, lng: 116.4 } } },
-            ],
-          }),
-        })
-      }
-      throw new Error(`unexpected fetch to ${url}`)
-    })
+    const fetchMock = externalFetch([
+      { name: 'Family Li Imperial Cuisine', types: ['restaurant'], place_id: 'a', geometry: { location: { lat: 39.91, lng: 116.42 } } },
+      { name: '天\uDC9D厅', types: ['restaurant'], place_id: 'b', geometry: { location: { lat: 39.88, lng: 116.4 } } },
+    ])
     vi.stubGlobal('fetch', fetchMock)
+    const env = locEnv(
+      cachedLocation('beijing-china', [
+        { name: '交泰殿', category: 'tourist_attraction', source: 'places', lat: 39.92, lng: 116.39 },
+        { name: '故宫\uDC8D物院', category: 'restaurant', source: 'places', lat: 39.91, lng: 116.39 },
+      ]),
+    )
     const res = await onRequestGet({ env, request: req('https://x/api/location?q=Beijing') } as never)
     expect(res.status).toBe(200)
-    // It refreshed (called the geocoder)…
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('nominatim.openstreetmap.org'))).toBe(true)
-    // …and the returned list has the clean name but not the corrupt one.
-    const body = await res.json()
-    const names = body.thingsToDo.map((t: { name: string }) => t.name)
+    const names = (await res.json()).thingsToDo.map((t: { name: string }) => t.name)
     expect(names).toContain('Family Li Imperial Cuisine')
     expect(names.some((n: string) => [...n].some((c) => c.charCodeAt(0) >= 0xdc00 && c.charCodeAt(0) <= 0xdfff))).toBe(false)
   })
 
   it('does not refresh a cached row whose places-sourced entries already have coordinates', async () => {
-    const fetchMock = vi.fn((url: string) => {
-      if (url.includes('/rest/v1/locations')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => [
-            {
-              slug: 'prague-czechia',
-              lat: 50.08,
-              lng: 14.44,
-              display_name: 'Prague, Czechia',
-              things_to_do: [
-                { name: 'Charles Bridge', category: 'tourist_attraction', source: 'places', lat: 50.09, lng: 14.41 },
-                { name: 'Lokal', category: 'restaurant', source: 'places', lat: 50.09, lng: 14.42 },
-              ],
-            },
-          ],
-        })
-      }
-      throw new Error(`unexpected fetch to ${url}`)
-    })
+    const fetchMock = externalFetch()
     vi.stubGlobal('fetch', fetchMock)
+    const env = locEnv(
+      cachedLocation('prague-czechia', [
+        { name: 'Charles Bridge', category: 'tourist_attraction', source: 'places', lat: 50.09, lng: 14.41 },
+        { name: 'Lokal', category: 'restaurant', source: 'places', lat: 50.09, lng: 14.42 },
+      ]),
+    )
     const res = await onRequestGet({ env, request: req('https://x/api/location?q=Prague') } as never)
     expect(res.status).toBe(200)
-    expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('nominatim.openstreetmap.org'))).toBe(false)
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('returns 429 when the rate limit is exceeded on a cache miss', async () => {
-    vi.stubGlobal('fetch', (url: string) => {
-      if (url.includes('/rest/v1/locations')) return Promise.resolve({ ok: true, json: async () => [] })
-      if (url.includes('/rest/v1/request_log')) {
-        return Promise.resolve({ ok: true, headers: new Headers({ 'content-range': '*/250' }), json: async () => [] })
-      }
-      throw new Error(`unexpected fetch to ${url}`)
-    })
+    vi.stubGlobal('fetch', externalFetch())
+    // Cache miss (null) + 250 recent requests, over the 200/hr cap.
+    const env = locEnv(null, 250)
     const res = await onRequestGet({ env, request: req('https://x/api/location?q=Nowhereville') } as never)
     expect(res.status).toBe(429)
   })
 
-  it('returns 500 with a clean error body and logs when the Supabase lookup fails', async () => {
+  it('returns 500 with a clean error body and logs when the database lookup fails', async () => {
     const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {})
-    vi.stubGlobal('fetch', (url: string) => {
-      if (url.includes('/rest/v1/locations')) {
-        return Promise.resolve({ ok: false, status: 500, json: async () => ({}) })
-      }
-      throw new Error(`unexpected fetch to ${url}`)
-    })
+    const env = fakeD1({ fail: true, extraEnv: API_KEYS }).env
     const res = await onRequestGet({ env, request: req('https://x/api/location?q=Dublin') } as never)
     expect(res.status).toBe(500)
-    const body = await res.json()
-    expect(body.error).toBeDefined()
+    expect((await res.json()).error).toBeDefined()
     expect(errorSpy).toHaveBeenCalled()
   })
 })

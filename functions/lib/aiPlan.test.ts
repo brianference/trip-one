@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildPlanPrompt, normalizePlan, extractPlanMessage, ensureFoodPerDay } from './aiPlan'
+import { buildPlanPrompt, normalizePlan, extractPlanMessage, balanceDayFood, maxIncidentalFood } from './aiPlan'
 
 const candidates = [
   { name: 'Ramen Shop', category: 'restaurant', rating: 4.6 },
@@ -113,9 +113,34 @@ describe('normalizePlan', () => {
   })
 })
 
-describe('ensureFoodPerDay', () => {
-  // 0,1 = attractions near (0,0); 2,3,4 = restaurants near (0,0); 5,6 = restaurants far (10,10)
-  const candidates = [
+interface TestPlace {
+  name: string
+  category: string
+  lat?: number
+  lng?: number
+  rating?: number
+  themed?: boolean
+}
+
+describe('maxIncidentalFood', () => {
+  it('allows about a third of a day to be food', () => {
+    expect(maxIncidentalFood(4)).toBe(2)
+    expect(maxIncidentalFood(6)).toBe(3)
+  })
+
+  it('always allows at least one meal, even on a day with nothing else', () => {
+    expect(maxIncidentalFood(0)).toBe(1)
+    expect(maxIncidentalFood(1)).toBe(1)
+  })
+
+  it('never allows more than three food stops in a day', () => {
+    expect(maxIncidentalFood(20)).toBe(3)
+  })
+})
+
+describe('balanceDayFood', () => {
+  // 0,1 = attractions near (0,0); 2,3,4 = food near (0,0); 5,6 = food far (10,10)
+  const candidates: TestPlace[] = [
     { name: 'Museum A', category: 'museum', lat: 0.0, lng: 0.0 },
     { name: 'Park B', category: 'park', lat: 0.01, lng: 0.01 },
     { name: 'Cafe Near', category: 'cafe', lat: 0.02, lng: 0.0, rating: 4.5 },
@@ -124,25 +149,49 @@ describe('ensureFoodPerDay', () => {
     { name: 'Diner Far', category: 'restaurant', lat: 10.0, lng: 10.0, rating: 4.9 },
     { name: 'Grill Far', category: 'restaurant', lat: 10.1, lng: 10.1, rating: 4.8 },
   ]
+  const isFood = (i: number) => ['cafe', 'restaurant', 'bar'].includes(candidates[i].category)
 
-  it('adds food to reach the minimum, choosing the nearest to the day’s attractions', () => {
-    const out = ensureFoodPerDay([{ day: 1, placeIndexes: [0, 1] }], candidates, 3)
-    const foodIdx = out[0].placeIndexes.filter((i) => ['cafe', 'restaurant', 'bar'].includes(candidates[i].category))
-    expect(foodIdx.length).toBeGreaterThanOrEqual(3)
-    // the far, higher-rated restaurants (5,6) are NOT chosen over the near ones (2,3,4)
+  it('gives a day with no food a meal, choosing the nearest to that day’s stops', () => {
+    const out = balanceDayFood([{ day: 1, placeIndexes: [0, 1] }], candidates)
+    expect(out[0].placeIndexes.filter(isFood).length).toBeGreaterThanOrEqual(1)
+    // the far, higher-rated restaurants (5,6) are NOT chosen over the near ones
     expect(out[0].placeIndexes).not.toContain(5)
     expect(out[0].placeIndexes).not.toContain(6)
-    expect(out[0].placeIndexes).toEqual(expect.arrayContaining([2, 3, 4]))
   })
 
-  it('leaves a day alone when it already has enough food', () => {
-    const out = ensureFoodPerDay([{ day: 1, placeIndexes: [0, 2, 3, 4] }], candidates, 3)
+  it('trims incidental food back to its share of the day', () => {
+    // one attraction + three food stops -> ceiling of 1 incidental food
+    const out = balanceDayFood([{ day: 1, placeIndexes: [0, 2, 3, 4] }], candidates)
+    expect(out[0].placeIndexes.filter(isFood)).toHaveLength(1)
+    expect(out[0].placeIndexes).toContain(0)
+  })
+
+  it('keeps food the traveler actually asked for, over the incidental ceiling', () => {
+    // A wine/food trip: the food IS the theme, so none of it is trimmed.
+    const themedFood: TestPlace[] = candidates.map((c, i) =>
+      i >= 2 && i <= 4 ? { ...c, themed: true } : c,
+    )
+    const out = balanceDayFood([{ day: 1, placeIndexes: [0, 2, 3, 4] }], themedFood)
     expect(out[0].placeIndexes).toEqual([0, 2, 3, 4])
   })
 
+  it('does not fill a day past the minimum just because food is available', () => {
+    const out = balanceDayFood([{ day: 1, placeIndexes: [0, 1] }], candidates)
+    expect(out[0].placeIndexes.filter(isFood)).toHaveLength(1)
+  })
+
   it('never reuses a food place across days', () => {
-    const out = ensureFoodPerDay([{ day: 1, placeIndexes: [0] }, { day: 2, placeIndexes: [1] }], candidates, 3)
+    const out = balanceDayFood([{ day: 1, placeIndexes: [0] }, { day: 2, placeIndexes: [1] }], candidates)
     const all = out.flatMap((d) => d.placeIndexes)
     expect(new Set(all).size).toBe(all.length)
+  })
+
+  it('leaves a day with no food when the pool has none at all', () => {
+    const noFood: TestPlace[] = [
+      { name: 'Museum A', category: 'museum' },
+      { name: 'Park B', category: 'park' },
+    ]
+    const out = balanceDayFood([{ day: 1, placeIndexes: [0, 1] }], noFood)
+    expect(out[0].placeIndexes).toEqual([0, 1])
   })
 })

@@ -1,11 +1,18 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { onRequestPost } from './plan'
+import { fakeD1 } from '../lib/testD1'
 
-const env = {
-  SUPABASE_URL: 'https://x.supabase.co',
-  SUPABASE_SERVICE_ROLE_KEY: 'k',
-  RATE_LIMIT_SALT: 'salt',
-  OPENAI_API_KEY: 'sk-test',
+/**
+ * An env whose rate-limit COUNT returns `recent`. Includes an OpenAI key
+ * unless `withKey` is false — passed explicitly rather than as a defaulted
+ * param, because `mkEnv(0, undefined)` would resolve back to the default and
+ * silently keep the key set.
+ */
+function mkEnv(recent = 0, withKey = true) {
+  return fakeD1({
+    first: (sql) => (sql.includes('COUNT(*)') ? { n: recent } : null),
+    extraEnv: withKey ? { OPENAI_API_KEY: 'sk-test' } : {},
+  }).env
 }
 
 function req(body: unknown, ip = '203.0.113.9') {
@@ -26,15 +33,9 @@ const validBody = {
   ],
 }
 
-/** Mocks the rate-log reads/writes plus an OpenAI response returning `content`. */
-function mockBackend(openAiContent: string, opts: { recent?: number; openAiOk?: boolean } = {}) {
-  return vi.fn((url: string, init?: RequestInit) => {
-    if (url.includes('/rest/v1/request_log') && (!init || init.method === undefined)) {
-      return Promise.resolve({ ok: true, headers: new Headers({ 'content-range': `*/${opts.recent ?? 0}` }), json: async () => [] })
-    }
-    if (url.includes('/rest/v1/request_log')) {
-      return Promise.resolve({ ok: true, json: async () => [] })
-    }
+/** Mocks just the OpenAI call (the DB no longer goes through fetch). */
+function mockOpenAi(openAiContent: string, opts: { openAiOk?: boolean } = {}) {
+  return vi.fn((url: string) => {
     if (url.includes('api.openai.com')) {
       return Promise.resolve({
         ok: opts.openAiOk ?? true,
@@ -47,11 +48,16 @@ function mockBackend(openAiContent: string, opts: { recent?: number; openAiOk?: 
 }
 
 describe('POST /api/plan', () => {
-  afterEach(() => vi.restoreAllMocks())
+  afterEach(() => {
+    vi.restoreAllMocks()
+    // restoreAllMocks does not undo stubGlobal; without this a leaked fetch
+    // stub from one test would answer the next.
+    vi.unstubAllGlobals()
+  })
 
   it('returns a grounded plan referencing only supplied place indices', async () => {
-    vi.stubGlobal('fetch', mockBackend(JSON.stringify({ days: [{ day: 1, placeIndexes: [0] }, { day: 2, placeIndexes: [2] }] })))
-    const res = await onRequestPost({ env, request: req(validBody) } as never)
+    vi.stubGlobal('fetch', mockOpenAi(JSON.stringify({ days: [{ day: 1, placeIndexes: [0] }, { day: 2, placeIndexes: [2] }] })))
+    const res = await onRequestPost({ env: mkEnv(), request: req(validBody) } as never)
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.days).toEqual([
@@ -61,11 +67,9 @@ describe('POST /api/plan', () => {
   })
 
   it('drops hallucinated out-of-range indices before returning', async () => {
-    vi.stubGlobal('fetch', mockBackend(JSON.stringify({ days: [{ day: 1, placeIndexes: [0, 99] }] })))
-    const res = await onRequestPost({ env, request: req(validBody) } as never)
+    vi.stubGlobal('fetch', mockOpenAi(JSON.stringify({ days: [{ day: 1, placeIndexes: [0, 99] }] })))
+    const res = await onRequestPost({ env: mkEnv(), request: req(validBody) } as never)
     const body = await res.json()
-    // The hallucinated index 99 is dropped; only real indices remain (food-per-day
-    // enforcement may add other REAL indices, but never the out-of-range one).
     const all = body.days.flatMap((d: { placeIndexes: number[] }) => d.placeIndexes)
     expect(all).toContain(0)
     expect(all).not.toContain(99)
@@ -73,31 +77,31 @@ describe('POST /api/plan', () => {
   })
 
   it('502s when the model returns nothing usable', async () => {
-    vi.stubGlobal('fetch', mockBackend(JSON.stringify({ days: [{ day: 1, placeIndexes: [99] }] })))
-    const res = await onRequestPost({ env, request: req(validBody) } as never)
+    vi.stubGlobal('fetch', mockOpenAi(JSON.stringify({ days: [{ day: 1, placeIndexes: [99] }] })))
+    const res = await onRequestPost({ env: mkEnv(), request: req(validBody) } as never)
     expect(res.status).toBe(502)
   })
 
   it('502s when OpenAI errors', async () => {
-    vi.stubGlobal('fetch', mockBackend('', { openAiOk: false }))
-    const res = await onRequestPost({ env, request: req(validBody) } as never)
+    vi.stubGlobal('fetch', mockOpenAi('', { openAiOk: false }))
+    const res = await onRequestPost({ env: mkEnv(), request: req(validBody) } as never)
     expect(res.status).toBe(502)
   })
 
   it('rejects an invalid request body with 400', async () => {
-    vi.stubGlobal('fetch', mockBackend('{}'))
-    const res = await onRequestPost({ env, request: req({ intent: '', days: 0, places: [] }) } as never)
+    vi.stubGlobal('fetch', mockOpenAi('{}'))
+    const res = await onRequestPost({ env: mkEnv(), request: req({ intent: '', days: 0, places: [] }) } as never)
     expect(res.status).toBe(400)
   })
 
   it('returns 429 when over the rate limit', async () => {
-    vi.stubGlobal('fetch', mockBackend(JSON.stringify({ days: [{ day: 1, placeIndexes: [0] }] }), { recent: 199 }))
-    const res = await onRequestPost({ env, request: req(validBody) } as never)
+    vi.stubGlobal('fetch', mockOpenAi(JSON.stringify({ days: [{ day: 1, placeIndexes: [0] }] })))
+    const res = await onRequestPost({ env: mkEnv(199), request: req(validBody) } as never)
     expect(res.status).toBe(429)
   })
 
   it('500s when the API key is not configured', async () => {
-    const res = await onRequestPost({ env: { ...env, OPENAI_API_KEY: undefined }, request: req(validBody) } as never)
+    const res = await onRequestPost({ env: mkEnv(0, false), request: req(validBody) } as never)
     expect(res.status).toBe(500)
   })
 })

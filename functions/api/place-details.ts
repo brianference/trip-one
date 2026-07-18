@@ -1,6 +1,6 @@
 import { z } from 'zod'
-import type { Env } from '../lib/supabaseAdmin'
-import { getPlaceDetailCache, upsertPlaceDetailCache, countRecentRequests, insertRequestLog } from '../lib/supabaseAdmin'
+import type { Env } from '../lib/db'
+import { getPlaceDetailCache, upsertPlaceDetailCache, countRecentRequests, insertRequestLog } from '../lib/db'
 import { isUnderRateLimit, hashIp } from '../../src/lib/rateLimit'
 import { PLACE_DETAILS_FIELDS, normalizePlaceDetail, type PlaceDetail } from '../lib/placeDetails'
 import { logger } from '../../src/lib/logger'
@@ -42,7 +42,7 @@ async function resolvePlaceId(name: string, lat: number | undefined, lng: number
  *
  * Returns rich, real detail for a place — rating, review count, address, phone,
  * hours, a summary/reviews, photo references, and a Google Maps link — cached
- * in Supabase so the paid Google Details call is made at most once per place
+ * in D1 so the paid Google Details call is made at most once per place
  * per 30 days. Nothing is fabricated; a place with no phone/hours simply omits
  * them. When only a name is given (e.g. an itinerary stop with no place_id) it
  * resolves the id via Find Place first.

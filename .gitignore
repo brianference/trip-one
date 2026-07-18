@@ -11,3 +11,6 @@ tsconfig.tsbuildinfo
 
 # Local QA screenshots (root)
 /*.png
+
+# Cloudflare local dev state (local D1, logs)
+.wrangler/

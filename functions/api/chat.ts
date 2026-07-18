@@ -1,9 +1,9 @@
 import { z } from 'zod'
-import type { Env } from '../lib/supabaseAdmin'
-import { countRecentRequests, insertRequestLog } from '../lib/supabaseAdmin'
+import type { Env } from '../lib/db'
+import { countRecentRequests, insertRequestLog } from '../lib/db'
 import { isUnderRateLimit, hashIp } from '../../src/lib/rateLimit'
 import { buildChatPrompt, normalizeChatResponse } from '../lib/aiChat'
-import { ensureFoodPerDay } from '../lib/aiPlan'
+import { balanceDayFood } from '../lib/aiPlan'
 import { openAiResponseSchema } from '../lib/openAi'
 import { logger } from '../../src/lib/logger'
 
@@ -25,6 +25,10 @@ const chatRequestSchema = z.object({
         rating: z.number().optional(),
         lat: z.number().optional(),
         lng: z.number().optional(),
+        // Set when the place came from searching the traveler's own stated
+        // interests, so the planner can prioritise it and the food balancer
+        // knows it isn't incidental filler.
+        themed: z.boolean().optional(),
       }),
     )
     .min(1)
@@ -99,7 +103,7 @@ export async function onRequestPost({ env, request }: { env: ChatEnv; request: R
 
     // On a re-plan, guarantee ≥3 food stops per day near each day's stops.
     if (result.action === 'plan' && result.days) {
-      result.days = ensureFoodPerDay(result.days, places, 3)
+      result.days = balanceDayFood(result.days, places)
     }
     return json(result, 200)
   } catch (err) {

@@ -1,17 +1,17 @@
-import { countRecentRequests, insertRequestLog, type Env } from './supabaseAdmin'
+import { countRecentRequests, insertRequestLog, type Env } from './db'
 import { isUnderRateLimit, hashIp } from '../../src/lib/rateLimit'
 import { logger } from '../../src/lib/logger'
 
 /**
- * Shared per-IP hourly rate limit for an endpoint, backed by the Supabase
+ * Shared per-IP hourly rate limit for an endpoint, backed by the D1
  * `request_log` (the same mechanism `/api/location` uses inline). Returns true
  * when the caller is OVER the limit — the endpoint should then return 429.
  *
- * Fails OPEN: if the rate-limit bookkeeping itself errors (e.g. Supabase blip),
+ * Fails OPEN: if the rate-limit bookkeeping itself errors (e.g. a D1 blip),
  * the request is allowed rather than blocked, since these are best-effort abuse
  * guards on endpoints that should stay available.
  *
- * @param env - Function env (needs SUPABASE_* and RATE_LIMIT_SALT)
+ * @param env - Function env (needs the DB binding and RATE_LIMIT_SALT)
  * @param request - The incoming request (for the client IP header)
  * @param endpoint - Label stored in the request log
  * @param perHour - Allowed requests per rolling hour per IP

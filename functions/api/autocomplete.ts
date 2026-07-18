@@ -1,7 +1,7 @@
 import { autocompleteQuerySchema } from '../../src/lib/validation/schemas'
 import { autocompleteSearch } from '../lib/geocode'
 import { isRateLimited } from '../lib/rateLimitGuard'
-import type { Env } from '../lib/supabaseAdmin'
+import type { Env } from '../lib/db'
 import { logger } from '../../src/lib/logger'
 
 // Generous — this is typeahead (debounced, min 2 chars), so a real user stays

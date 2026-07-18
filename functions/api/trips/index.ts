@@ -1,5 +1,5 @@
-import type { Env } from '../../lib/supabaseAdmin'
-import { createTrip } from '../../lib/supabaseAdmin'
+import type { Env } from '../../lib/db'
+import { createTrip } from '../../lib/db'
 import { isRateLimited } from '../../lib/rateLimitGuard'
 import { logger } from '../../../src/lib/logger'
 import { z } from 'zod'

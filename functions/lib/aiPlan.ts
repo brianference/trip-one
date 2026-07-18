@@ -1,3 +1,5 @@
+import { isFoodCategory } from '../../src/lib/places/foodCategories'
+
 /**
  * Pure, network-free core of the grounded AI trip planner.
  *
@@ -8,6 +10,19 @@
  * or malformed response can never introduce a place that doesn't exist.
  */
 
+export { isFoodCategory }
+
+/**
+ * Target stops per day, meals included.
+ *
+ * Capping the food (see {@link balanceDayFood}) removed the filler that used
+ * to pad a day out to a plausible length, which left some days down to a
+ * couple of stops — a thin trip rather than a food-heavy one. The model is
+ * told the target so it replaces that volume with real places instead.
+ */
+const STOPS_PER_DAY_MIN = 4
+const STOPS_PER_DAY_MAX = 6
+
 export interface PlanCandidate {
   name: string
   category: string
@@ -15,6 +30,14 @@ export interface PlanCandidate {
   /** Coordinates, when known — used so the planner can keep each day geographically compact. */
   lat?: number
   lng?: number
+  /**
+   * True when this place was found by searching the traveler's own stated
+   * interests, rather than by the generic nearby sweep. Themed places are
+   * flagged to the model as the point of the trip, and themed FOOD is exempt
+   * from the incidental-food cap — a winery on a wine trip is the itinerary,
+   * not filler.
+   */
+  themed?: boolean
 }
 
 export interface PlanDay {
@@ -57,12 +80,17 @@ export interface BuildPlanPromptParams {
  * them it builds a fresh plan (the one-shot path). Either way it returns a
  * short friendly `message` alongside the grounded `days`.
  */
-/** Numbered "index) Name [category, rated X] @lat,lng" list of the real candidate places. */
+/**
+ * Numbered "index) Name [category, rated X] @lat,lng" list of the real
+ * candidate places. Interest-matched places carry a ★ so the model can tell
+ * the reason for the trip apart from the generic nearby filler.
+ */
 export function formatCandidateList(candidates: PlanCandidate[]): string {
   return candidates
     .map((c, i) => {
       const coords = c.lat != null && c.lng != null ? ` @${c.lat.toFixed(4)},${c.lng.toFixed(4)}` : ''
-      return `${i}) ${c.name} [${c.category}${c.rating != null ? `, rated ${c.rating}` : ''}]${coords}`
+      const star = c.themed ? ' ★MATCHES INTERESTS' : ''
+      return `${i}) ${c.name} [${c.category}${c.rating != null ? `, rated ${c.rating}` : ''}]${coords}${star}`
     })
     .join('\n')
 }
@@ -78,7 +106,10 @@ export function buildPlanPrompt(params: BuildPlanPromptParams): string {
     '- Only use indices that appear in the list. Never invent a place or an index.',
     '- Use each place at most once across the whole plan.',
     `- Spread the selections roughly evenly across all ${days} days.`,
-    '- Every day must include at least 3 DIFFERENT real food/drink stops (restaurant/cafe/bar/bakery) around breakfast, lunch, and dinner — never reuse the same one, and only use ones present in the list.',
+    `- Each day needs ${STOPS_PER_DAY_MIN}-${STOPS_PER_DAY_MAX} stops in total, including meals. A day with one or two stops is not a day out — fill it with the best real places available.`,
+    '- THE TRAVELER\'S STATED INTERESTS COME FIRST. Places marked ★MATCHES INTERESTS are why they are making this trip: build each day around them and use as many as genuinely fit before considering anything else.',
+    '- Include 1-2 real food/drink stops per day (restaurant/cafe/bar/bakery) so meals are covered, and only from the list. Do NOT pad a day with extra restaurants and cafes when on-theme or sightseeing places are still available — a day of eating is not a trip.',
+    '- The exception: when the traveler\'s interests ARE food or drink (a food tour, wine tasting, "best restaurants"), the food stops are the point — use as many as the trip calls for.',
     '- Keep each day GEOGRAPHICALLY COMPACT using the @lat,lng coordinates: all of a day\'s stops (attractions AND food) should be close together so the day doesn\'t zig-zag across the city. Crucially, choose each day\'s restaurants/cafes NEAR that day\'s attractions — never dump all the food stops in one far-off area.',
     '- Within a day, order stops sensibly and place food/restaurant/cafe stops around meal times.',
     "- Favor places that match the traveler's stated interests and pace. It is fine to leave weak matches out.",
@@ -136,19 +167,7 @@ export function extractPlanMessage(raw: unknown): string | null {
   return trimmed.length > 0 ? trimmed.slice(0, 600) : null
 }
 
-const FOOD_CATEGORIES = new Set([
-  'restaurant',
-  'cafe',
-  'bar',
-  'bakery',
-  'food',
-  'meal_takeaway',
-  'meal_delivery',
-])
 
-function isFoodCategory(category?: string): boolean {
-  return category != null && FOOD_CATEGORIES.has(category)
-}
 
 /** Squared distance between two coordinates — enough to rank proximity, no sqrt needed. */
 function distSq(aLat: number, aLng: number, bLat: number, bLng: number): number {
@@ -157,26 +176,72 @@ function distSq(aLat: number, aLng: number, bLat: number, bLng: number): number 
   return dLat * dLat + dLng * dLng
 }
 
+/** Meals guaranteed per day — nobody wants a day with nowhere to eat. */
+export const MIN_FOOD_PER_DAY = 1
+/** Hard ceiling on incidental food stops in a single day. */
+const MAX_FOOD_PER_DAY = 3
+
 /**
- * Guarantees each day has at least `minFood` food/drink stops, chosen from the
- * REAL candidate pool and placed NEAR that day's existing (attraction) stops —
- * so meals are convenient, not clustered across town. The LLM is unreliable at
- * this hard constraint, so we enforce it deterministically after the fact.
+ * The most INCIDENTAL food stops a day should carry, given how many real
+ * things to do it has. Roughly a third of the day, which reads as "we ate
+ * while we were out" rather than "we went out to eat".
  *
- * For each short day it finds the day's geographic center (from its stops that
- * have coordinates) and adds the closest unused food candidates until the day
- * has `minFood` of them. Food candidates without coordinates are used only as a
- * last resort (appended when nothing closer remains). Every place is still real
- * and used at most once across the whole plan.
- * @param plan - The normalized plan (mutated copy returned)
- * @param candidates - The real candidates the indices refer to
- * @param minFood - Minimum food stops required per day
+ * Themed food never counts against this — see {@link balanceDayFood}.
+ * @param nonFoodCount - Stops in the day that aren't food
  */
-export function ensureFoodPerDay(plan: PlanDay[], candidates: PlanCandidate[], minFood = 3): PlanDay[] {
-  const used = new Set<number>(plan.flatMap((d) => d.placeIndexes))
+export function maxIncidentalFood(nonFoodCount: number): number {
+  return Math.min(MAX_FOOD_PER_DAY, Math.max(MIN_FOOD_PER_DAY, Math.ceil(nonFoodCount / 2)))
+}
+
+/**
+ * Balances the food in each day of a plan: guarantees a floor of real meals,
+ * and trims INCIDENTAL food back to {@link maxIncidentalFood}.
+ *
+ * The floor exists because the model sometimes plans a day with nothing to
+ * eat. The ceiling exists because it far more often did the opposite — the
+ * old version of this function unconditionally forced 3 food stops into every
+ * day, so a 3-day fishing trip got 9 restaurants whether or not the traveler
+ * asked for one, and food was the majority of nearly every itinerary.
+ *
+ * Food the traveler actually asked for (`themed`, from their own interest
+ * searches — a winery on a wine trip, a food tour in New Orleans) is exempt
+ * from the ceiling and counts toward the floor. So a food trip stays a food
+ * trip; only unrequested filler is trimmed.
+ *
+ * Added meals are chosen from the REAL candidate pool near the day's existing
+ * stops, so they're convenient rather than clustered across town. Every place
+ * is still real and used at most once across the whole plan.
+ *
+ * @param plan - The normalized plan (a balanced copy is returned)
+ * @param candidates - The real candidates the indices refer to
+ * @param minFood - Minimum food stops per day (defaults to {@link MIN_FOOD_PER_DAY})
+ */
+export function balanceDayFood(plan: PlanDay[], candidates: PlanCandidate[], minFood = MIN_FOOD_PER_DAY): PlanDay[] {
+  const isIncidentalFood = (i: number): boolean =>
+    isFoodCategory(candidates[i]?.category) && candidates[i]?.themed !== true
+
+  // Trim first, so the slots freed by over-stuffed days are available to days
+  // that are short of a meal.
+  const trimmed = plan.map((d) => {
+    const nonFoodCount = d.placeIndexes.filter((i) => !isFoodCategory(candidates[i]?.category)).length
+    const themedFoodCount = d.placeIndexes.filter(
+      (i) => isFoodCategory(candidates[i]?.category) && candidates[i]?.themed === true,
+    ).length
+    // A day already carrying requested food needs less filler on top of it.
+    const ceiling = Math.max(0, maxIncidentalFood(nonFoodCount) - themedFoodCount)
+    let kept = 0
+    const placeIndexes = d.placeIndexes.filter((i) => {
+      if (!isIncidentalFood(i)) return true
+      kept += 1
+      return kept <= ceiling
+    })
+    return { day: d.day, placeIndexes }
+  })
+
+  const used = new Set<number>(trimmed.flatMap((d) => d.placeIndexes))
   const foodPool = candidates.map((_, i) => i).filter((i) => isFoodCategory(candidates[i]?.category))
 
-  const result = plan.map((d) => ({ day: d.day, placeIndexes: [...d.placeIndexes] }))
+  const result = trimmed.map((d) => ({ day: d.day, placeIndexes: [...d.placeIndexes] }))
   for (const day of result) {
     let foodCount = day.placeIndexes.filter((i) => isFoodCategory(candidates[i]?.category)).length
     if (foodCount >= minFood) continue

@@ -1,7 +1,14 @@
-import type { Env } from '../lib/supabaseAdmin'
-import { getLocationBySlug } from '../lib/supabaseAdmin'
+import type { Env } from '../lib/db'
+import { getLocationBySlug } from '../lib/db'
 import { logger } from '../../src/lib/logger'
 
+/**
+ * GET /api/health
+ *
+ * Liveness probe. Runs one real D1 query (a lookup that returns null) so a 200
+ * proves the database binding is actually reachable, not just that the Worker
+ * booted. Returns 503 if the query throws.
+ */
 export async function onRequestGet({ env }: { env: Env }): Promise<Response> {
   try {
     await getLocationBySlug(env, '__healthcheck__')

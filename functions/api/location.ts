@@ -1,10 +1,10 @@
-import type { Env } from '../lib/supabaseAdmin'
+import type { Env } from '../lib/db'
 import {
   getLocationBySlug,
   upsertLocation,
   countRecentRequests,
   insertRequestLog,
-} from '../lib/supabaseAdmin'
+} from '../lib/db'
 import { normalizeLocationSlug } from '../../src/lib/slug'
 import { isUnderRateLimit, hashIp } from '../../src/lib/rateLimit'
 import { locationQuerySchema } from '../../src/lib/validation/schemas'
@@ -27,7 +27,7 @@ function json(body: unknown, status: number) {
  * GET /api/location?q=<query>
  *
  * Resolves a free-text location query to coordinates and a list of things to do,
- * using a Supabase-backed cache keyed by a normalized slug. On a cache miss,
+ * using a D1-backed cache keyed by a normalized slug. On a cache miss,
  * enforces a per-IP hourly rate limit before calling out to Nominatim (geocode),
  * Tripadvisor, and Google Places, then persists the merged result for future hits.
  * @param context - Request context with `env` (bindings/secrets) and `request`
@@ -76,7 +76,7 @@ export async function onRequestGet({
     const namesAreCorrupt = anyNameCorrupt(cachedThingsToDo)
     if (cached && cachedThingsToDo.length > 0 && !placesEntriesLackCoordinates && !hasNoRestaurant && !namesAreCorrupt) {
       // The dedicated weather_baseline column has never stored weather data
-      // (see supabaseAdmin.ts) — it's repurposed here to carry the geocoded
+      // (see db.ts) — it's repurposed here to carry the geocoded
       // bounding box so a fresh Nominatim call isn't needed just to zoom the
       // map to a place's real extent.
       const baseline = cached.weather_baseline as { boundingBox?: [number, number, number, number] } | null

@@ -1,8 +1,8 @@
 import { z } from 'zod'
-import type { Env } from '../lib/supabaseAdmin'
-import { countRecentRequests, insertRequestLog } from '../lib/supabaseAdmin'
+import type { Env } from '../lib/db'
+import { countRecentRequests, insertRequestLog } from '../lib/db'
 import { isUnderRateLimit, hashIp } from '../../src/lib/rateLimit'
-import { buildPlanPrompt, normalizePlan, extractPlanMessage, ensureFoodPerDay } from '../lib/aiPlan'
+import { buildPlanPrompt, normalizePlan, extractPlanMessage, balanceDayFood } from '../lib/aiPlan'
 import { openAiResponseSchema } from '../lib/openAi'
 import { logger } from '../../src/lib/logger'
 
@@ -30,6 +30,10 @@ const planRequestSchema = z.object({
         rating: z.number().optional(),
         lat: z.number().optional(),
         lng: z.number().optional(),
+        // Set when the place came from searching the traveler's own stated
+        // interests, so the planner can prioritise it and the food balancer
+        // knows it isn't incidental filler.
+        themed: z.boolean().optional(),
       }),
     )
     .min(1)
@@ -115,8 +119,9 @@ export async function onRequestPost({ env, request }: { env: PlanEnv; request: R
     const plan = normalizePlan(rawPlan, places.length, days)
     if (!plan) return json({ error: 'AI planner could not build a plan from nearby places, try again' }, 502)
 
-    // Deterministically guarantee ≥3 food stops per day, near each day's stops.
-    const withFood = ensureFoodPerDay(plan, places, 3)
+    // Deterministically guarantee each day has a meal, and trim any incidental
+    // food the model padded the day with beyond its share.
+    const withFood = balanceDayFood(plan, places)
     return json({ days: withFood, message: extractPlanMessage(rawPlan) ?? DEFAULT_PLAN_MESSAGE }, 200)
   } catch (err) {
     logger.error('AI plan generation failed', err)

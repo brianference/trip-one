@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { Env } from '../lib/supabaseAdmin'
+import type { Env } from '../lib/db'
 import { textSearchPlaces } from '../lib/places'
 import { textSearchThingsToDo } from '../lib/tripadvisor'
 import { isRateLimited } from '../lib/rateLimitGuard'

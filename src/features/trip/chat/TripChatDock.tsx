@@ -108,6 +108,10 @@ export function TripChatDock({
   }, [open])
 
   async function handleRelocate(destination: string, interests: string) {
+    // No `foodFocused` here: the chat's relocate path has no intent-extraction
+    // step to read it from, and spending an extra AI call on a destination
+    // switch isn't worth it. A food-led relocate still lands on-theme, since
+    // the interest search picks its own food queries up from `interests`.
     const built = await createTripForDestination(destination, interests, tripLengthDays)
     const now = Date.now()
     stashOpeningChat(built.tripId, [

@@ -1,42 +1,45 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { onRequestGet, onRequestPatch } from './[id]'
+import { fakeD1 } from '../../lib/testD1'
 
-const env = { SUPABASE_URL: 'https://x.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'k', RATE_LIMIT_SALT: 's' }
-const trip = { id: 'abc-123', location_slug: 'dublin-ireland', itinerary: [], design_style: 'bento', created_at: '2026-01-01' }
+/** A trips row shaped as D1 returns it (itinerary as JSON TEXT). */
+const tripRow = {
+  id: 'abc-123',
+  location_slug: 'dublin-ireland',
+  itinerary: '[]',
+  design_style: 'bento',
+  created_at: '2026-01-01',
+  trip_length_days: null,
+  start_date: null,
+}
 
 describe('GET /api/trips/:id', () => {
-  afterEach(() => vi.restoreAllMocks())
-
   it('returns the trip when found', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [trip] }))
+    const { env } = fakeD1({ first: (sql) => (sql.includes('FROM trips') ? tripRow : null) })
     const res = await onRequestGet({ env, params: { id: 'abc-123' } } as never)
     expect(res.status).toBe(200)
     expect((await res.json()).id).toBe('abc-123')
   })
 
   it('returns 404 when not found', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [] }))
+    const { env } = fakeD1({ first: () => null })
     const res = await onRequestGet({ env, params: { id: 'missing' } } as never)
     expect(res.status).toBe(404)
   })
 
-  it('returns 500 when Supabase throws', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Supabase down')))
+  it('returns 500 when the database throws', async () => {
+    const { env } = fakeD1({ fail: true })
     const res = await onRequestGet({ env, params: { id: 'abc-123' } } as never)
     expect(res.status).toBe(500)
-    const body = await res.json()
-    expect(body.error).toBe('internal error')
+    expect((await res.json()).error).toBe('internal error')
   })
 })
 
 describe('PATCH /api/trips/:id', () => {
-  afterEach(() => vi.restoreAllMocks())
-
   it('updates the itinerary and design_style', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ ok: true, json: async () => [{ ...trip, design_style: 'chronicle' }] }),
-    )
+    const { env } = fakeD1({
+      first: (sql) => (sql.includes('FROM trips') ? { ...tripRow, design_style: 'chronicle' } : null),
+    })
     const request = new Request('https://x/api/trips/abc-123', {
       method: 'PATCH',
       body: JSON.stringify({ design_style: 'chronicle' }),
@@ -47,6 +50,7 @@ describe('PATCH /api/trips/:id', () => {
   })
 
   it('rejects an invalid patch body', async () => {
+    const { env } = fakeD1()
     const request = new Request('https://x/api/trips/abc-123', {
       method: 'PATCH',
       body: JSON.stringify({ invalid_field: 'value' }),
@@ -55,15 +59,14 @@ describe('PATCH /api/trips/:id', () => {
     expect(res.status).toBe(400)
   })
 
-  it('returns 500 when Supabase throws', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Supabase down')))
+  it('returns 500 when the database throws', async () => {
+    const { env } = fakeD1({ fail: true })
     const request = new Request('https://x/api/trips/abc-123', {
       method: 'PATCH',
       body: JSON.stringify({ design_style: 'chronicle' }),
     })
     const res = await onRequestPatch({ env, request, params: { id: 'abc-123' } } as never)
     expect(res.status).toBe(500)
-    const body = await res.json()
-    expect(body.error).toBe('internal error')
+    expect((await res.json()).error).toBe('internal error')
   })
 })

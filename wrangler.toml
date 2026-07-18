@@ -1,0 +1,12 @@
+name = "trip-one"
+pages_build_output_dir = "dist"
+compatibility_date = "2024-11-01"
+
+# The D1 database, bound into every Pages Function as `env.DB`. Local `wrangler
+# pages dev` uses a local SQLite file under .wrangler/ (no network, no token);
+# the deployed Pages project uses the real database identified by database_id.
+# database_id is filled in once the remote database is created.
+[[d1_databases]]
+binding = "DB"
+database_name = "trip-one-db"
+database_id = "PLACEHOLDER_SET_AFTER_CREATE"

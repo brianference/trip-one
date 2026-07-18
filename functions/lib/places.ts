@@ -11,7 +11,7 @@ const SEARCH_RADIUS_M = 50000
 // restaurants, AND cafes so the itinerary has real meals and real coffee to
 // draw from — dedicated coffee shops carry Google's `cafe` type and rarely
 // surface in a `restaurant` search, so "add a coffee shop" had nothing real to
-// ground to before this. Each new location is cached in Supabase, so the extra
+// ground to before this. Each new location is cached in D1, so the extra
 // calls are paid once per location, not per visit.
 const SEARCH_TYPES = ['tourist_attraction', 'restaurant', 'cafe'] as const
 

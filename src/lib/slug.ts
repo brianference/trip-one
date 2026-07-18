@@ -14,7 +14,7 @@
  * normalizeLocationSlug('東京都, 日本') // → '東京都-日本'
  *
  * @param input - A location string (e.g., "Dublin, Ireland", "東京都, 日本")
- * @returns A normalized, non-empty slug used as a Supabase cache key
+ * @returns A normalized, non-empty slug used as a D1 cache key
  */
 export function normalizeLocationSlug(input: string): string {
   const latinNormalized = input

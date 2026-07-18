@@ -2,7 +2,7 @@ import type { ItineraryItem } from '../validation/schemas'
 import type { DesignStyle } from '../../store/tripStore'
 import { logger } from '../logger'
 import { cleanDisplayName } from '../location/displayName'
-import { isExperienceCategory } from '../location/experienceFilter'
+import { isExperienceCategory, isRequestedExperienceCategory } from '../location/experienceFilter'
 
 export interface ThingToDo {
   name: string
@@ -20,6 +20,13 @@ export interface ThingToDo {
   lng?: number
   /** Google Places place_id, present for `places`-sourced entries. Used to fetch rich detail. */
   placeId?: string
+  /**
+   * True when the place was found by searching the traveler's own stated
+   * interests rather than by the generic nearby sweep. The planner treats
+   * these as the reason for the trip, and themed food is exempt from the
+   * incidental-food cap.
+   */
+  themed?: boolean
 }
 
 export interface LocationResult {
@@ -78,6 +85,44 @@ export async function fetchLocation(query: string): Promise<LocationResult> {
   // and AI candidate pool only contain real experiences.
   const thingsToDo: ThingToDo[] = (body.thingsToDo ?? []).filter((t: ThingToDo) => isExperienceCategory(t.category))
   return { ...body, displayName: cleanDisplayName(body.displayName), thingsToDo }
+}
+
+/**
+ * Finds real places matching the traveler's stated interests near a trip's
+ * coordinates — the fishing guides, trailheads, or wineries the generic nearby
+ * sweep never looks for.
+ *
+ * Fails soft to an empty list: interest results IMPROVE a plan, so a failure
+ * here should quietly fall back to the nearby pool rather than stop a traveler
+ * from getting a trip at all.
+ *
+ * @param interests - The traveler's interests phrase
+ * @param destination - Resolved destination name, for regional context
+ * @param lat - Trip centre latitude
+ * @param lng - Trip centre longitude
+ */
+export async function fetchInterestPlaces(
+  interests: string,
+  destination: string,
+  lat: number,
+  lng: number,
+): Promise<ThingToDo[]> {
+  try {
+    const res = await fetch('/api/interest-places', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ interests, destination, lat, lng }),
+    })
+    if (!res.ok) return []
+    const body = await res.json()
+    const places: ThingToDo[] = (body.places ?? []).filter((t: ThingToDo) => isRequestedExperienceCategory(t.category))
+    return places.map((p) => ({ ...p, themed: true }))
+  } catch (err) {
+    logger.warn('interest place search failed; falling back to the nearby pool', {
+      reason: err instanceof Error ? err.message : String(err),
+    })
+    return []
+  }
 }
 
 export interface AutocompleteSuggestion {
@@ -216,6 +261,11 @@ export interface TripIntent {
   days: number | null
   /** A short interests/pace phrase to feed the planner. */
   interests: string
+  /**
+   * True when eating/drinking is a main point of the trip (a food tour, wine
+   * tasting), so restaurants count as the itinerary rather than as filler.
+   */
+  foodFocused?: boolean
 }
 
 /**
@@ -253,7 +303,7 @@ export async function extractTripIntent(text: string): Promise<TripIntent> {
 export async function generatePlan(
   intent: string,
   days: number,
-  places: { name: string; category: string; rating?: number; lat?: number; lng?: number }[],
+  places: { name: string; category: string; rating?: number; lat?: number; lng?: number; themed?: boolean }[],
   opts?: { conversation?: PlanTurn[]; currentPlan?: CurrentPlanDay[] },
 ): Promise<PlanResult> {
   const res = await fetch('/api/plan', {
@@ -299,7 +349,7 @@ export function placePhotoUrl(ref: string, width = 400): string {
 }
 
 // Per-session cache of place-detail lookups (keyed by the query). The result
-// is already server-cached in Supabase, but this also avoids a duplicate
+// is already server-cached in D1, but this also avoids a duplicate
 // network round-trip when the same place is opened twice — e.g. from the map
 // and then from the things-to-do list. Stores the in-flight promise so two
 // near-simultaneous opens share one request.
