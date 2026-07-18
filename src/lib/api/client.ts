@@ -299,6 +299,7 @@ export async function fetchDiscoveredVenues(intent: TripIntent, lat: number, lng
       body: JSON.stringify({
         destination: intent.destination,
         interests: intent.interests,
+        days: intent.days ?? undefined,
         party: intent.party,
         occasion: intent.occasion,
         season: intent.season,

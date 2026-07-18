@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildDiscoverPrompt, normalizeDiscoveredVenues, MAX_DISCOVERED_VENUES, type TravelerProfile } from './aiDiscover'
+import { buildDiscoverPrompt, normalizeDiscoveredVenues, discoveredVenuesForDays, MAX_DISCOVERED_VENUES, type TravelerProfile } from './aiDiscover'
 
 const kidsProfile: TravelerProfile = {
   party: 'family with two young kids',
@@ -69,5 +69,14 @@ describe('normalizeDiscoveredVenues', () => {
     expect(normalizeDiscoveredVenues(null)).toEqual([])
     expect(normalizeDiscoveredVenues({})).toEqual([])
     expect(normalizeDiscoveredVenues({ venues: 'nope' })).toEqual([])
+  })
+})
+
+describe('discoveredVenuesForDays', () => {
+  it('asks for more venues on longer trips, within bounds', () => {
+    expect(discoveredVenuesForDays(3)).toBe(20)
+    expect(discoveredVenuesForDays(7)).toBe(28)
+    expect(discoveredVenuesForDays(12)).toBe(45)
+    expect(discoveredVenuesForDays(30)).toBe(MAX_DISCOVERED_VENUES)
   })
 })

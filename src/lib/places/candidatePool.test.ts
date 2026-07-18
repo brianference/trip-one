@@ -102,4 +102,33 @@ describe('buildCandidatePool', () => {
   it('returns an empty pool for an empty location rather than throwing', () => {
     expect(buildCandidatePool([], [], 3)).toEqual([])
   })
+
+  describe('audience filtering of the generic pool', () => {
+    it('keeps a zoo out of an adults trip (the day-filler can never reach it)', () => {
+      const nearby: PoolPlace[] = [
+        { name: 'Dublin Zoo', category: 'zoo', rating: 4.4, numReviews: 30000 },
+        { name: 'Trinity College', category: 'tourist_attraction', rating: 4.6, numReviews: 40000 },
+      ]
+      const pool = buildCandidatePool(nearby, [], 3, { audience: 'adults' })
+      expect(pool.map((p) => p.name)).not.toContain('Dublin Zoo')
+      expect(pool.map((p) => p.name)).toContain('Trinity College')
+    })
+
+    it('keeps a bar out of a kids trip', () => {
+      const nearby: PoolPlace[] = [
+        { name: 'Late Night Bar', category: 'bar', rating: 4.5, numReviews: 500 },
+        { name: 'Science Museum', category: 'museum', rating: 4.5, numReviews: 500 },
+      ]
+      const pool = buildCandidatePool(nearby, [], 3, { audience: 'kids' })
+      expect(pool.map((p) => p.name)).not.toContain('Late Night Bar')
+      expect(pool.map((p) => p.name)).toContain('Science Museum')
+    })
+
+    it('filters nothing for a general-audience trip', () => {
+      const nearby: PoolPlace[] = [{ name: 'Dublin Zoo', category: 'zoo' }, { name: 'Late Night Bar', category: 'bar' }]
+      const pool = buildCandidatePool(nearby, [], 3, { audience: 'general' })
+      expect(pool).toHaveLength(2)
+    })
+  })
+
 })

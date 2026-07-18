@@ -83,6 +83,7 @@ export async function createTripForDestination(req: TripRequest): Promise<BuiltT
   const themed = dedupeByName([...discovered, ...interestPlaces])
   const candidatePlaces: ThingToDo[] = buildCandidatePool(location.thingsToDo, themed, days, {
     foodFocused: req.foodFocused,
+    audience: req.audience,
   })
 
   const plan = await generatePlan(interests, days, candidatePlaces.map(toPlanPlace), {

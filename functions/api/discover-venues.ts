@@ -4,7 +4,7 @@ import { getInterestPlacesCache, upsertInterestPlacesCache } from '../lib/db'
 import { findPlaceByName } from '../lib/places'
 import { isRateLimited } from '../lib/rateLimitGuard'
 import { openAiResponseSchema } from '../lib/openAi'
-import { buildDiscoverPrompt, normalizeDiscoveredVenues, type TravelerProfile } from '../lib/aiDiscover'
+import { buildDiscoverPrompt, normalizeDiscoveredVenues, discoveredVenuesForDays, type TravelerProfile } from '../lib/aiDiscover'
 import { buildInterestCacheKey } from '../lib/interestCache'
 import { gatherGuideContent } from '../lib/webSearch'
 import { isRequestedExperienceCategory } from '../../src/lib/location/experienceFilter'
@@ -28,6 +28,7 @@ const DEFAULT_MODEL = 'gpt-4o-mini'
 const requestSchema = z.object({
   destination: z.string().trim().min(1).max(200),
   interests: z.string().trim().min(1).max(300),
+  days: z.number().int().min(1).max(30).optional(),
   party: z.string().trim().max(120).optional(),
   occasion: z.string().trim().max(120).nullable().optional(),
   season: z.string().trim().max(40).nullable().optional(),
@@ -71,7 +72,8 @@ export async function onRequestPost({ env, request }: { env: DiscoverEnv; reques
   const parsed = requestSchema.safeParse(await request.json().catch(() => ({})))
   if (!parsed.success) return json({ error: 'invalid request' }, 400)
 
-  const { destination, interests, party, occasion, season, audience, foodFocused, lat, lng } = parsed.data
+  const { destination, interests, days, party, occasion, season, audience, foodFocused, lat, lng } = parsed.data
+  const maxVenues = discoveredVenuesForDays(days ?? 4)
   const profile: TravelerProfile = {
     party: party || 'travelers',
     occasion: occasion ?? undefined,
@@ -81,9 +83,10 @@ export async function onRequestPost({ env, request }: { env: DiscoverEnv; reques
     foodFocused: foodFocused ?? false,
   }
 
-  // Cache by destination + the full profile (not just interests), since a
-  // family trip and an adults trip to the same place want different venues.
-  const cacheSeed = `discover:${interests}|${profile.party}|${profile.audience}|${profile.season ?? ''}`
+  // Cache by destination + the full profile AND the venue target, since a
+  // family trip and an adults trip want different venues, and a long trip wants
+  // MORE of them than a short one (maxVenues encodes the trip length).
+  const cacheSeed = `discover:${interests}|${profile.party}|${profile.audience}|${profile.season ?? ''}|n${maxVenues}`
   const cacheKey = await buildInterestCacheKey(normalizeLocationSlug(destination), cacheSeed)
   try {
     const cached = await getInterestPlacesCache(env, cacheKey)
@@ -119,12 +122,12 @@ export async function onRequestPost({ env, request }: { env: DiscoverEnv; reques
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.OPENAI_API_KEY}` },
       body: JSON.stringify({
         model: env.AI_MODEL ?? DEFAULT_MODEL,
-        messages: [{ role: 'user', content: buildDiscoverPrompt(profile, destination, guideContent) }],
+        messages: [{ role: 'user', content: buildDiscoverPrompt(profile, destination, guideContent, maxVenues) }],
         response_format: { type: 'json_object' },
         temperature: 0.3,
-        // Enough for ~30 venues with terse hints; too low truncates the JSON
-        // mid-array and the whole response fails to parse.
-        max_tokens: 1600,
+        // Scale with the venue count — too low truncates the JSON mid-array and
+        // the whole response fails to parse. ~50 tokens per terse venue + slack.
+        max_tokens: Math.min(2600, maxVenues * 55 + 200),
       }),
     })
     if (!aiRes.ok) {
@@ -140,7 +143,7 @@ export async function onRequestPost({ env, request }: { env: DiscoverEnv; reques
     } catch {
       return json({ places: [], venues: [] }, 200)
     }
-    const venues = normalizeDiscoveredVenues(raw)
+    const venues = normalizeDiscoveredVenues(raw, maxVenues)
     if (venues.length === 0) return respond([], [])
 
     // 3. Verify each named venue against Google Places (grounding). Unverified

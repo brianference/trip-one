@@ -66,6 +66,27 @@ export interface PoolOptions {
    * "eat everything" request came back with two stops.
    */
   foodFocused?: boolean
+  /**
+   * Audience filter for the GENERIC nearby pool. The deterministic day-filler
+   * draws from this pool once the themed venues run out, and it bypasses the
+   * planner's own audience rule — which is how a zoo ended up on day 12 of a
+   * 21st-birthday pub trip. Filtering here keeps kid attractions out of an
+   * adults trip and nightlife out of a kids trip, at the source.
+   */
+  audience?: 'kids' | 'adults' | 'general'
+}
+
+// Categories that only fit one audience. Kept out of the generic nearby pool
+// for the wrong audience so the day-filler can't reach for them. Discovered
+// (themed) venues are already audience-filtered upstream and are never dropped.
+const KID_ONLY_CATEGORIES = new Set(['zoo', 'aquarium', 'amusement_park', 'playground'])
+const ADULT_ONLY_CATEGORIES = new Set(['bar', 'night_club', 'casino', 'liquor_store'])
+
+/** Whether a generic nearby place suits the trip's audience. */
+function fitsAudience(category: string, audience: PoolOptions['audience']): boolean {
+  if (audience === 'adults') return !KID_ONLY_CATEGORIES.has(category)
+  if (audience === 'kids') return !ADULT_ONLY_CATEGORIES.has(category)
+  return true
 }
 
 
@@ -85,7 +106,10 @@ export function buildCandidatePool<T extends PoolPlace>(
   days: number,
   opts: PoolOptions = {},
 ): T[] {
-  const { maxCandidates = poolSizeForDays(days), foodFocused = false } = opts
+  const { maxCandidates = poolSizeForDays(days), foodFocused = false, audience = 'general' } = opts
+  // Drop audience-mismatched generic places up front so nothing downstream —
+  // including the deterministic day-filler — can schedule them.
+  nearby = nearby.filter((p) => fitsAudience(p.category, audience))
   const seen = new Set<string>()
   const take = (item: T, isThemed: boolean): T | null => {
     const key = item.name.trim().toLowerCase()
