@@ -85,16 +85,16 @@ export function HomeAiPlanner() {
   return (
     <>
       {busy && <TripBuildingOverlay status={status} />}
-      <form className="chronicle-home-ai" onSubmit={handleSubmit} aria-labelledby="chronicle-home-ai-heading">
-      <p className="chronicle-ai-kicker">✨ Your AI Trip</p>
-      <h2 id="chronicle-home-ai-heading" className="chronicle-home-ai-heading">
+      <form onSubmit={handleSubmit} aria-labelledby="chronicle-home-ai-heading">
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent-text)]">✨ Your AI Trip</p>
+      <h2 id="chronicle-home-ai-heading" className="mt-1.5 font-[family-name:var(--font-display)] text-xl font-semibold">
         Describe your trip
       </h2>
-      <p className="chronicle-home-ai-sub">
+      <p className="mt-1.5 text-sm leading-relaxed opacity-75">
         Say where you want to go and what you’re after — we’ll build a real day-by-day plan from actual places there.
       </p>
       <textarea
-        className="chronicle-ai-input"
+        className="mt-3 w-full resize-none rounded-xl border border-[var(--hairline)] bg-[var(--surface)] px-3.5 py-3 text-base disabled:opacity-60"
         value={text}
         onChange={(e) => {
           setText(e.target.value)
@@ -105,18 +105,22 @@ export function HomeAiPlanner() {
         maxLength={500}
         disabled={busy}
       />
-      <button type="submit" className="chronicle-ai-submit chronicle-home-ai-submit" disabled={busy || !text.trim()}>
+      <button
+        type="submit"
+        className="mt-3 min-h-[52px] w-full rounded-[var(--radius-pill)] bg-dusk-500 px-6 text-base font-semibold text-[var(--color-on-accent)] transition-colors hover:bg-dusk-400 disabled:opacity-40"
+        disabled={busy || !text.trim()}
+      >
         {busy ? status || 'Planning…' : 'Plan my trip'}
       </button>
 
-      <div className="chronicle-ai-suggestions" aria-label="Suggested trips">
-        <span className="chronicle-ai-suggestions-label">Or try one of these</span>
-        <ul>
+      <div className="mt-4" aria-label="Suggested trips">
+        <span className="text-xs font-medium uppercase tracking-wider opacity-60">Or try one of these</span>
+        <ul className="mt-2 flex flex-wrap gap-2">
           {SUGGESTED_PROMPTS.map((prompt) => (
             <li key={prompt}>
               <button
                 type="button"
-                className="chronicle-ai-suggestion"
+                className="min-h-[36px] rounded-[var(--radius-pill)] border border-[var(--hairline)] px-3 text-sm hover:bg-[var(--surface-muted)] disabled:opacity-50"
                 onClick={() => {
                   setText(prompt)
                   void planTrip(prompt)
@@ -131,7 +135,7 @@ export function HomeAiPlanner() {
       </div>
 
       {error && (
-        <p role="alert" className="chronicle-ai-error">
+        <p role="alert" className="mt-3 text-sm text-danger-500">
           {error}
         </p>
       )}

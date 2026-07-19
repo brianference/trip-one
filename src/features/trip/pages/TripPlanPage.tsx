@@ -73,6 +73,10 @@ export function TripPlanPage() {
 
   if (!location) return <TripSkeleton />
 
+  // `chronicle-chapter` and the `chronicle-print-*` classes below are kept on
+  // purpose: the print stylesheet targets them to lay out the PDF, and that
+  // layout is verified behaviour (one section per trip day). Converting them
+  // would trade a working feature for stylistic consistency.
   return (
     <article className="chronicle-chapter chronicle-chapter--wide">
       {/* Print-only header: destination + dates, so a printed/PDF itinerary is labeled. */}
@@ -80,14 +84,14 @@ export function TripPlanPage() {
         {location.displayName}
         {startDate ? ` · from ${startDate}` : ''}
       </p>
-      <div className="chronicle-itinerary-header">
-        <h1 className="chronicle-timeline-heading">Your trip</h1>
-        <div className="chronicle-trip-controls">
-          <label className="chronicle-trip-length-control">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight">Your trip</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-sm [&_input]:min-h-[40px] [&_input]:w-20 [&_input]:rounded-lg [&_input]:border [&_input]:border-[var(--hairline)] [&_input]:bg-[var(--surface)] [&_input]:px-2 [&_input]:text-sm">
             <span>Start date</span>
             <input type="date" value={startDate ?? ''} onChange={(e) => setStartDate(e.target.value || null)} />
           </label>
-          <label className="chronicle-trip-length-control">
+          <label className="flex items-center gap-2 text-sm [&_input]:min-h-[40px] [&_input]:w-20 [&_input]:rounded-lg [&_input]:border [&_input]:border-[var(--hairline)] [&_input]:bg-[var(--surface)] [&_input]:px-2 [&_input]:text-sm">
             <span>Trip length</span>
             <select
               value={tripLengthDays ?? ''}
@@ -118,19 +122,22 @@ export function TripPlanPage() {
         focusLatLng={mapFocus}
       />
 
-      <section className="chronicle-plan-day" aria-label={`Day ${selectedDay} stops`} key={`${selectedDay}-${itinerary.length}`}>
-        <h2 className="chronicle-weather-section-heading">{dayHeading(startDate, selectedDay)}</h2>
+      <section className="mt-4" aria-label={`Day ${selectedDay} stops`} key={`${selectedDay}-${itinerary.length}`}>
+        <h2 className="font-[family-name:var(--font-display)] text-lg font-semibold">{dayHeading(startDate, selectedDay)}</h2>
         {summaryChips.length > 0 && (
-          <div className="chronicle-day-chips" aria-label="Day summary">
+          <div className="mt-2 flex flex-wrap items-center gap-2" aria-label="Day summary">
             {summaryChips.map((chip) => (
-              <span key={chip.key} className={`chronicle-day-chip chronicle-day-chip--${chip.key}`}>
+              <span
+                key={chip.key}
+                className="rounded-full bg-[var(--surface-muted)] px-2.5 py-1 text-xs font-medium opacity-90"
+              >
                 {chip.label}
               </span>
             ))}
           </div>
         )}
         {effort && (
-          <p className={`chronicle-day-effort${effort.crossTown ? ' chronicle-day-effort--warn' : ''}`}>
+          <p className={`mt-1.5 text-sm ${effort.crossTown ? 'text-danger-500' : 'opacity-70'}`}>
             {formatEffort(effort)}
             {effort.crossTown && ' · spread across town — consider splitting'}
           </p>
@@ -148,13 +155,13 @@ export function TripPlanPage() {
             onRemove={removeStop}
           />
         ) : (
-          <p className="chronicle-rate-line">No stops on day {selectedDay} yet — add one below, or ask the chat.</p>
+          <p className="mt-3 text-sm opacity-70">No stops on day {selectedDay} yet — add one below, or ask the chat.</p>
         )}
         <ItineraryStopForm onSubmit={addStop} submitting={adding} />
       </section>
 
-      <section className="chronicle-map-places" aria-label="Things to do nearby">
-        <h2 className="chronicle-weather-section-heading">Things to do nearby</h2>
+      <section className="mt-8" aria-label="Things to do nearby">
+        <h2 className="font-[family-name:var(--font-display)] text-lg font-semibold">Things to do nearby</h2>
         <ThingsToDoList
           thingsToDo={location.thingsToDo}
           plannedNames={plannedNames}
