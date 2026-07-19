@@ -19,6 +19,7 @@ describe('places searchPlaces', () => {
       {
         name: 'Guinness Storehouse',
         category: 'tourist_attraction',
+        adultVenue: false,
         source: 'places',
         rating: 4.5,
         address: 'St James Gate',
@@ -183,6 +184,7 @@ describe('places searchPlaces', () => {
       {
         name: 'Shibuya Crossing',
         category: 'tourist_attraction',
+        adultVenue: false,
         source: 'places',
         rating: 4.7,
         address: 'Shibuya',

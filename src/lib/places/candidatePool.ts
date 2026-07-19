@@ -1,5 +1,6 @@
 import { isFoodCategory } from './foodCategories'
 import { byPopularity } from './popularity'
+import { fitsAudience } from './audience'
 
 /**
  * Builds the candidate pool the grounded planner chooses from.
@@ -48,6 +49,10 @@ export function poolSizeForDays(days: number): number {
 export interface PoolPlace {
   name: string
   category: string
+  /** Set when Places' full `types` marked this a drinking venue. */
+  adultVenue?: boolean
+  /** Full Places `types`, when the source kept them. */
+  types?: readonly string[]
   rating?: number
   numReviews?: number
   themed?: boolean
@@ -76,18 +81,10 @@ export interface PoolOptions {
   audience?: 'kids' | 'adults' | 'general'
 }
 
-// Categories that only fit one audience. Kept out of the generic nearby pool
-// for the wrong audience so the day-filler can't reach for them. Discovered
-// (themed) venues are already audience-filtered upstream and are never dropped.
-const KID_ONLY_CATEGORIES = new Set(['zoo', 'aquarium', 'amusement_park', 'playground'])
-const ADULT_ONLY_CATEGORIES = new Set(['bar', 'night_club', 'casino', 'liquor_store'])
-
-/** Whether a generic nearby place suits the trip's audience. */
-function fitsAudience(category: string, audience: PoolOptions['audience']): boolean {
-  if (audience === 'adults') return !KID_ONLY_CATEGORIES.has(category)
-  if (audience === 'kids') return !ADULT_ONLY_CATEGORIES.has(category)
-  return true
-}
+// Audience classification lives in ./audience, which judges from the full
+// Places `types` and the venue name rather than the single promoted category.
+// Category alone missed saloons: food promotion rewrites a bar's category to
+// 'restaurant', which is how the Mangy Moose reached a family ski trip.
 
 
 /**
@@ -107,9 +104,13 @@ export function buildCandidatePool<T extends PoolPlace>(
   opts: PoolOptions = {},
 ): T[] {
   const { maxCandidates = poolSizeForDays(days), foodFocused = false, audience = 'general' } = opts
-  // Drop audience-mismatched generic places up front so nothing downstream —
-  // including the deterministic day-filler — can schedule them.
-  nearby = nearby.filter((p) => fitsAudience(p.category, audience))
+  // Drop audience-mismatched places up front so nothing downstream — including
+  // the deterministic day-filler — can schedule them. Themed venues are
+  // filtered too: the discovery prompt is told to respect the audience, but a
+  // prompt is a request, not a guarantee, and a saloon reached day 4 of a
+  // family ski trip that way.
+  nearby = nearby.filter((p) => fitsAudience(p, audience))
+  themed = themed.filter((p) => fitsAudience(p, audience))
   const seen = new Set<string>()
   const take = (item: T, isThemed: boolean): T | null => {
     const key = item.name.trim().toLowerCase()

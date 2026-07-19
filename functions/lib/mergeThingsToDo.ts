@@ -1,6 +1,11 @@
 export interface ThingToDo {
   name: string
   category: string
+  /**
+   * True when Places' full `types` marked this a drinking venue, captured
+   * before food-category promotion rewrites `category` to 'restaurant'.
+   */
+  adultVenue?: boolean
   source: 'tripadvisor' | 'places'
   rating?: number
   address?: string

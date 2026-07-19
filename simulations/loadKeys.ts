@@ -62,5 +62,12 @@ export function loadKeys(): SimKeys {
   if (!openAi) throw new Error('OPENAI_API_KEY not found in .dev.vars or the shared env')
   if (!googlePlaces) throw new Error('GOOGLE_PLACES_API_KEY not found in .dev.vars or the shared env')
 
-  return { openAi, googlePlaces, tripadvisor: env.Tripadvisor_API_Key ?? env.TRIPADVISOR_API_KEY }
+  // Brave is optional: without it, discovery falls back to the model's own
+  // knowledge instead of real guide content, exactly as production does.
+  return {
+    openAi,
+    googlePlaces,
+    tripadvisor: env.Tripadvisor_API_Key ?? env.TRIPADVISOR_API_KEY,
+    brave: env.BRAVE_API ?? env.BRAVE_API_KEY,
+  }
 }

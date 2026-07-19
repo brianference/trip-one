@@ -14,7 +14,17 @@
  */
 import { buildIntentPrompt, extractedIntentSchema } from '../functions/lib/aiIntent'
 import { buildInterestQueriesPrompt, normalizeInterestQueries } from '../functions/lib/aiInterestQueries'
-import { buildPlanPrompt, normalizePlan, balanceDayFood, type PlanDay } from '../functions/lib/aiPlan'
+import { buildPlanPrompt, normalizePlan, balanceDayFood, ensureAllDays, type PlanDay } from '../functions/lib/aiPlan'
+import {
+  buildDiscoverPrompt,
+  normalizeDiscoveredVenues,
+  discoveredVenuesForDays,
+  describeInterests,
+  type TravelerProfile,
+} from '../functions/lib/aiDiscover'
+import { gatherGuideContent } from '../functions/lib/webSearch'
+import { fitsAudience } from '../src/lib/places/audience'
+import { distanceKm, findPlaceByName } from '../functions/lib/places'
 import { openAiResponseSchema } from '../functions/lib/openAi'
 import { geocode } from '../functions/lib/geocode'
 import { searchPlaces, textSearchPlaces } from '../functions/lib/places'
@@ -38,6 +48,8 @@ export interface SimKeys {
   openAi: string
   googlePlaces: string
   tripadvisor?: string
+  /** Brave Search key for web-grounded discovery; optional. */
+  brave?: string
 }
 
 export interface StopReport {
@@ -65,10 +77,28 @@ export interface ScenarioReport {
   itineraryFoodShare: number
   /** Share of non-food stops that clearly match the theme (relevance >= 2). */
   onThemeShare: number
+  /**
+   * Stops that don't suit the trip's audience (a saloon on a family trip).
+   * Any value above zero is a bug, not a quality score.
+   */
+  audienceViolations?: string[]
+  /** Stops farther from the destination centre than a traveler would drive. */
+  farStops?: { name: string; km: number }[]
+  /** Days that ended up with fewer than 3 stops. */
+  thinDays?: number
+  /** Days with no stops at all — always a bug. */
+  emptyDays?: number
   /** Mean relevance across every stop, food included — the "is this my trip?" number. */
   meanRelevance: number
   error?: string
 }
+
+/**
+ * How far a stop may sit from the destination centre before it counts as
+ * out-of-region. Generous enough for a national park's spread, tight enough to
+ * flag a cafe across a state border.
+ */
+const FAR_STOP_KM = 30
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -164,6 +194,64 @@ async function findInterestPlaces(
 }
 
 /** Runs one scenario through the real pipeline and reports what came out. */
+
+/**
+ * Web-grounded discovery, mirroring /api/discover-venues: search real guides,
+ * have the model name the venues they recommend, then verify each against
+ * Google Places so only real ones survive. Fails soft to [].
+ */
+async function discoverVenues(
+  profile: TravelerProfile,
+  destination: string,
+  lat: number,
+  lng: number,
+  days: number,
+  keys: SimKeys,
+): Promise<ThingToDo[]> {
+  try {
+    const maxVenues = discoveredVenuesForDays(days)
+    const query = [destination, profile.season ?? '', profile.party, describeInterests(profile), 'best things to do itinerary']
+      .filter(Boolean)
+      .join(' ')
+      .slice(0, 200)
+    const guideContent = keys.brave ? await gatherGuideContent(query, keys.brave) : ''
+    const raw = await askJson(
+      buildDiscoverPrompt(profile, destination, guideContent, maxVenues),
+      keys.openAi,
+      Math.min(2600, maxVenues * 55 + 200),
+      0.3,
+    )
+    const venues = normalizeDiscoveredVenues(raw, maxVenues)
+    if (venues.length === 0) return []
+    const verified = await Promise.all(venues.map((v) => findPlaceByName(v.name, lat, lng, keys.googlePlaces)))
+    const seen = new Set<string>()
+    const out: ThingToDo[] = []
+    for (const p of verified) {
+      if (!p || !isRequestedExperienceCategory(p.category)) continue
+      const key = p.name.trim().toLowerCase()
+      if (key === '' || seen.has(key)) continue
+      seen.add(key)
+      out.push({ ...p, themed: true })
+    }
+    return dropCorruptNames(out)
+  } catch {
+    return []
+  }
+}
+
+/** Case-insensitive dedupe by name, first occurrence wins. */
+function dedupeByName(places: ThingToDo[]): ThingToDo[] {
+  const seen = new Set<string>()
+  const out: ThingToDo[] = []
+  for (const p of places) {
+    const key = p.name.trim().toLowerCase()
+    if (key === '' || seen.has(key)) continue
+    seen.add(key)
+    out.push(p)
+  }
+  return out
+}
+
 export async function runScenario(scenario: Scenario, keys: SimKeys): Promise<ScenarioReport> {
   const base: ScenarioReport = {
     id: scenario.id,
@@ -191,6 +279,17 @@ export async function runScenario(scenario: Scenario, keys: SimKeys): Promise<Sc
     const interests = intent.data.interests ?? scenario.request
     const foodFocused = intent.data.foodFocused ?? false
     const days = Math.max(intent.data.days ?? MIN_TRIP_DAYS, MIN_TRIP_DAYS)
+    // The full traveler profile drives audience filtering and discovery in
+    // production. The harness ignored it, which is why its food share read far
+    // lower than what QA measured on the real site.
+    const audience = intent.data.audience ?? 'general'
+    const party = intent.data.party ?? ''
+    const occasion = intent.data.occasion ?? null
+    const season = intent.data.season ?? null
+    const effectiveInterests =
+      interests.trim() !== ''
+        ? interests
+        : describeInterests({ party, occasion: occasion ?? undefined, audience, interests: '', foodFocused })
 
     // 2. Geocode (real Nominatim; rate-limited per their policy).
     await sleep(NOMINATIM_DELAY_MS)
@@ -209,15 +308,35 @@ export async function runScenario(scenario: Scenario, keys: SimKeys): Promise<Sc
     if (nearby.length === 0) return { ...base, destination, days, interests, foodFocused, error: 'no things to do found' }
 
     // 4. Real places matching what they actually asked for (real /api/interest-places).
-    const { places: interestPlaces, queries } = await findInterestPlaces(interests, destination, geo.lat, geo.lng, keys)
+    const { places: interestPlaces, queries } = await findInterestPlaces(
+      effectiveInterests,
+      destination,
+      geo.lat,
+      geo.lng,
+      keys,
+    )
 
-    const pool = buildCandidatePool(nearby, interestPlaces, days, { foodFocused })
+    // 4b. Web-grounded discovery — the step that makes a plan read like a
+    //     guide. Production runs this on every trip; omitting it here made the
+    //     simulation measure a pipeline no traveler actually gets.
+    const discovered = await discoverVenues(
+      { party, occasion: occasion ?? undefined, season: season ?? undefined, audience, interests: effectiveInterests, foodFocused },
+      destination,
+      geo.lat,
+      geo.lng,
+      days,
+      keys,
+    )
+
+    const themed = dedupeByName([...discovered, ...interestPlaces])
+    const pool = buildCandidatePool(nearby, themed, days, { foodFocused, audience })
     const poolFoodShare = pool.filter((p) => isFoodCategory(p.category)).length / pool.length
 
     // 5. The real grounded planner (real prompt, real model, real normalization).
     const prompt = buildPlanPrompt({
-      intent: interests,
+      intent: effectiveInterests,
       days,
+      profile: { party, occasion, season, audience },
       candidates: pool.map((p) => ({
         name: p.name,
         category: p.category,
@@ -232,10 +351,15 @@ export async function runScenario(scenario: Scenario, keys: SimKeys): Promise<Sc
     if (!plan) {
       return { ...base, destination, days, interests, foodFocused, queries, poolSize: pool.length, poolFoodShare, error: 'no usable plan' }
     }
-    const balanced = balanceDayFood(
-      plan,
-      pool.map((p) => ({ name: p.name, category: p.category, rating: p.rating, lat: p.lat, lng: p.lng, themed: p.themed })),
-    )
+    const planCandidates = pool.map((p) => ({
+      name: p.name,
+      category: p.category,
+      rating: p.rating,
+      lat: p.lat,
+      lng: p.lng,
+      themed: p.themed,
+    }))
+    const balanced = ensureAllDays(balanceDayFood(plan, planCandidates), planCandidates, days)
 
     // 6. Measure what the traveler would actually see.
     const stopPlaces = balanced.flatMap((d) => d.placeIndexes.map((i) => pool[i])).filter(Boolean)
@@ -248,6 +372,19 @@ export async function runScenario(scenario: Scenario, keys: SimKeys): Promise<Sc
       relevance: relevance[i] ?? 0,
     }))
 
+    // Bug detectors. These are pass/fail, not quality scores: a nonzero value
+    // is a defect the pipeline shipped, and the simulation exists to catch
+    // them before a traveler does.
+    const audienceViolations = stopPlaces.filter((p) => !fitsAudience(p, audience)).map((p) => p.name)
+    const farStops = stopPlaces
+      .filter((p) => p.lat != null && p.lng != null)
+      .map((p) => ({ name: p.name, km: distanceKm(geo.lat, geo.lng, p.lat as number, p.lng as number) }))
+      .filter((p) => p.km > FAR_STOP_KM)
+      .sort((a, b) => b.km - a.km)
+    const perDayCounts = balanced.map((d) => d.placeIndexes.length)
+    const thinDays = perDayCounts.filter((n) => n > 0 && n < 3).length
+    const emptyDays = Math.max(0, days - perDayCounts.length) + perDayCounts.filter((n) => n === 0).length
+
     const nonFood = stops.filter((s) => !s.isFood)
     return {
       ...base,
@@ -259,6 +396,10 @@ export async function runScenario(scenario: Scenario, keys: SimKeys): Promise<Sc
       poolSize: pool.length,
       poolFoodShare,
       stops,
+      audienceViolations,
+      farStops,
+      thinDays,
+      emptyDays,
       itineraryFoodShare: stops.length > 0 ? stops.filter((s) => s.isFood).length / stops.length : 0,
       onThemeShare: nonFood.length > 0 ? nonFood.filter((s) => s.relevance >= 2).length / nonFood.length : 0,
       meanRelevance: stops.length > 0 ? stops.reduce((sum, s) => sum + s.relevance, 0) / stops.length : 0,

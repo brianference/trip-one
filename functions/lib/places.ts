@@ -1,4 +1,6 @@
 import type { ThingToDo } from './mergeThingsToDo'
+import { isAdultVenue } from '../../src/lib/places/audience'
+import { isFoodCategory } from '../../src/lib/places/foodCategories'
 import { logger } from '../../src/lib/logger'
 
 // 50000m is the documented maximum radius Google Places Nearby Search accepts.
@@ -51,6 +53,15 @@ const TEXT_SEARCH_LIMIT = 20
 // on another continent.
 const TEXT_SEARCH_MAX_KM = 80
 
+/**
+ * Tighter ceiling for food and drink. An attraction can justify a drive — a
+ * national-park lodge 47km out is a legitimate day's destination — but a cafe
+ * is somewhere you stop when you're already there. Without a separate limit,
+ * Jackson trips picked up espresso bars 32-39km away across the Idaho border
+ * purely because the town's own venues had run out.
+ */
+const FOOD_MAX_KM = 15
+
 /** Great-circle distance between two lat/lng points, in kilometres. */
 export function distanceKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
   const R = 6371
@@ -98,6 +109,10 @@ async function searchPlacesByType(lat: number, lng: number, type: string, apiKey
     .map((item) => ({
       name: item.name,
       category: pickCategory(item.types ?? [], type),
+      // Preserve the adult signal BEFORE food promotion buries it: a saloon's
+      // types are ['bar', 'restaurant', ...] and pickCategory returns
+      // 'restaurant', which made it invisible to the audience filter.
+      adultVenue: isAdultVenue({ name: item.name, category: '', types: item.types ?? [] }),
       source: 'places' as const,
       rating: item.rating,
       numReviews: item.user_ratings_total,
@@ -163,10 +178,13 @@ export async function findPlaceByName(name: string, lat: number, lng: number, ap
     // Must have real coordinates and be within the trip's vicinity — a text
     // search for a name with no local match happily returns a same-named place
     // on another continent.
-    if (plat == null || plng == null || distanceKm(lat, lng, plat, plng) > TEXT_SEARCH_MAX_KM) return null
+    if (plat == null || plng == null) return null
+    const category = categorizeTextResult(item.types ?? [])
+    if (distanceKm(lat, lng, plat, plng) > maxKmFor(category)) return null
     return {
       name: item.name,
-      category: categorizeTextResult(item.types ?? []),
+      category,
+      adultVenue: isAdultVenue({ name: item.name, category: '', types: item.types ?? [] }),
       source: 'places' as const,
       rating: item.rating,
       numReviews: item.user_ratings_total,
@@ -182,6 +200,11 @@ export async function findPlaceByName(name: string, lat: number, lng: number, ap
 }
 
 /** Category for a free-text result: promote a real food/drink type, else the first type. */
+/** How far out a result of this category may sit before it stops being useful. */
+function maxKmFor(category: string): number {
+  return isFoodCategory(category) ? FOOD_MAX_KM : TEXT_SEARCH_MAX_KM
+}
+
 function categorizeTextResult(types: string[]): string {
   return FOOD_TYPES.find((t) => types.includes(t)) ?? types.find((t) => t !== 'point_of_interest' && t !== 'establishment') ?? types[0] ?? 'attraction'
 }
@@ -212,12 +235,14 @@ export async function textSearchPlaces(query: string, lat: number, lng: number, 
       .filter((item) => {
         const plat = item.geometry?.location?.lat
         const plng = item.geometry?.location?.lng
-        return plat != null && plng != null && distanceKm(lat, lng, plat, plng) <= TEXT_SEARCH_MAX_KM
+        if (plat == null || plng == null) return false
+        return distanceKm(lat, lng, plat, plng) <= maxKmFor(categorizeTextResult(item.types ?? []))
       })
       .slice(0, TEXT_SEARCH_LIMIT)
       .map((item) => ({
         name: item.name,
         category: categorizeTextResult(item.types ?? []),
+        adultVenue: isAdultVenue({ name: item.name, category: '', types: item.types ?? [] }),
         source: 'places' as const,
         rating: item.rating,
         numReviews: item.user_ratings_total,

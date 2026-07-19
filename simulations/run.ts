@@ -6,7 +6,7 @@
  * and never runs in CI.
  */
 import { writeFileSync } from 'node:fs'
-import { SCENARIOS, HELD_OUT } from './scenarios'
+import { SCENARIOS, HELD_OUT, SWEEP_V2, ALL_SCENARIOS } from './scenarios'
 import { loadKeys } from './loadKeys'
 import { runScenario, type ScenarioReport } from './harness'
 
@@ -25,7 +25,16 @@ async function main(): Promise<void> {
   const outFile = argValue('--out')
   // --held-out runs the scenarios the fix was not developed against, which is
   // the honest test of whether it generalises rather than fits its own cases.
-  const all = process.argv.includes('--held-out') ? HELD_OUT : SCENARIOS
+  // --sweep runs the 30-scenario v2 set (fresh destinations, weighted toward
+  // the failure modes real QA found); --all runs it plus the earlier held-out
+  // set; --held-out runs only the original held-out scenarios.
+  const all = process.argv.includes('--all')
+    ? ALL_SCENARIOS
+    : process.argv.includes('--sweep')
+      ? SWEEP_V2
+      : process.argv.includes('--held-out')
+        ? HELD_OUT
+        : SCENARIOS
   const wanted = new Set((only ?? '').split(',').map((s) => s.trim()).filter(Boolean))
   const scenarios = wanted.size > 0 ? all.filter((s) => wanted.has(s.id)) : all
   if (scenarios.length === 0) throw new Error('no scenarios matched')
@@ -49,11 +58,32 @@ async function main(): Promise<void> {
     // A food trip has few non-food stops to score, so the share means nothing there.
     'on-theme': r.foodFocused ? 'n/a' : pct(r.onThemeShare),
     relevance: r.meanRelevance.toFixed(2),
+    // Bug detectors: any nonzero value here is a defect, not a score.
+    'aud!': (r.audienceViolations ?? []).length || '',
+    'far!': (r.farStops ?? []).length || '',
+    thin: r.thinDays || '',
+    empty: r.emptyDays || '',
     error: r.error ?? '',
   }))
   console.table(rows)
 
   const ok = reports.filter((r) => !r.error)
+
+  // Defects are reported separately from the quality averages: a mean hides
+  // the one trip that put a bar in front of someone's children.
+  const withAudience = ok.filter((r) => (r.audienceViolations ?? []).length > 0)
+  const withFar = ok.filter((r) => (r.farStops ?? []).length > 0)
+  const withEmpty = ok.filter((r) => (r.emptyDays ?? 0) > 0)
+  console.log('\n== DEFECTS ==\n')
+  console.log(`audience violations: ${withAudience.length}/${ok.length} scenarios`)
+  for (const r of withAudience) console.log(`  ${r.id}: ${(r.audienceViolations ?? []).join(', ')}`)
+  console.log(`out-of-region stops: ${withFar.length}/${ok.length} scenarios`)
+  for (const r of withFar) {
+    console.log(`  ${r.id}: ${(r.farStops ?? []).map((f) => `${f.name} (${f.km.toFixed(0)}km)`).join(', ')}`)
+  }
+  console.log(`empty days: ${withEmpty.length}/${ok.length} scenarios`)
+  for (const r of withEmpty) console.log(`  ${r.id}: ${r.emptyDays} empty of ${r.days}`)
+  console.log(`thin days (<3 stops): ${ok.reduce((n, r) => n + (r.thinDays ?? 0), 0)} across ${ok.length} scenarios`)
   const summarize = (label: string, group: ScenarioReport[]): void => {
     if (group.length === 0) return
     const mean = (pick: (r: ScenarioReport) => number): string =>

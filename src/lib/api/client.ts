@@ -7,6 +7,8 @@ import { isExperienceCategory, isRequestedExperienceCategory } from '../location
 export interface ThingToDo {
   name: string
   category: string
+  /** True when the venue is a bar/pub/saloon, even if `category` says restaurant. */
+  adultVenue?: boolean
   source: 'tripadvisor' | 'places'
   rating?: number
   /** Total ratings/reviews the place has (Google user_ratings_total / TA num_reviews). Used to rank by popularity. Absent when unknown. */
