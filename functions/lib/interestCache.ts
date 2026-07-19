@@ -35,6 +35,15 @@ export function normalizeInterestsForKey(interests: string): string {
  * @param slug - The destination's normalized location slug (already stable)
  * @param interests - The traveler's interests phrase
  */
+/**
+ * Bump when the SHAPE or CLASSIFICATION of cached places changes, not when the
+ * search itself changes. Cached entries store derived metadata (`adultVenue`,
+ * `category`), so a change to how places are classified leaves every existing
+ * entry stale — a family trip kept getting saloons back from cache long after
+ * the filter that excludes them was fixed. Bumping this retires those entries.
+ */
+export const PLACE_CACHE_VERSION = 'v2-audience'
+
 export async function buildInterestCacheKey(slug: string, interests: string): Promise<string> {
   const data = new TextEncoder().encode(normalizeInterestsForKey(interests))
   const digest = await crypto.subtle.digest('SHA-256', data)

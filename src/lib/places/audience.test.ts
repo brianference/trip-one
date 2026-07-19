@@ -2,18 +2,27 @@ import { describe, it, expect } from 'vitest'
 import { isAdultVenue, isKidVenue, fitsAudience } from './audience'
 
 describe('isAdultVenue', () => {
-  // The exact venue that reached day 4 of a 7-day family ski trip. Places
-  // returns types ['bar', 'restaurant', ...] and the food promotion in
-  // places.ts rewrites category to 'restaurant', so only `types` reveals it.
-  it('catches a saloon whose category was promoted to restaurant', () => {
-    expect(
-      isAdultVenue({ name: 'Mangy Moose Jackson Hole', category: 'restaurant', types: ['bar', 'restaurant'] }),
-    ).toBe(true)
+  it('catches a pure drinking venue whose category was promoted to restaurant', () => {
+    // A bar that is not also an eatery: types carry `bar` and nothing to eat.
+    expect(isAdultVenue({ name: 'The Local Watering Hole', category: 'restaurant', types: ['bar'] })).toBe(true)
+    expect(isAdultVenue({ name: 'Somewhere', category: 'restaurant', types: ['night_club', 'restaurant'] })).toBe(true)
+  })
+
+  // Google tags any restaurant with a drinks licence as `bar`. Treating that
+  // as decisive flagged Pinky G's Pizzeria, a family pizza place, and Bar T 5,
+  // a family chuckwagon show — both of which a family trip should keep.
+  it('does not flag an eatery merely because it serves drinks', () => {
+    expect(isAdultVenue({ name: "Pinky G's Pizzeria", category: 'restaurant', types: ['bar', 'restaurant'] })).toBe(false)
+    expect(isAdultVenue({ name: 'Bar T 5', category: 'restaurant', types: ['restaurant'] })).toBe(false)
+    expect(isAdultVenue({ name: 'Bar Harbor Inn', category: 'restaurant' })).toBe(false)
+    expect(isAdultVenue({ name: 'Sushi Bar Tokyo', category: 'restaurant' })).toBe(false)
+    expect(isAdultVenue({ name: 'The Juice Bar', category: 'cafe' })).toBe(false)
   })
 
   // The other family-trip leak: no useful types, but the name says it outright.
   it('catches a drinking venue by name when types are unavailable', () => {
     expect(isAdultVenue({ name: 'Local Restaurant & Bar', category: 'restaurant' })).toBe(true)
+    expect(isAdultVenue({ name: 'The Old Storehouse Bar and Restaurant', category: 'restaurant' })).toBe(true)
     expect(isAdultVenue({ name: 'The Cobblestone Pub', category: 'restaurant' })).toBe(true)
     expect(isAdultVenue({ name: 'Teeling Whiskey Distillery', category: 'cafe' })).toBe(true)
   })
@@ -34,6 +43,9 @@ describe('isAdultVenue', () => {
       'Persephone Bakery',
       'The Bunnery Bakery & Restaurant',
       'Rhubarb Cafe',
+      'Bar T 5',
+      'Bar Harbor Lobster Pound',
+      'The Snack Bar',
     ]
     for (const name of safe) {
       expect(isAdultVenue({ name, category: 'restaurant' }), name).toBe(false)
@@ -54,7 +66,7 @@ describe('isKidVenue', () => {
 })
 
 describe('fitsAudience', () => {
-  const saloon = { name: 'Mangy Moose Jackson Hole', category: 'restaurant', types: ['bar', 'restaurant'] }
+  const saloon = { name: 'The Cobblestone Pub', category: 'restaurant', types: ['bar'] }
   const zoo = { name: 'Dublin Zoo', category: 'zoo' }
   const neutral = { name: 'Grand Teton National Park', category: 'tourist_attraction' }
 

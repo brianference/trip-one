@@ -6,7 +6,7 @@ import { textSearchThingsToDo } from '../lib/tripadvisor'
 import { isRateLimited } from '../lib/rateLimitGuard'
 import { openAiResponseSchema } from '../lib/openAi'
 import { buildInterestQueriesPrompt, normalizeInterestQueries } from '../lib/aiInterestQueries'
-import { buildInterestCacheKey } from '../lib/interestCache'
+import { buildInterestCacheKey, PLACE_CACHE_VERSION } from '../lib/interestCache'
 import { mergeThingsToDo, type ThingToDo } from '../lib/mergeThingsToDo'
 import { dropCorruptNames } from '../lib/textIntegrity'
 import { normalizeLocationSlug } from '../../src/lib/slug'
@@ -86,7 +86,7 @@ export async function onRequestPost({ env, request }: { env: InterestEnv; reques
   // serve (a single D1 read, no AI or Places calls), so it shouldn't spend a
   // request against the traveler's hourly budget. A cache read that fails just
   // falls through to a live search rather than breaking the trip.
-  const cacheKey = await buildInterestCacheKey(normalizeLocationSlug(destination), interests)
+  const cacheKey = await buildInterestCacheKey(normalizeLocationSlug(destination), `${PLACE_CACHE_VERSION}|${interests}`)
   try {
     const cached = await getInterestPlacesCache(env, cacheKey)
     if (cached) {

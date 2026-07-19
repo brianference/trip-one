@@ -5,7 +5,7 @@ import { findPlaceByName } from '../lib/places'
 import { isRateLimited } from '../lib/rateLimitGuard'
 import { openAiResponseSchema } from '../lib/openAi'
 import { buildDiscoverPrompt, normalizeDiscoveredVenues, discoveredVenuesForDays, describeInterests, type TravelerProfile } from '../lib/aiDiscover'
-import { buildInterestCacheKey } from '../lib/interestCache'
+import { buildInterestCacheKey, PLACE_CACHE_VERSION } from '../lib/interestCache'
 import { gatherGuideContent } from '../lib/webSearch'
 import { isRequestedExperienceCategory } from '../../src/lib/location/experienceFilter'
 import type { ThingToDo } from '../lib/mergeThingsToDo'
@@ -89,7 +89,7 @@ export async function onRequestPost({ env, request }: { env: DiscoverEnv; reques
   // Cache by destination + the full profile AND the venue target, since a
   // family trip and an adults trip want different venues, and a long trip wants
   // MORE of them than a short one (maxVenues encodes the trip length).
-  const cacheSeed = `discover:${interests}|${profile.party}|${profile.audience}|${profile.season ?? ''}|n${maxVenues}`
+  const cacheSeed = `discover:${PLACE_CACHE_VERSION}|${interests}|${profile.party}|${profile.audience}|${profile.season ?? ''}|n${maxVenues}`
   const cacheKey = await buildInterestCacheKey(normalizeLocationSlug(destination), cacheSeed)
   try {
     const cached = await getInterestPlacesCache(env, cacheKey)

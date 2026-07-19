@@ -14,21 +14,44 @@
  * literally called "Local Restaurant & Bar" is self-describing).
  */
 
-/** Places types that make a venue adults-only in practice. */
-export const ADULT_PLACE_TYPES: readonly string[] = ['bar', 'night_club', 'casino', 'liquor_store']
+/**
+ * Types that make a venue adults-only on their own. `bar` is deliberately NOT
+ * here: Google tags any restaurant with a drinks licence as `bar`, so treating
+ * it as decisive flagged Pinky G's Pizzeria — a family pizza place — as a
+ * drinking venue. See {@link isAdultVenue} for how `bar` is actually used.
+ */
+export const ADULT_PLACE_TYPES: readonly string[] = ['night_club', 'casino', 'liquor_store']
+
+/** Types that mean the place also serves as somewhere to eat. */
+const EATERY_TYPES: readonly string[] = ['restaurant', 'cafe', 'bakery', 'meal_takeaway', 'meal_delivery']
 
 /** Places types that only make sense on a trip that includes children. */
 export const KID_PLACE_TYPES: readonly string[] = ['zoo', 'aquarium', 'amusement_park', 'playground']
 
 /**
- * Name tokens that mark a drinking venue when the type list doesn't.
+ * Name tokens that mark a place as primarily a drinking venue.
  *
- * Matched on word boundaries: "bar" must not fire on "Barbecue", "Barn" or
- * "Barista", and "pub" must not fire on "Public Library". Ordered loosely by
- * how unambiguous each token is.
+ * A bare "bar" is NOT a token here. It fires on far too much that has nothing
+ * to do with drinking — "Bar T 5" (a family chuckwagon show), "Bar Harbor",
+ * "Sushi Bar", "Juice Bar", "Snack Bar" — and a false positive silently
+ * deletes a place a family would have enjoyed. "bar" only counts in a
+ * qualified form ("wine bar", "cocktail bar", "Restaurant & Bar"), where it
+ * genuinely describes the venue.
+ *
+ * Word boundaries throughout, so "pub" can't fire on "Public Library" and
+ * "brewing" can't fire on a coffee roaster's tagline.
  */
-const ADULT_NAME_PATTERN =
-  /\b(bar|bars|pub|pubs|tavern|saloon|brewery|brewing|brewpub|taproom|tap\s?house|alehouse|ale\s?house|distillery|whiskey|whisky|cocktails?|speakeasy|nightclub|night\s?club|wine\s?bar|beer\s?garden)\b/i
+const ADULT_NAME_PATTERN = new RegExp(
+  [
+    // Unambiguous drinking words.
+    String.raw`\b(pubs?|tavern|saloon|brewery|brewpub|taproom|tap\s?house|ale\s?house|distillery|whiskey|whisky|speakeasy|night\s?club|wine\s?bar|cocktail\s?bar|sports\s?bar|beer\s?garden|beer\s?hall)\b`,
+    // "… & Bar", "… and Bar" — the bar is billed as half the venue.
+    String.raw`([&+]|\band)\s*bar\b`,
+    // "Bar & Grill", "Bar and Restaurant" — same billing, words reversed.
+    String.raw`\bbar\s*([&+]|and)\s*(grill|restaurant|kitchen|lounge|eatery)\b`,
+  ].join('|'),
+  'i',
+)
 
 /**
  * Name tokens that mark a children's attraction. Kept deliberately narrow —
@@ -54,7 +77,15 @@ export interface AudienceCandidate {
 export function isAdultVenue(place: AudienceCandidate): boolean {
   if (place.adultVenue === true) return true
   if (place.types?.some((t) => ADULT_PLACE_TYPES.includes(t))) return true
-  if (ADULT_PLACE_TYPES.includes(place.category)) return true
+  if (ADULT_PLACE_TYPES.includes(place.category) || place.category === 'bar') return true
+
+  // A `bar` type only means "adults only" when the place ISN'T also somewhere
+  // to eat. A pub that serves food is still a pub; a pizzeria that serves beer
+  // is still a pizzeria, and excluding it would rob a family trip of a
+  // perfectly good dinner.
+  const types = place.types
+  if (types?.includes('bar') && !types.some((t) => EATERY_TYPES.includes(t))) return true
+
   return ADULT_NAME_PATTERN.test(place.name)
 }
 
