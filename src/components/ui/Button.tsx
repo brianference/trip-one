@@ -17,11 +17,10 @@ const BASE =
   'disabled:opacity-50 disabled:pointer-events-none select-none rounded-[var(--radius-pill)]'
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  // Dark text on the accent, not white. White on dusk-500 measures 3.18:1 --
-  // below WCAG AA for the 14px label this button uses -- while ink-900 on the
-  // same orange is 5.89:1. Hover lightens rather than darkens so the pairing
-  // keeps its contrast.
-  primary: 'bg-dusk-500 text-[var(--color-on-accent)] hover:bg-dusk-400 active:bg-dusk-500 shadow-[var(--shadow-card)]',
+  // The primary action colour is pine, not orange: white on it is 8.17:1,
+  // where the old orange managed only 3.18:1 with white and 5.89:1 with dark
+  // text. Orange is reserved for the logo mark now.
+  primary: 'bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] active:bg-[var(--color-primary)] shadow-[var(--shadow-card)]',
   secondary:
     'bg-[var(--surface)] text-[var(--page-fg)] border border-[var(--hairline)] hover:bg-[var(--surface-muted)]',
   ghost: 'bg-transparent text-[var(--page-fg)] hover:bg-[var(--surface-muted)]',

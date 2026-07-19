@@ -133,7 +133,7 @@ export function ExplorePage() {
                 }}
                 className={`min-h-[44px] rounded-[var(--radius-pill)] border px-4 text-sm font-medium transition-colors ${
                   active
-                    ? 'border-dusk-500 bg-dusk-500 text-[var(--color-on-accent)]'
+                    ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-on-primary)]'
                     : 'border-[var(--hairline)] hover:bg-[var(--surface-muted)]'
                 }`}
               >
@@ -172,7 +172,7 @@ export function ExplorePage() {
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 300px"
                   />
                   <div className="p-4">
-                    <h2 className="font-[family-name:var(--font-display)] text-lg font-semibold leading-snug group-hover:text-dusk-600">
+                    <h2 className="font-[family-name:var(--font-display)] text-lg font-semibold leading-snug group-hover:text-[var(--accent-text)]">
                       {d.name}
                     </h2>
                     <p className="text-sm opacity-60">{d.country}</p>

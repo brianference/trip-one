@@ -192,13 +192,13 @@ export function SearchBox({
           />
 
           {loading && (
-            <span className="size-4 shrink-0 animate-spin rounded-full border-2 border-dusk-400 border-t-transparent" aria-hidden="true" />
+            <span className="size-4 shrink-0 animate-spin rounded-full border-2 border-[var(--color-primary)] border-t-transparent" aria-hidden="true" />
           )}
 
           <button
             type="submit"
             disabled={query.trim().length === 0}
-            className={`shrink-0 rounded-[var(--radius-pill)] bg-dusk-500 font-medium text-[var(--color-on-accent)] transition-colors hover:bg-dusk-400 disabled:opacity-40 ${
+            className={`shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-primary)] font-medium text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-hover)] disabled:opacity-40 ${
               tall ? 'min-h-[44px] px-5 text-sm' : 'min-h-[36px] px-4 text-sm'
             }`}
           >

@@ -23,7 +23,7 @@
      src/styles/theme.css rather than owning a second palette.
 
      Before this, the app had two visual identities: the marketing and
-     account pages in warm sand + sans + a dusk-orange accent, and the trip
+     account pages in warm sand + sans + a single accent, and the trip
      views in cream + serif + teal/gold. Aliasing the tokens unifies both
      instantly, and it means a future palette change happens in one file.
 
@@ -45,10 +45,10 @@
 
   /* ---- Accents ----
      Chronicle's teal was its primary action colour, so it maps to the single
-     dusk accent. Gold was its secondary emphasis, so it maps to pine, which
+     primary. Gold was its secondary emphasis, so it maps to pine, which
      plays the same role in the shared system. */
-  --chronicle-teal: var(--color-dusk-500);
-  --chronicle-teal-hover: var(--color-dusk-600);
+  --chronicle-teal: var(--color-primary);
+  --chronicle-teal-hover: var(--color-primary-hover);
   /* Theme-aware: gold is used as TEXT (weather badges, distance/meta lines,
      "Hourly" links), and a single mid-tone value cannot clear WCAG AA on both
      a near-white and a near-black surface. Measured, pine-500 on the dark
@@ -61,8 +61,8 @@
   --chronicle-text-primary: var(--page-fg);
   --chronicle-text-secondary: color-mix(in oklab, var(--page-fg) 78%, transparent);
   --chronicle-text-tertiary: color-mix(in oklab, var(--page-fg) 58%, transparent);
-  /* Dark, not white: white on the dusk accent is 3.18:1, ink-900 is 5.89:1. */
-  --chronicle-text-on-gold: var(--color-on-accent);
+  /* White on the pine primary is 8.17:1. */
+  --chronicle-text-on-gold: var(--color-on-primary);
 
   /* ---- Semantic ---- */
   --chronicle-danger: var(--color-danger-500);
@@ -93,7 +93,7 @@
 
   /* ---- Shadow ---- */
   --chronicle-shadow-card: var(--shadow-card);
-  --chronicle-shadow-focus: 0 0 0 2px var(--page-bg), 0 0 0 4px var(--color-dusk-500);
+  --chronicle-shadow-focus: 0 0 0 2px var(--page-bg), 0 0 0 4px var(--color-primary);
 }
 
 

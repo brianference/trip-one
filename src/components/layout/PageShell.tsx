@@ -28,7 +28,7 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
           return (
             <li key={`${item.label}-${i}`} className="flex min-w-0 items-center gap-2">
               {item.to && !last ? (
-                <Link to={item.to} className="hover:text-dusk-600 hover:underline underline-offset-4">
+                <Link to={item.to} className="hover:text-[var(--accent-text)] hover:underline underline-offset-4">
                   {item.label}
                 </Link>
               ) : (
@@ -94,7 +94,7 @@ export function Prose({ children }: { children: ReactNode }) {
         [&_h3]:mt-6 [&_h3]:text-lg [&_h3]:font-semibold
         [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-2
         [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-2
-        [&_a]:text-dusk-600 [&_a]:underline [&_a]:underline-offset-4"
+        [&_a]:text-[var(--accent-text)] [&_a]:underline [&_a]:underline-offset-4"
     >
       {children}
     </div>

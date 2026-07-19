@@ -35,7 +35,7 @@ const FEATURES = [
 
 /** Section label above a heading. */
 function Kicker({ children }: { children: string }) {
-  return <p className="text-xs font-semibold uppercase tracking-[0.14em] text-dusk-600">{children}</p>
+  return <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent-text)]">{children}</p>
 }
 
 /**
@@ -121,7 +121,10 @@ export function SearchScreen() {
       <section className="mx-auto max-w-6xl px-4 pb-8 pt-10 sm:px-6 sm:pt-16">
         <div className="mx-auto max-w-2xl text-center">
           <Kicker>A trip planner, without the friction</Kicker>
-          <h1 className="mt-3 font-[family-name:var(--font-display)] text-4xl font-semibold leading-[1.1] tracking-tight sm:text-5xl">
+          {/* text-balance keeps the sentence from breaking after "trip." on
+              mid-width screens; the size steps down on small phones so it stays
+              on one line rather than wrapping mid-thought. */}
+          <h1 className="mt-3 text-pretty font-[family-name:var(--font-display)] text-[1.75rem] font-semibold leading-[1.15] tracking-tight text-balance sm:text-4xl lg:text-5xl">
             Describe your trip. We build it.
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-lg leading-relaxed opacity-80">
@@ -161,7 +164,7 @@ export function SearchScreen() {
                   <li key={trip.id}>
                     <Link
                       to={`/trip/${trip.id}`}
-                      className="flex flex-col gap-0.5 rounded-xl border border-[var(--hairline)] bg-[var(--surface)] px-4 py-3 transition-colors hover:border-dusk-400 hover:bg-[var(--surface-muted)]"
+                      className="flex flex-col gap-0.5 rounded-xl border border-[var(--hairline)] bg-[var(--surface)] px-4 py-3 transition-colors hover:border-[var(--color-primary)] hover:bg-[var(--surface-muted)]"
                     >
                       <span className="font-medium">{trip.city}</span>
                       <span className="text-sm opacity-70">{trip.blurb}</span>
@@ -188,7 +191,7 @@ export function SearchScreen() {
               <li key={t.id}>
                 <Link
                   to={`/trip/${t.id}`}
-                  className="flex flex-col gap-0.5 rounded-xl border border-[var(--hairline)] bg-[var(--surface)] px-4 py-3 transition-colors hover:border-dusk-400 hover:bg-[var(--surface-muted)]"
+                  className="flex flex-col gap-0.5 rounded-xl border border-[var(--hairline)] bg-[var(--surface)] px-4 py-3 transition-colors hover:border-[var(--color-primary)] hover:bg-[var(--surface-muted)]"
                 >
                   <span className="font-medium">{t.name}</span>
                   <span className="text-sm opacity-70">Open your trip →</span>

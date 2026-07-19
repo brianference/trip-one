@@ -107,7 +107,7 @@ export function HomeAiPlanner() {
       />
       <button
         type="submit"
-        className="mt-3 min-h-[52px] w-full rounded-[var(--radius-pill)] bg-dusk-500 px-6 text-base font-semibold text-[var(--color-on-accent)] transition-colors hover:bg-dusk-400 disabled:opacity-40"
+        className="mt-3 min-h-[52px] w-full rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-6 text-base font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-hover)] disabled:opacity-40"
         disabled={busy || !text.trim()}
       >
         {busy ? status || 'Planning…' : 'Plan my trip'}

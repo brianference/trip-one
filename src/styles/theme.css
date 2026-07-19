@@ -72,7 +72,26 @@
    * produced light-on-orange in light mode (3.02:1, below AA) while passing in
    * dark by accident. Pinning it to ink keeps 5.96:1 in both.
    */
+  /* Text on the orange logo mark only. Everything actionable uses the primary. */
   --color-on-accent: #14120f;
+
+  /**
+   * PRIMARY ACTION COLOUR.
+   *
+   * Orange carried every button, pill and chat action, which was both visually
+   * relentless and the weakest contrast in the palette: white on dusk-500 is
+   * 3.18:1 and even dark text on it only reaches 5.89:1. Pine-600 with white
+   * text is 8.17:1 — comfortably past AA, and past AAA for large text — and it
+   * reads as a calmer product.
+   *
+   * Both values are theme-invariant: the button paints its own background, so
+   * its foreground must not change with the page behind it.
+   *
+   * Orange is now reserved for the logo mark and nothing else.
+   */
+  --color-primary: var(--color-pine-600);
+  --color-primary-hover: var(--color-pine-500);
+  --color-on-primary: #ffffff;
 }
 
 /**
@@ -121,11 +140,15 @@
          dusk-700 on sand-100     = 5.77:1  (passes)
        Backgrounds keep the mid-tone accents; only text uses these. */
     --accent-secondary: var(--color-pine-600);
-    --accent-text: var(--color-dusk-700);
+    /* Was dusk-700. Orange is no longer used for body-level emphasis. */
+    --accent-text: var(--color-pine-600);
   }
 
+  /* Dark applies ONLY when the visitor asks for it via the toggle
+     (`data-theme="dark"`), not from the OS preference. Light is the product's
+     default look and what the design was tuned against. */
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme='light']) {
+    :root[data-theme='dark'] {
       color-scheme: dark;
       --page-bg: var(--color-ink-900);
       --page-fg: var(--color-sand-100);
@@ -133,7 +156,7 @@
       --surface-muted: var(--color-ink-700);
       --hairline: var(--color-ink-600);
       --accent-secondary: var(--color-pine-300);
-      --accent-text: var(--color-dusk-300);
+      --accent-text: var(--color-pine-300);
     }
   }
 
@@ -145,7 +168,7 @@
     --surface-muted: var(--color-ink-700);
     --hairline: var(--color-ink-600);
     --accent-secondary: var(--color-pine-300);
-    --accent-text: var(--color-dusk-300);
+    --accent-text: var(--color-pine-300);
   }
 
   html {
@@ -182,7 +205,7 @@
      outlines without replacing them makes an app unusable by keyboard, so this
      is defined once here rather than per component. */
   :where(a, button, input, select, textarea, [tabindex]):focus-visible {
-    outline: 2px solid var(--color-dusk-500);
+    outline: 2px solid var(--color-primary);
     outline-offset: 2px;
     border-radius: 4px;
   }
@@ -209,8 +232,8 @@
     left: 0.5rem;
     top: 0.5rem;
     padding: 0.5rem 0.875rem;
-    background: var(--color-dusk-500);
-    color: var(--color-on-accent);
+    background: var(--color-primary);
+    color: var(--color-on-primary);
     border-radius: 0.5rem;
   }
 }

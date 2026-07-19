@@ -109,7 +109,7 @@ export function RegisterPage() {
           </Button>
           <p className="text-sm opacity-80">
             Already have an account?{' '}
-            <Link to="/login" className="text-dusk-600 underline underline-offset-4">
+            <Link to="/login" className="text-[var(--accent-text)] underline underline-offset-4">
               Sign in
             </Link>
           </p>

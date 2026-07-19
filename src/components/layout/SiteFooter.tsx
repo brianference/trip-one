@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Logo } from './Logo'
+import { Logo } from '../Logo'
 
 /**
  * Site footer, organised into labelled columns.
@@ -41,7 +41,7 @@ export function SiteFooter() {
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
           <div className="max-w-xs">
-            <Logo />
+            <Logo size={24} />
             <p className="mt-3 text-sm leading-relaxed opacity-75">
               Real places, real itineraries. Trip One plans day-by-day trips from verified places — never invented
               ones.
@@ -54,7 +54,7 @@ export function SiteFooter() {
               <ul className="mt-3 space-y-2.5">
                 {col.links.map((link) => (
                   <li key={link.to}>
-                    <Link to={link.to} className="text-sm hover:text-dusk-600 hover:underline underline-offset-4">
+                    <Link to={link.to} className="text-sm hover:text-[var(--accent-text)] hover:underline underline-offset-4">
                       {link.label}
                     </Link>
                   </li>

@@ -36,5 +36,7 @@ export function applyTheme(theme: ThemeChoice): void {
 
 /** The theme to show on first paint: the saved choice, else the OS preference. */
 export function initialTheme(): ThemeChoice {
-  return getStoredTheme() ?? systemTheme()
+  // Light is the product default. The OS preference is deliberately NOT
+  // consulted: dark is opt-in through the toggle, and a stored choice wins.
+  return getStoredTheme() ?? 'light'
 }

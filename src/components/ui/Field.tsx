@@ -34,7 +34,7 @@ export function Field({ label, error, hint, className = '', id, ...rest }: Field
         aria-describedby={error ? errorId : hint ? hintId : undefined}
         className={`w-full rounded-xl border bg-[var(--surface)] px-3.5 py-2.5 text-base min-h-[44px]
           placeholder:text-ink-500/60 transition-colors
-          ${error ? 'border-danger-500' : 'border-[var(--hairline)] focus:border-dusk-400'}
+          ${error ? 'border-danger-500' : 'border-[var(--hairline)] focus:border-[var(--color-primary)]'}
           ${className}`}
         {...rest}
       />

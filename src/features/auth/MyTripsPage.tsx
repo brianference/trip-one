@@ -133,7 +133,7 @@ export function MyTripsPage() {
                 </Link>
                 <div className="flex flex-1 flex-col p-4">
                   <h2 className="font-[family-name:var(--font-display)] text-lg font-semibold leading-snug">
-                    <Link to={`/trip/${trip.id}`} className="hover:text-dusk-600">
+                    <Link to={`/trip/${trip.id}`} className="hover:text-[var(--accent-text)]">
                       {readableName(trip)}
                     </Link>
                   </h2>

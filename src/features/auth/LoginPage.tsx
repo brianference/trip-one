@@ -73,7 +73,7 @@ export function LoginPage() {
           </Button>
           <p className="text-sm opacity-80">
             No account?{' '}
-            <Link to="/register" className="text-dusk-600 underline underline-offset-4">
+            <Link to="/register" className="text-[var(--accent-text)] underline underline-offset-4">
               Create one
             </Link>
           </p>

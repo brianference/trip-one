@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { Logo } from './Logo'
+import { Link as RouterLink } from 'react-router-dom'
+import { Logo } from '../Logo'
 import { Button, ButtonLink } from '../ui/Button'
 import { useAuth } from '../../features/auth/AuthContext'
 import { ThemeToggle } from '../ThemeToggle'
@@ -65,7 +66,9 @@ export function SiteHeader() {
       }`}
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:px-6">
-        <Logo />
+        <RouterLink to="/" aria-label="Trip One — home" className="shrink-0">
+          <Logo size={26} />
+        </RouterLink>
 
         <nav aria-label="Main" className="ml-auto hidden items-center gap-1 md:flex">
           {NAV.map((item) => (
@@ -75,7 +78,7 @@ export function SiteHeader() {
               end={item.end}
               className={({ isActive }) =>
                 `rounded-full px-3.5 py-2 text-sm font-medium transition-colors ${
-                  isActive ? 'bg-[var(--surface-muted)] text-dusk-600' : 'hover:bg-[var(--surface-muted)]'
+                  isActive ? 'bg-[var(--surface-muted)] text-[var(--accent-text)]' : 'hover:bg-[var(--surface-muted)]'
                 }`
               }
             >
@@ -142,7 +145,7 @@ export function SiteHeader() {
                 end={item.end}
                 className={({ isActive }) =>
                   `rounded-xl px-3 py-3 text-base font-medium ${
-                    isActive ? 'bg-[var(--surface-muted)] text-dusk-600' : ''
+                    isActive ? 'bg-[var(--surface-muted)] text-[var(--accent-text)]' : ''
                   }`
                 }
               >

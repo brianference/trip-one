@@ -127,7 +127,7 @@ export function ContactPage() {
           <aside className="space-y-6 text-sm">
             <div className="rounded-[var(--radius-card)] border border-[var(--hairline)] bg-[var(--surface)] p-5">
               <h2 className="font-[family-name:var(--font-display)] text-base font-semibold">Email us directly</h2>
-              <a href={`mailto:${CONTACT_EMAIL}`} className="mt-2 block break-all text-dusk-600 underline underline-offset-4">
+              <a href={`mailto:${CONTACT_EMAIL}`} className="mt-2 block break-all text-[var(--accent-text)] underline underline-offset-4">
                 {CONTACT_EMAIL}
               </a>
             </div>
@@ -138,7 +138,7 @@ export function ContactPage() {
                 href={GITHUB_ISSUES}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-2 inline-block text-dusk-600 underline underline-offset-4"
+                className="mt-2 inline-block text-[var(--accent-text)] underline underline-offset-4"
               >
                 Open an issue on GitHub
               </a>

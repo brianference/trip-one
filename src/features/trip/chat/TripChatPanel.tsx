@@ -142,7 +142,7 @@ export function TripChatPanel({
         <div className="flex shrink-0 gap-2 px-4 pb-3" role="group" aria-label={`Start a new trip to ${pendingRelocate.destination}?`}>
           <button
             type="button"
-            className="min-h-[44px] flex-1 rounded-[var(--radius-pill)] bg-dusk-500 px-4 text-sm font-medium text-[var(--color-on-accent)] hover:bg-dusk-400 disabled:opacity-50"
+            className="min-h-[44px] flex-1 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 text-sm font-medium text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
             onClick={onConfirmRelocate}
             disabled={isThinking}
           >
@@ -176,7 +176,7 @@ export function TripChatPanel({
         />
         <button
           type="submit"
-          className="min-h-[44px] shrink-0 rounded-[var(--radius-pill)] bg-dusk-500 px-4 text-sm font-medium text-[var(--color-on-accent)] hover:bg-dusk-400 disabled:opacity-40"
+          className="min-h-[44px] shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 text-sm font-medium text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] disabled:opacity-40"
           disabled={disabled || isThinking || !draft.trim()}
           aria-label="Send"
         >
