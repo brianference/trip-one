@@ -63,6 +63,16 @@
   /* Elevation that reads as paper lifting, not as a drop shadow. */
   --shadow-card: 0 1px 2px rgb(20 18 15 / 0.04), 0 8px 24px -12px rgb(20 18 15 / 0.18);
   --shadow-lifted: 0 2px 4px rgb(20 18 15 / 0.06), 0 16px 40px -16px rgb(20 18 15 / 0.28);
+
+  /**
+   * Text sitting ON the dusk accent. Deliberately NOT theme-aware: the accent
+   * itself is the same orange in both themes, so its foreground must be too.
+   *
+   * Rules that used the page background here inverted with the theme and
+   * produced light-on-orange in light mode (3.02:1, below AA) while passing in
+   * dark by accident. Pinning it to ink keeps 5.96:1 in both.
+   */
+  --color-on-accent: #14120f;
 }
 
 /**
@@ -179,7 +189,7 @@
     top: 0.5rem;
     padding: 0.5rem 0.875rem;
     background: var(--color-dusk-500);
-    color: var(--color-ink-900);
+    color: var(--color-on-accent);
     border-radius: 0.5rem;
   }
 }

@@ -221,7 +221,7 @@ export function PlaceDetailPanel({
                 )}
                 <button
                   type="button"
-                  className="min-h-[44px] flex-1 rounded-[var(--radius-pill)] bg-dusk-500 px-4 text-sm font-medium text-ink-900 hover:bg-dusk-400"
+                  className="min-h-[44px] flex-1 rounded-[var(--radius-pill)] bg-dusk-500 px-4 text-sm font-medium text-[var(--color-on-accent)] hover:bg-dusk-400"
                   onClick={() => onAddToDay(dayCount && dayCount > 1 ? pickDay : 1)}
                 >
                   {dayCount && dayCount > 1 ? `Add to Day ${pickDay}` : 'Add to trip'}

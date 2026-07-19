@@ -133,7 +133,7 @@ export function ExplorePage() {
                 }}
                 className={`min-h-[40px] rounded-[var(--radius-pill)] border px-4 text-sm font-medium transition-colors ${
                   active
-                    ? 'border-dusk-500 bg-dusk-500 text-white'
+                    ? 'border-dusk-500 bg-dusk-500 text-[var(--color-on-accent)]'
                     : 'border-[var(--hairline)] hover:bg-[var(--surface-muted)]'
                 }`}
               >

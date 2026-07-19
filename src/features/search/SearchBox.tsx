@@ -198,7 +198,7 @@ export function SearchBox({
           <button
             type="submit"
             disabled={query.trim().length === 0}
-            className={`shrink-0 rounded-[var(--radius-pill)] bg-dusk-500 font-medium text-white transition-colors hover:bg-dusk-600 disabled:opacity-40 ${
+            className={`shrink-0 rounded-[var(--radius-pill)] bg-dusk-500 font-medium text-[var(--color-on-accent)] transition-colors hover:bg-dusk-400 disabled:opacity-40 ${
               tall ? 'min-h-[44px] px-5 text-sm' : 'min-h-[36px] px-4 text-sm'
             }`}
           >
