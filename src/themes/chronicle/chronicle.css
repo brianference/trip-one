@@ -1,51 +1,75 @@
 /* =============================================================================
    Trip One — Chronicle theme
    Editorial day-by-day timeline: each day reads as a magazine chapter —
-   narrative, chronological, literary. Charcoal canvas, thermal-teal and
-   sulfur-gold accents, warm cream surfaces. Playfair Display (display) +
-   Source Serif 4 (body) + JetBrains Mono (labels/dates).
+   narrative, chronological, literary.
+
+   Colour and type are no longer defined here. Chronicle now derives every
+   token from the shared design system in src/styles/theme.css, so the trip
+   views and the rest of the app are one design rather than two. See the :root
+   block below.
 
    All custom properties and classes are namespaced with `chronicle-` so this
    stylesheet — which is imported globally alongside the other four themes —
    never leaks into Bento / Field Guide / Liquid Glass / Trail Ledger.
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300&display=swap');
+/* No webfont import. Chronicle's faces now come from the shared tokens: Sora
+   for display (loaded once in index.html) and the system sans for body, which
+   costs no download at all. */
 
 :root {
-  /* ---- Surfaces (light, default) ---- */
-  --chronicle-bg-canvas: #f7f2e7;
-  --chronicle-bg-surface: #fffdf8;
-  --chronicle-bg-surface-2: #f0e9d8;
+  /* ------------------------------------------------------------------
+     Chronicle now DERIVES from the shared design system in
+     src/styles/theme.css rather than owning a second palette.
+
+     Before this, the app had two visual identities: the marketing and
+     account pages in warm sand + sans + a dusk-orange accent, and the trip
+     views in cream + serif + teal/gold. Aliasing the tokens unifies both
+     instantly, and it means a future palette change happens in one file.
+
+     The variable NAMES are kept so the ~250 Chronicle class rules keep
+     working untouched; only the values now point at the shared tokens.
+     Dark mode is handled by theme.css, so the old per-mode overrides below
+     are no longer needed.
+     ------------------------------------------------------------------ */
+
+  /* ---- Surfaces ---- */
+  --chronicle-bg-canvas: var(--page-bg);
+  --chronicle-bg-surface: var(--surface);
+  --chronicle-bg-surface-2: var(--surface-muted);
 
   /* ---- Borders ---- */
-  --chronicle-border-hairline: rgba(26, 26, 26, 0.1);
-  --chronicle-border-subtle: rgba(26, 26, 26, 0.18);
-  --chronicle-spine: #d8cfba;
+  --chronicle-border-hairline: var(--hairline);
+  --chronicle-border-subtle: var(--hairline);
+  --chronicle-spine: var(--hairline);
 
-  /* ---- Accents ---- */
-  --chronicle-teal: #1d8a7d;
-  --chronicle-teal-hover: #166f64;
-  --chronicle-gold: #b8912e;
-  --chronicle-gold-hover: #967520;
-  --chronicle-muted: #8a8370;
+  /* ---- Accents ----
+     Chronicle's teal was its primary action colour, so it maps to the single
+     dusk accent. Gold was its secondary emphasis, so it maps to pine, which
+     plays the same role in the shared system. */
+  --chronicle-teal: var(--color-dusk-500);
+  --chronicle-teal-hover: var(--color-dusk-600);
+  --chronicle-gold: var(--color-pine-500);
+  --chronicle-gold-hover: var(--color-pine-600);
+  --chronicle-muted: var(--color-ink-500);
 
   /* ---- Text ---- */
-  --chronicle-text-primary: #1a1a1a;
-  --chronicle-text-secondary: #4a4438;
-  --chronicle-text-tertiary: #746c5a;
-  --chronicle-text-on-gold: #fffdf8;
+  --chronicle-text-primary: var(--page-fg);
+  --chronicle-text-secondary: color-mix(in oklab, var(--page-fg) 78%, transparent);
+  --chronicle-text-tertiary: color-mix(in oklab, var(--page-fg) 58%, transparent);
+  --chronicle-text-on-gold: #fff;
 
   /* ---- Semantic ---- */
-  --chronicle-danger: #c0483f;
+  --chronicle-danger: var(--color-danger-500);
 
-  /* ---- Typography ---- */
-  --chronicle-font-display: 'Playfair Display', Georgia, serif;
-  --chronicle-font-body: 'Source Serif 4', Georgia, serif;
-  --chronicle-font-mono: 'JetBrains Mono', ui-monospace, monospace;
-  /* Brand/wordmark face (Sora) — reused by the mobile top bar so the currency
-     reads as part of the "Trip One" chrome, not a mono data chip. */
-  --chronicle-font-brand: 'Sora', var(--chronicle-font-body), sans-serif;
+  /* ---- Typography ----
+     The serif display/body faces are replaced by the shared sans stack; this
+     is the change that makes the trip views read as the same product as the
+     rest of the app. */
+  --chronicle-font-display: var(--font-display);
+  --chronicle-font-body: var(--font-sans);
+  --chronicle-font-mono: ui-monospace, 'JetBrains Mono', monospace;
+  --chronicle-font-brand: var(--font-display);
 
   /* ---- Spacing (4px base) ---- */
   --chronicle-space-xs: 4px;
@@ -57,70 +81,16 @@
   --chronicle-space-3xl: 64px;
 
   /* ---- Radius ---- */
-  --chronicle-radius-sm: 4px;
-  --chronicle-radius-md: 8px;
-  --chronicle-radius-lg: 14px;
-  --chronicle-radius-pill: 999px;
+  --chronicle-radius-sm: 6px;
+  --chronicle-radius-md: 10px;
+  --chronicle-radius-lg: var(--radius-card);
+  --chronicle-radius-pill: var(--radius-pill);
 
   /* ---- Shadow ---- */
-  --chronicle-shadow-card: 0 1px 2px rgba(26, 26, 26, 0.06), 0 8px 20px -12px rgba(26, 26, 26, 0.16);
-  --chronicle-shadow-focus: 0 0 0 2px var(--chronicle-bg-canvas), 0 0 0 4px var(--chronicle-teal);
+  --chronicle-shadow-card: var(--shadow-card);
+  --chronicle-shadow-focus: 0 0 0 2px var(--page-bg), 0 0 0 4px var(--color-dusk-500);
 }
 
-/* Dark palette. Light is the default (above). Dark applies two ways: when the
-   OS prefers dark AND the user hasn't picked a theme (`:root:not([data-theme])`),
-   or explicitly when they toggle to dark (`:root[data-theme='dark']`). An
-   explicit `data-theme='light'` matches neither, so it keeps the light `:root`
-   defaults — that's how the toggle overrides the system setting. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
-    --chronicle-bg-canvas: #1a1a1a;
-    --chronicle-bg-surface: #232323;
-    --chronicle-bg-surface-2: #2b2b2b;
-
-    --chronicle-border-hairline: rgba(245, 240, 230, 0.1);
-    --chronicle-border-subtle: rgba(245, 240, 230, 0.18);
-    --chronicle-spine: #3a3a3a;
-
-    --chronicle-teal: #2fa396;
-    --chronicle-teal-hover: #3ebdae;
-    --chronicle-gold: #e8b84a;
-    --chronicle-gold-hover: #f0c55e;
-    --chronicle-muted: #8b8b83;
-
-    --chronicle-text-primary: #f5f0e6;
-    --chronicle-text-secondary: #c9c3b4;
-    --chronicle-text-tertiary: #8f8a7c;
-    --chronicle-text-on-gold: #1a1a1a;
-
-    --chronicle-danger: #d9635a;
-    --chronicle-shadow-card: 0 1px 0 rgba(0, 0, 0, 0.5), 0 12px 24px -14px rgba(0, 0, 0, 0.6);
-  }
-}
-
-:root[data-theme='dark'] {
-  --chronicle-bg-canvas: #1a1a1a;
-  --chronicle-bg-surface: #232323;
-  --chronicle-bg-surface-2: #2b2b2b;
-
-  --chronicle-border-hairline: rgba(245, 240, 230, 0.1);
-  --chronicle-border-subtle: rgba(245, 240, 230, 0.18);
-  --chronicle-spine: #3a3a3a;
-
-  --chronicle-teal: #2fa396;
-  --chronicle-teal-hover: #3ebdae;
-  --chronicle-gold: #e8b84a;
-  --chronicle-gold-hover: #f0c55e;
-  --chronicle-muted: #8b8b83;
-
-  --chronicle-text-primary: #f5f0e6;
-  --chronicle-text-secondary: #c9c3b4;
-  --chronicle-text-tertiary: #8f8a7c;
-  --chronicle-text-on-gold: #1a1a1a;
-
-  --chronicle-danger: #d9635a;
-  --chronicle-shadow-card: 0 1px 0 rgba(0, 0, 0, 0.5), 0 12px 24px -14px rgba(0, 0, 0, 0.6);
-}
 
 /* ---------- Share trip + save hint + recents ---------- */
 .chronicle-overview-header {
