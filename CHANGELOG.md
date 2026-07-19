@@ -3,6 +3,87 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v12.0.0 — Accounts, a premium frontend, and search that finds things
+
+A major release. Trip One gains user accounts, a rebuilt interface on Tailwind,
+five real site pages, and a destination search that works.
+
+### Accounts, and trips that belong to you
+Register and sign in to save trips and open them on any device. Password
+hashing and sessions are implemented on Web Crypto rather than bcrypt and
+jsonwebtoken, neither of which can run on Cloudflare Workers.
+
+Security specifics, each addressing a concrete failure mode:
+- Sessions live in an httpOnly, Secure, SameSite=Lax cookie, so page JavaScript
+  cannot read a session and an XSS bug cannot exfiltrate one.
+- The JWT verifier ignores the token header's `alg` and only ever checks HS256,
+  so the `alg:none` and RS256-to-HS256 confusion attacks do not apply. The
+  signature is verified BEFORE the payload is parsed, and compared in constant
+  time.
+- Login answers identically for an unknown account and a wrong password, and
+  hashes anyway when the account doesn't exist, so timing doesn't reveal which
+  emails are registered.
+- Trip deletion enforces ownership inside the SQL rather than by a separate
+  read-then-check, which cannot race and cannot be forgotten at a call site. A
+  missing trip and someone else's trip both answer 404.
+- Passwords are peppered with a secret held outside the database, so a stolen
+  database alone cannot be attacked offline.
+
+**Anonymous trips still work exactly as before.** Ownership is optional: every
+existing share link keeps working, and signing up can claim the trip you just
+planned.
+
+### A rebuilt interface
+Converted to Tailwind v4 with a single design system. The trip views derive
+their colours and type from the same tokens as the rest of the app, so the
+product no longer looks like two different sites stitched together.
+
+New: a sticky header with the wordmark, an organised footer, and About,
+Contact, Terms, Explore and 404 pages. Delete now asks first, in a
+focus-trapped dialog that names the trip and puts focus on Cancel so a stray
+Enter cannot destroy anything.
+
+### Search that finds destinations
+Type-ahead moved from Nominatim to Photon. Nominatim is a geocoder that matches
+whole tokens, so "dubl" returned a private road in Luton and a Russian mountain
+peak, and never Dublin. Photon does prefix search on the same data. Results are
+ranked so a place you can base a trip in beats a building or a street.
+
+### Faster on a phone
+Four webfont families were being downloaded for nothing — three imported by a
+stylesheet that no longer used them, two more referenced only by themes the app
+never routes to. Only Sora is fetched now. Destination photos are served at the
+width the device actually needs, with reserved dimensions so nothing shifts as
+they load.
+
+### SEO
+Per-route titles, descriptions, canonicals, Open Graph, Twitter cards and
+JSON-LD, plus robots.txt and a sitemap. Trip URLs are deliberately excluded
+from indexing: they are unguessable share links, not public pages.
+
+### Fixed
+- Planned trips never reached the signed-in user's account, so "My trips"
+  stayed empty and the delete flow was unreachable.
+- The theme toggle was fixed to the top-right corner, where it covered the new
+  header's menu button and swallowed taps meant for it. It was also the first
+  Tab stop, pushing "Skip to content" to second.
+- Two footers rendered on the homepage.
+- Every Explore image was blocked, from two independent causes: CSP did not
+  allow Wikimedia, and the URLs were guessed from slugs and only resolved for
+  three of eight destinations.
+- Search suggestions never rendered: the client read a `label` field the
+  endpoint does not return.
+- Per-endpoint rate limits shared one budget, so the effective limit was the
+  smallest across all routes. Planning a trip consumed registration's allowance
+  and made signing up impossible.
+- Requests naming no party failed intermittently with a 502, because the intent
+  schema rejected the `null` the model returns for unstated fields.
+- The Privacy Policy claimed "no accounts, logins, or passwords" and named
+  Supabase as the database. Both were untrue; it has been rewritten.
+
+### Under the hood
+- 584 automated tests; typecheck, tests and build gate every push.
+
 ## v11.1.0 — Audience filtering that holds, and a simulation that tells the truth
 
 ### Fixed

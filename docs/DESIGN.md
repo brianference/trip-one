@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **Product** | trip-one.pages.dev |
-| **Version** | v11.1.0 |
+| **Version** | v12.0.0 |
 | **Theme** | Chronicle (sole active) |
 | **Stack** | Vite · React · CF Pages Functions · Cloudflare D1 |
 
@@ -115,4 +115,4 @@ Each of these is a real bug that shipped, or a rule that stopped one. Non-negoti
 ---
 
 **Source of truth:** `src/themes/chronicle/chronicle.css` (design tokens) · `docs/superpowers/specs/2026-06-30-trip-one-design.md` (full spec).
-**Repo:** github.com/brianference/trip-one · **Prod:** trip-one.pages.dev · **As of:** v11.1.0
+**Repo:** github.com/brianference/trip-one · **Prod:** trip-one.pages.dev · **As of:** v12.0.0
