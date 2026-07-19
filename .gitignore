@@ -14,3 +14,7 @@ tsconfig.tsbuildinfo
 
 # Cloudflare local dev state (local D1, logs)
 .wrangler/
+
+# Simulation run artifacts (paid API output, machine-specific)
+sim-*.log
+sim-*.json

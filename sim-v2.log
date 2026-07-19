@@ -1,6 +1,0 @@
-
-> trip-one@11.0.1 sim
-> vite-node simulations/run.ts -- --sweep --out sim-v2.json
-
-running v2-breck-family-ski ... ok (24 stops)
-running v2-orlando-family ... 
