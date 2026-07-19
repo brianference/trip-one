@@ -8,9 +8,9 @@ const PRICE = ['Free', '$', '$$', '$$$', '$$$$']
 function Stars({ rating, count }: { rating: number | null; count: number | null }) {
   if (rating == null) return null
   return (
-    <p className="chronicle-place-rating">
+    <p className="text-sm font-medium">
       <span aria-hidden="true">★</span> {rating.toFixed(1)}
-      {count != null && <span className="chronicle-place-rating-count"> ({count.toLocaleString()} reviews)</span>}
+      {count != null && <span className="font-normal opacity-65"> ({count.toLocaleString()} reviews)</span>}
     </p>
   )
 }
@@ -71,66 +71,86 @@ export function PlaceDetailPanel({
   const directionsHref = detail?.mapsUrl ?? directionsUrl(detail?.name ?? query.label)
 
   return (
-    <div className="chronicle-place-overlay" role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
-      <div className="chronicle-place-sheet" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-[90] flex items-end justify-center bg-ink-900/60 backdrop-blur-sm sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-[var(--radius-card)] border border-[var(--hairline)] bg-[var(--surface)] shadow-[var(--shadow-lifted)] sm:max-h-[85dvh] sm:rounded-[var(--radius-card)]"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Pinned header — the title and close button stay put while the body
             scrolls, so the × is always reachable on a long review list. */}
-        <div className="chronicle-place-head">
-          <h2 className="chronicle-place-title">{title}</h2>
-          <button type="button" className="chronicle-place-close" onClick={onClose} aria-label="Close details">
+        <div className="flex shrink-0 items-start gap-3 border-b border-[var(--hairline)] px-5 py-4">
+          <h2 className="min-w-0 flex-1 font-[family-name:var(--font-display)] text-lg font-semibold leading-snug">{title}</h2>
+          <button
+            type="button"
+            className="-mr-1 grid size-9 shrink-0 place-items-center rounded-lg text-xl leading-none hover:bg-[var(--surface-muted)]"
+            onClick={onClose}
+            aria-label="Close details"
+          >
             ×
           </button>
         </div>
 
-        <div className="chronicle-place-scroll">
-          {loading && <p className="chronicle-rate-line">Loading details…</p>}
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+          {loading && <p className="text-sm opacity-70">Loading details…</p>}
           {error && (
-            <p role="alert" className="chronicle-ai-error">
+            <p role="alert" className="text-sm text-danger-500">
               {error}
             </p>
           )}
 
           {detail && (
-          <div className="chronicle-place-body">
+          <div className="space-y-3">
             {detail.photoRefs.length > 0 && (
-              <div className="chronicle-place-photos">
+              <div className="-mx-1 flex snap-x gap-2 overflow-x-auto pb-1">
                 {detail.photoRefs.map((ref) => (
-                  <img key={ref} src={placePhotoUrl(ref, 400)} alt={`${detail.name}`} loading="lazy" className="chronicle-place-photo" />
+                  <img key={ref} src={placePhotoUrl(ref, 400)} alt={`${detail.name}`} loading="lazy" className="h-32 w-44 shrink-0 snap-start rounded-xl object-cover" width={400} height={300} decoding="async" />
                 ))}
               </div>
             )}
 
-            <div className="chronicle-place-meta">
+            <div className="flex flex-wrap items-center gap-2">
               <Stars rating={detail.rating} count={detail.reviewCount} />
               {detail.priceLevel != null && PRICE[detail.priceLevel] && (
-                <span className="chronicle-place-chip">{PRICE[detail.priceLevel]}</span>
+                <span className="rounded-full border border-[var(--hairline)] px-2.5 py-1 text-xs font-medium">{PRICE[detail.priceLevel]}</span>
               )}
               {detail.openNow != null && (
-                <span className={`chronicle-place-chip ${detail.openNow ? 'chronicle-place-chip--open' : 'chronicle-place-chip--closed'}`}>
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                    detail.openNow
+                      ? 'bg-pine-500/15 text-[var(--accent-secondary)]'
+                      : 'bg-danger-500/15 text-danger-500'
+                  }`}
+                >
                   {detail.openNow ? 'Open now' : 'Closed'}
                 </span>
               )}
             </div>
 
             {detail.serves.length > 0 && (
-              <p className="chronicle-place-serves">Serves: {detail.serves.join(', ')}</p>
+              <p className="text-sm opacity-75">Serves: {detail.serves.join(', ')}</p>
             )}
 
-            {detail.summary && <p className="chronicle-place-summary">{detail.summary}</p>}
+            {detail.summary && <p className="text-sm leading-relaxed">{detail.summary}</p>}
 
             {detail.address && (
-              <p className="chronicle-place-line">
+              <p className="text-sm [&_a]:text-[var(--accent-text)] [&_a]:underline [&_a]:underline-offset-4">
                 <span aria-hidden="true">📍</span> {detail.address}
               </p>
             )}
             {detail.phone && (
-              <p className="chronicle-place-line">
+              <p className="text-sm [&_a]:text-[var(--accent-text)] [&_a]:underline [&_a]:underline-offset-4">
                 <span aria-hidden="true">☎</span>{' '}
                 <a href={`tel:${detail.phone.replace(/[^+\d]/g, '')}`}>{detail.phone}</a>
               </p>
             )}
             {detail.website && (
-              <p className="chronicle-place-line">
+              <p className="text-sm [&_a]:text-[var(--accent-text)] [&_a]:underline [&_a]:underline-offset-4">
                 <span aria-hidden="true">🔗</span>{' '}
                 <a href={detail.website} target="_blank" rel="noopener noreferrer">
                   Website
@@ -139,7 +159,7 @@ export function PlaceDetailPanel({
             )}
 
             {detail.hours.length > 0 && (
-              <details className="chronicle-place-hours">
+              <details className="rounded-xl border border-[var(--hairline)] px-3.5 py-2.5 text-sm [&_ul]:mt-2 [&_ul]:space-y-1 [&_ul]:opacity-80 [&>summary]:cursor-pointer [&>summary]:font-medium">
                 <summary>Opening hours</summary>
                 <ul>
                   {detail.hours.map((line) => (
@@ -150,10 +170,10 @@ export function PlaceDetailPanel({
             )}
 
             {detail.reviews.length > 0 && (
-              <div className="chronicle-place-reviews">
-                <h3>Reviews</h3>
+              <div className="space-y-3 pt-1">
+                <h3 className="font-[family-name:var(--font-display)] text-base font-semibold">Reviews</h3>
                 {detail.reviews.map((r, i) => (
-                  <blockquote key={i} className="chronicle-place-review">
+                  <blockquote key={i} className="rounded-xl bg-[var(--surface-muted)] px-3.5 py-3 text-sm [&_cite]:mt-1.5 [&_cite]:block [&_cite]:text-xs [&_cite]:not-italic [&_cite]:opacity-65">
                     <p>“{r.text}”</p>
                     <cite>
                       — {r.author}
@@ -170,22 +190,26 @@ export function PlaceDetailPanel({
 
         {/* Pinned action footer — the primary CTAs never hide under the mobile
             nav bar or require scrolling the full review list to reach. */}
-        <div className="chronicle-place-foot">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-[var(--hairline)] px-5 py-4">
           {onAddToDay &&
             (onPlanDay != null ? (
-              <div className="chronicle-place-plan">
-                <span className="chronicle-place-on-plan">✓ On Day {onPlanDay}</span>
+              <div className="flex flex-1 items-center gap-2">
+                <span className="text-sm font-medium text-[var(--accent-secondary)]">✓ On Day {onPlanDay}</span>
                 {onRemoveFromPlan && (
-                  <button type="button" className="chronicle-place-remove" onClick={onRemoveFromPlan}>
+                  <button
+                    type="button"
+                    className="min-h-[44px] rounded-[var(--radius-pill)] px-3 text-sm font-medium text-danger-500 hover:bg-danger-50"
+                    onClick={onRemoveFromPlan}
+                  >
                     Remove from trip
                   </button>
                 )}
               </div>
             ) : (
-              <div className="chronicle-place-plan">
+              <div className="flex flex-1 items-center gap-2">
                 {dayCount && dayCount > 1 && (
-                  <label className="chronicle-place-day-pick">
-                    <span className="chronicle-sr-only">Day</span>
+                  <label className="shrink-0 [&_select]:min-h-[44px] [&_select]:rounded-[var(--radius-pill)] [&_select]:border [&_select]:border-[var(--hairline)] [&_select]:bg-[var(--surface)] [&_select]:px-3 [&_select]:text-sm">
+                    <span className="sr-only">Day</span>
                     <select value={pickDay} onChange={(e) => setPickDay(Number(e.target.value))}>
                       {Array.from({ length: dayCount }, (_, i) => i + 1).map((d) => (
                         <option key={d} value={d}>
@@ -195,13 +219,22 @@ export function PlaceDetailPanel({
                     </select>
                   </label>
                 )}
-                <button type="button" className="chronicle-place-add" onClick={() => onAddToDay(dayCount && dayCount > 1 ? pickDay : 1)}>
+                <button
+                  type="button"
+                  className="min-h-[44px] flex-1 rounded-[var(--radius-pill)] bg-dusk-500 px-4 text-sm font-medium text-ink-900 hover:bg-dusk-400"
+                  onClick={() => onAddToDay(dayCount && dayCount > 1 ? pickDay : 1)}
+                >
                   {dayCount && dayCount > 1 ? `Add to Day ${pickDay}` : 'Add to trip'}
                 </button>
               </div>
             ))}
 
-          <a className="chronicle-place-directions" href={directionsHref} target="_blank" rel="noopener noreferrer">
+          <a
+            className="inline-flex min-h-[44px] items-center rounded-[var(--radius-pill)] border border-[var(--hairline)] px-4 text-sm font-medium hover:bg-[var(--surface-muted)]"
+            href={directionsHref}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             Get Directions
           </a>
         </div>
