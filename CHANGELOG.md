@@ -3,6 +3,33 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v13.0.0 — Light by default, and a calmer palette
+
+**Breaking (visual).** The product's default appearance changed. Anyone who had
+not explicitly chosen a theme now sees the light one, and the colour that drives
+every button and pill is different.
+
+### Light is the default
+Dark mode previously applied whenever the operating system preferred it, which
+meant most visitors met a dark app that the design had not been tuned against.
+Dark is now opt-in through the header toggle, and a saved choice still wins.
+
+### Orange is no longer the action colour
+Orange carried every button, pill, filter and chat action. It was visually
+relentless, and it was the weakest contrast in the palette: white on it measures
+3.18:1 and even dark text only reaches 5.89:1.
+
+The primary action colour is now pine with white text at **8.17:1** — past AA,
+and past AAA for large text. Accent text moved off orange as well. Orange
+survives in the logo mark alone, where it is a graphic rather than text.
+
+The change is driven by two tokens, so the whole app moved together and nothing
+can drift back to the old pairing.
+
+### Other
+- The original route-and-pin logo is back in the header and footer.
+- The homepage headline stays on one line instead of breaking mid-sentence.
+
 ## v12.2.0 — The chat stops deleting your trip
 
 ### Fixed — data loss in the itinerary chat
