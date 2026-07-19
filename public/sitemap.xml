@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Only the stable, publicly meaningful pages. Trip URLs are per-user share
+  links and are deliberately excluded (see robots.txt).
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://trip-one.pages.dev/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://trip-one.pages.dev/explore</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://trip-one.pages.dev/about</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://trip-one.pages.dev/contact</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://trip-one.pages.dev/privacy</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://trip-one.pages.dev/terms</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
+</urlset>

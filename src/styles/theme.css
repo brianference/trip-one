@@ -1,0 +1,168 @@
+@import 'tailwindcss';
+
+/**
+ * Trip One design system.
+ *
+ * Tailwind v4 takes its theme from CSS custom properties under `@theme`, so
+ * these ARE the utilities: `--color-ink-700` produces `text-ink-700`,
+ * `bg-ink-700`, `border-ink-700` and so on. Defining them here rather than in a
+ * JS config keeps one source of truth that both the utilities and any
+ * hand-written CSS can read.
+ *
+ * The palette is warm and editorial rather than the default cool grey/blue —
+ * it belongs to a travel journal, not a dashboard. Ink is a warm near-black,
+ * sand is the paper it sits on, and a single dusk-orange accent carries every
+ * call to action so the primary action is never ambiguous.
+ */
+
+@theme {
+  /* Warm neutrals — the "paper" the app is printed on. */
+  --color-sand-50: #fdfbf7;
+  --color-sand-100: #f7f2e9;
+  --color-sand-200: #ece4d6;
+  --color-sand-300: #dcd0bc;
+  --color-sand-400: #c2b299;
+
+  /* Warm near-blacks for text and surfaces in dark mode. */
+  --color-ink-500: #6b6355;
+  --color-ink-600: #4a4438;
+  --color-ink-700: #332f27;
+  --color-ink-800: #221f1a;
+  --color-ink-900: #14120f;
+
+  /* The single accent. Used for primary actions and nothing decorative, so a
+     dusk-orange element always means "this is the thing to press". */
+  --color-dusk-300: #f4b183;
+  --color-dusk-400: #ed8f52;
+  --color-dusk-500: #e0722c;
+  --color-dusk-600: #c25a1d;
+  --color-dusk-700: #9a4616;
+
+  /* Secondary accent for calm, informational emphasis (never for actions). */
+  --color-pine-400: #5f8d7a;
+  --color-pine-500: #45705f;
+  --color-pine-600: #33564a;
+
+  /* Feedback colours, warm-shifted to sit with the palette. */
+  --color-danger-50: #fdf2f0;
+  --color-danger-500: #c2401f;
+  --color-danger-600: #9c3218;
+  --color-success-500: #45705f;
+
+  /* Display face for the wordmark and headings; body stays system-native so
+     there is no webfont on the critical path. */
+  --font-display: 'Sora', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* Softer, larger radii than Tailwind's defaults — closer to a printed card. */
+  --radius-card: 1rem;
+  --radius-pill: 999px;
+
+  /* Elevation that reads as paper lifting, not as a drop shadow. */
+  --shadow-card: 0 1px 2px rgb(20 18 15 / 0.04), 0 8px 24px -12px rgb(20 18 15 / 0.18);
+  --shadow-lifted: 0 2px 4px rgb(20 18 15 / 0.06), 0 16px 40px -16px rgb(20 18 15 / 0.28);
+}
+
+/**
+ * Base layer.
+ *
+ * `color-scheme` tells the browser to render native controls (scrollbars, form
+ * fields, date pickers) in the right mode — without it a dark page keeps white
+ * scrollbars.
+ */
+@layer base {
+  :root {
+    color-scheme: light;
+    --page-bg: var(--color-sand-50);
+    --page-fg: var(--color-ink-800);
+    --surface: #ffffff;
+    --surface-muted: var(--color-sand-100);
+    --hairline: var(--color-sand-300);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      color-scheme: dark;
+      --page-bg: var(--color-ink-900);
+      --page-fg: var(--color-sand-100);
+      --surface: var(--color-ink-800);
+      --surface-muted: var(--color-ink-700);
+      --hairline: var(--color-ink-600);
+    }
+  }
+
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+    --page-bg: var(--color-ink-900);
+    --page-fg: var(--color-sand-100);
+    --surface: var(--color-ink-800);
+    --surface-muted: var(--color-ink-700);
+    --hairline: var(--color-ink-600);
+  }
+
+  html {
+    /* Anchor links and in-page nav should glide, but honour a user who has
+       asked the OS for reduced motion. */
+    scroll-behavior: smooth;
+    /* Keeps a sticky header from covering the target of an anchor jump. */
+    scroll-padding-top: 5rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  body {
+    background-color: var(--page-bg);
+    color: var(--page-fg);
+    font-family: var(--font-sans);
+    /* Stops iOS Safari inflating text in landscape. */
+    -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* A visible, high-contrast focus ring on every interactive element. Removing
+     outlines without replacing them makes an app unusable by keyboard, so this
+     is defined once here rather than per component. */
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-dusk-500);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Images should never be the reason a phone scrolls sideways. */
+  img,
+  svg,
+  video {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+@layer components {
+  /* Skip link: visually hidden until focused, so keyboard users can jump past
+     the header instead of tabbing through the whole nav on every page. */
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 100;
+  }
+  .skip-link:focus {
+    left: 0.5rem;
+    top: 0.5rem;
+    padding: 0.5rem 0.875rem;
+    background: var(--color-dusk-500);
+    color: #fff;
+    border-radius: 0.5rem;
+  }
+}

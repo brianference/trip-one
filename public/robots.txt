@@ -1,0 +1,12 @@
+# Trip One
+User-agent: *
+Allow: /
+
+# Private or per-user pages: no standalone search value, and /trip/ URLs are
+# unguessable share links that shouldn't end up in an index.
+Disallow: /my-trips
+Disallow: /login
+Disallow: /register
+Disallow: /trip/
+
+Sitemap: https://trip-one.pages.dev/sitemap.xml
