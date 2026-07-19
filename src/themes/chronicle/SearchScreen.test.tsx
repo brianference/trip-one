@@ -24,8 +24,8 @@ describe('Chronicle SearchScreen', () => {
         <SearchScreen />
       </MemoryRouter>,
     )
-    fireEvent.change(screen.getByLabelText(/where to/i), { target: { value: 'Kyoto, Japan' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Go' }))
+    fireEvent.change(screen.getByRole('combobox', { name: /search destinations/i }), { target: { value: 'Kyoto, Japan' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }))
     await waitFor(() => expect(createSpy).toHaveBeenCalledWith('kyoto-japan', 'chronicle'))
   })
 
@@ -48,9 +48,11 @@ describe('Chronicle SearchScreen', () => {
         <SearchScreen />
       </MemoryRouter>,
     )
-    fireEvent.change(screen.getByLabelText(/where to/i), { target: { value: 'Lis' } })
-    await waitFor(() => expect(screen.getByRole('button', { name: /lisbon, portugal/i })).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: /lisbon, portugal/i }))
+    fireEvent.change(screen.getByRole('combobox', { name: /search destinations/i }), { target: { value: 'Lis' } })
+    await waitFor(() => expect(screen.getByRole('option', { name: /lisbon/i })).toBeInTheDocument())
+    // The list commits on pointerdown, because a click fires after blur
+    // would already have closed it.
+    fireEvent.pointerDown(screen.getByRole('option', { name: /lisbon/i }))
     await waitFor(() => expect(createSpy).toHaveBeenCalledWith('lisbon-portugal', 'chronicle'))
   })
 
@@ -61,8 +63,8 @@ describe('Chronicle SearchScreen', () => {
         <SearchScreen />
       </MemoryRouter>,
     )
-    fireEvent.change(screen.getByLabelText(/where to/i), { target: { value: 'Nowhereville' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Go' }))
+    fireEvent.change(screen.getByRole('combobox', { name: /search destinations/i }), { target: { value: 'Nowhereville' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }))
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/location not found/i))
   })
 

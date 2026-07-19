@@ -62,7 +62,7 @@ describe('App', () => {
 
   it('renders the Chronicle landing page at the root route, with no theme switcher', () => {
     render(<App />)
-    expect(screen.getByLabelText(/where to/i)).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: /search destinations/i })).toBeInTheDocument()
     expect(screen.queryByLabelText(/design/i)).not.toBeInTheDocument()
   })
 
