@@ -38,7 +38,9 @@
   --color-dusk-600: #c25a1d;
   --color-dusk-700: #9a4616;
 
-  /* Secondary accent for calm, informational emphasis (never for actions). */
+  /* Secondary accent for calm, informational emphasis (never for actions).
+     300 exists specifically for dark surfaces — see --accent-secondary. */
+  --color-pine-300: #8fb3a3;
   --color-pine-400: #5f8d7a;
   --color-pine-500: #45705f;
   --color-pine-600: #33564a;
@@ -78,6 +80,17 @@
     --surface: #ffffff;
     --surface-muted: var(--color-sand-100);
     --hairline: var(--color-sand-300);
+
+    /* Accents used as TEXT need a different value per theme; a single value
+       cannot clear WCAG AA on both a near-white and a near-black surface.
+       Measured on the real palette:
+         pine-500 on dark surface = 2.92:1  (fails)
+         pine-300 on dark surface = 7.15:1  (passes)
+         dusk-500 on sand-100     = 2.85:1  (fails)
+         dusk-700 on sand-100     = 5.77:1  (passes)
+       Backgrounds keep the mid-tone accents; only text uses these. */
+    --accent-secondary: var(--color-pine-600);
+    --accent-text: var(--color-dusk-700);
   }
 
   @media (prefers-color-scheme: dark) {
@@ -88,6 +101,8 @@
       --surface: var(--color-ink-800);
       --surface-muted: var(--color-ink-700);
       --hairline: var(--color-ink-600);
+      --accent-secondary: var(--color-pine-300);
+      --accent-text: var(--color-dusk-300);
     }
   }
 
@@ -98,6 +113,8 @@
     --surface: var(--color-ink-800);
     --surface-muted: var(--color-ink-700);
     --hairline: var(--color-ink-600);
+    --accent-secondary: var(--color-pine-300);
+    --accent-text: var(--color-dusk-300);
   }
 
   html {
@@ -162,7 +179,7 @@
     top: 0.5rem;
     padding: 0.5rem 0.875rem;
     background: var(--color-dusk-500);
-    color: #fff;
+    color: var(--color-ink-900);
     border-radius: 0.5rem;
   }
 }

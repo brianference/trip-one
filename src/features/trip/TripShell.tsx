@@ -8,6 +8,7 @@ import { TripSkeleton } from './components/TripSkeleton'
 import { SaveErrorBanner } from './components/SaveErrorBanner'
 import { CurrencyTool } from './components/CurrencyTool'
 import { Logo } from '../../components/Logo'
+import { ThemeToggle } from '../../components/ThemeToggle'
 import { recordRecentTrip } from './recentTrips'
 import { useForecast } from '../weather/useForecast'
 import { currencyForDisplayName } from '../localinfo/currencyByCountry'
@@ -115,6 +116,21 @@ export function TripShell() {
             </span>
           )}
           <CurrencyTool code={currencyCode} rate={currencyRate} variant="compact" />
+          {/* The trip layout deliberately omits the site header to keep vertical
+              space on a phone, but that left someone with a trip open unable to
+              switch theme or reach their account without navigating away first. */}
+          <ThemeToggle />
+          <Link
+            to="/my-trips"
+            className="grid size-9 place-items-center rounded-lg hover:bg-[var(--surface-muted)]"
+            aria-label="My trips"
+            title="My trips"
+          >
+            <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+              <path d="M4 7h16v12H4z" strokeLinejoin="round" />
+              <path d="M9 7V5h6v2" strokeLinejoin="round" />
+            </svg>
+          </Link>
         </div>
       </div>
       <div className="chronicle-trip-header">

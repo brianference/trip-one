@@ -49,15 +49,20 @@
      plays the same role in the shared system. */
   --chronicle-teal: var(--color-dusk-500);
   --chronicle-teal-hover: var(--color-dusk-600);
-  --chronicle-gold: var(--color-pine-500);
-  --chronicle-gold-hover: var(--color-pine-600);
+  /* Theme-aware: gold is used as TEXT (weather badges, distance/meta lines,
+     "Hourly" links), and a single mid-tone value cannot clear WCAG AA on both
+     a near-white and a near-black surface. Measured, pine-500 on the dark
+     surface was 2.92:1 — below AA — across roughly two dozen elements. */
+  --chronicle-gold: var(--accent-secondary);
+  --chronicle-gold-hover: var(--accent-secondary);
   --chronicle-muted: var(--color-ink-500);
 
   /* ---- Text ---- */
   --chronicle-text-primary: var(--page-fg);
   --chronicle-text-secondary: color-mix(in oklab, var(--page-fg) 78%, transparent);
   --chronicle-text-tertiary: color-mix(in oklab, var(--page-fg) 58%, transparent);
-  --chronicle-text-on-gold: #fff;
+  /* Dark, not white: white on the dusk accent is 3.18:1, ink-900 is 5.89:1. */
+  --chronicle-text-on-gold: var(--color-ink-900);
 
   /* ---- Semantic ---- */
   --chronicle-danger: var(--color-danger-500);
@@ -124,7 +129,7 @@
   border: 1px solid var(--chronicle-teal);
   border-radius: var(--chronicle-radius-pill);
   background: none;
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
   font-family: var(--chronicle-font-mono);
   font-weight: 600;
   font-size: 12px;
@@ -184,7 +189,7 @@
 }
 
 .chronicle-legal a {
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
 }
 
 .chronicle-legal-back {
@@ -212,7 +217,7 @@
 }
 
 .chronicle-theme-toggle:hover {
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
   border-color: var(--chronicle-teal);
 }
 
@@ -316,7 +321,7 @@ body {
 }
 
 .chronicle-chapter nav a {
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
   text-decoration: none;
   min-height: 44px;
   display: inline-flex;
@@ -325,7 +330,7 @@ body {
 
 .chronicle-chapter nav a:hover,
 .chronicle-chapter nav a:focus-visible {
-  color: var(--chronicle-teal-hover);
+  color: var(--accent-text);
   text-decoration: underline;
 }
 
@@ -395,7 +400,7 @@ body {
   font-family: var(--chronicle-font-body);
   font-size: 16px;
   font-weight: 600;
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
   text-decoration: none;
 }
 
@@ -407,7 +412,7 @@ body {
 
 .chronicle-link-list a:hover,
 .chronicle-link-list a:focus-visible {
-  color: var(--chronicle-teal-hover);
+  color: var(--accent-text);
   text-decoration: underline;
 }
 
@@ -490,7 +495,7 @@ body {
   font-family: var(--chronicle-font-body);
   font-size: 16px;
   font-weight: 600;
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
   text-decoration: none;
 }
 
@@ -502,7 +507,7 @@ body {
 
 .chronicle-phrasebook-fallback-link:hover,
 .chronicle-phrasebook-fallback-link:focus-visible {
-  color: var(--chronicle-teal-hover);
+  color: var(--accent-text);
   text-decoration: underline;
 }
 
@@ -694,7 +699,7 @@ body {
 
 .chronicle-move-btn:hover:not(:disabled),
 .chronicle-move-btn:focus-visible:not(:disabled) {
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
   border-color: var(--chronicle-teal);
 }
 
@@ -720,7 +725,7 @@ body {
 .chronicle-entry-edit-toggle:hover,
 .chronicle-entry-edit-toggle:focus-visible,
 .chronicle-entry-edit-toggle[aria-expanded='true'] {
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
   border-color: var(--chronicle-teal);
 }
 
@@ -818,7 +823,7 @@ body {
 
 .chronicle-ttd-name:hover,
 .chronicle-ttd-name:focus-visible {
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
 }
 
 .chronicle-ttd-actions {
@@ -854,7 +859,7 @@ body {
 
 .chronicle-ttd-directions {
   background: none;
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
   border: 1px solid var(--chronicle-teal);
 }
 
@@ -906,7 +911,7 @@ body {
   font-family: var(--chronicle-font-mono);
   font-size: 11px;
   font-weight: 600;
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
 }
 
 /* Place detail: add-to-day / on-plan CTA (first row of the pinned footer). */
@@ -951,7 +956,7 @@ body {
   font-family: var(--chronicle-font-mono);
   font-weight: 600;
   font-size: 13px;
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
 }
 
 .chronicle-place-remove {
@@ -972,7 +977,7 @@ body {
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
   border: 1px solid var(--chronicle-teal);
   border-radius: var(--chronicle-radius-pill);
   padding: 2px 10px;
@@ -1109,7 +1114,7 @@ body:has(.chronicle-page) label {
   font-weight: 700;
   font-style: italic;
   font-size: 20px;
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
   margin: 0 0 var(--chronicle-space-sm);
 }
 
@@ -1198,7 +1203,7 @@ body:has(.chronicle-page) label {
 
 .chronicle-badge--optional {
   background: rgba(47, 163, 150, 0.16);
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
 }
 
 .chronicle-badge--dinner {
@@ -1212,7 +1217,7 @@ body:has(.chronicle-page) label {
   font-size: 12px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
   text-decoration: none;
   flex: none;
 }
@@ -1275,7 +1280,7 @@ body:has(.chronicle-page) label {
 
 .chronicle-section-nav-item--active {
   background: rgba(47, 163, 150, 0.14);
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
 }
 
 /* Keep the label (and its temperature) on one line — "Weather 70°", not wrapped. */
@@ -1458,7 +1463,7 @@ body:has(.chronicle-page) label {
 .chronicle-forecast-precip {
   font-family: var(--chronicle-font-mono);
   font-size: 10px;
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
 }
 
 .chronicle-forecast-hourly {
@@ -1552,13 +1557,13 @@ body:has(.chronicle-page) label {
   font-family: var(--chronicle-font-body);
   font-weight: 600;
   font-size: 15px;
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
   text-decoration: none;
 }
 
 .chronicle-preview-link:hover,
 .chronicle-preview-link:focus-visible {
-  color: var(--chronicle-teal-hover);
+  color: var(--accent-text);
   text-decoration: underline;
 }
 
@@ -1587,7 +1592,7 @@ body:has(.chronicle-page) label {
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
 }
 
 .chronicle-ai-heading {
@@ -1926,7 +1931,7 @@ body:has(.chronicle-page) label {
 .chronicle-footer-link:hover,
 .chronicle-footer-link:focus-visible,
 .chronicle-footer-link--active {
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
 }
 
 .chronicle-footer-note {
@@ -2164,7 +2169,7 @@ body:has(.chronicle-page) label {
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
   margin: 0 0 var(--chronicle-space-xs);
 }
 
@@ -2224,13 +2229,13 @@ body:has(.chronicle-page) label {
 .chronicle-landing-footer-links a {
   font-family: var(--chronicle-font-mono);
   font-size: 13px;
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
   text-decoration: none;
 }
 
 .chronicle-landing-footer-links a:hover,
 .chronicle-landing-footer-links a:focus-visible {
-  color: var(--chronicle-teal-hover);
+  color: var(--accent-text);
 }
 
 /* ---------- Place detail panel (bottom sheet) ---------- */
@@ -2388,7 +2393,7 @@ body:has(.chronicle-page) label {
 }
 
 .chronicle-place-line a {
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
 }
 
 .chronicle-place-hours {
@@ -2400,7 +2405,7 @@ body:has(.chronicle-page) label {
 
 .chronicle-place-hours summary {
   cursor: pointer;
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
 }
 
 .chronicle-place-hours ul {
@@ -2466,7 +2471,7 @@ body:has(.chronicle-page) label {
   padding: 0;
   text-align: left;
   cursor: pointer;
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -2560,7 +2565,7 @@ body:has(.chronicle-page) label {
 }
 
 .chronicle-transit-arrow {
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
   font-size: 18px;
 }
 
@@ -2708,7 +2713,7 @@ body:has(.chronicle-page) label {
   /* Active tab reads as a top-edge indicator, not a filled pill. */
   .chronicle-section-nav-item--active {
     background: none;
-    color: var(--chronicle-teal);
+    color: var(--accent-text);
     box-shadow: inset 0 2px 0 var(--chronicle-teal);
   }
 
@@ -2871,7 +2876,7 @@ body:has(.chronicle-page) label {
 .chronicle-update-toast-undo:hover,
 .chronicle-update-toast-undo:focus-visible {
   background: var(--chronicle-bg-canvas);
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
 }
 
 @keyframes chronicle-toast-in {
@@ -3038,7 +3043,7 @@ body:has(.chronicle-page) label {
 
 .chronicle-logo-one {
   font-weight: 700;
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
 }
 
 .chronicle-hero-logo {
@@ -3072,7 +3077,7 @@ body:has(.chronicle-page) label {
 .chronicle-export-btn:hover,
 .chronicle-export-btn:focus-visible {
   border-color: var(--chronicle-teal);
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
 }
 
 .chronicle-export-hint {
@@ -3112,7 +3117,7 @@ body:has(.chronicle-page) label {
 }
 
 .chronicle-day-chip--outdoors {
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
   border-color: color-mix(in srgb, var(--chronicle-teal) 40%, transparent);
 }
 
@@ -3192,7 +3197,7 @@ body:has(.chronicle-page) label {
   border: none;
   background: none;
   font: inherit;
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
   text-align: left;
   cursor: pointer;
   text-decoration: underline;
@@ -3210,7 +3215,7 @@ body:has(.chronicle-page) label {
 .chronicle-map-day-stop:focus-visible,
 .chronicle-preview-link:hover,
 .chronicle-preview-link:focus-visible {
-  color: var(--chronicle-teal-hover);
+  color: var(--accent-text);
   text-decoration-color: currentColor;
 }
 
@@ -3325,7 +3330,7 @@ body:has(.chronicle-page) label {
   border: 1px solid var(--chronicle-border-subtle);
   border-radius: var(--chronicle-radius-pill);
   background: var(--chronicle-bg-surface-2);
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
   font-family: var(--chronicle-font-mono);
   font-weight: 600;
   font-size: 12px;
@@ -3336,7 +3341,7 @@ body:has(.chronicle-page) label {
 .chronicle-chat-newtrip:hover,
 .chronicle-chat-newtrip:focus-visible {
   border-color: var(--chronicle-teal);
-  color: var(--chronicle-teal-hover);
+  color: var(--accent-text);
 }
 
 .chronicle-chat-messages {
@@ -3490,7 +3495,7 @@ body:has(.chronicle-page) label {
   border: 1px solid var(--chronicle-border-subtle);
   border-radius: var(--chronicle-radius-pill);
   background: var(--chronicle-bg-surface);
-  color: var(--chronicle-teal);
+  color: var(--accent-text);
   font-family: var(--chronicle-font-body);
   font-size: 13px;
   cursor: pointer;
