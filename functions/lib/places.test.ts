@@ -194,3 +194,38 @@ describe('places searchPlaces', () => {
     ])
   })
 })
+
+describe('food distance ceiling', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  // The nearby search spans 50km so a national park's attractions are
+  // reachable. Applied to food, that radius put a Tim Hortons 47km from
+  // Whistler on the plan.
+  it('drops food beyond the food radius but keeps distant attractions', async () => {
+    const near = { lat: 43.48, lng: -110.76 }
+    const far = { lat: 43.9, lng: -110.76 } // ~47km north
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        const type = /type=([a-z_]+)/.exec(url)?.[1]
+        const results =
+          type === 'tourist_attraction'
+            ? [{ name: 'Distant Overlook', types: ['tourist_attraction'], geometry: { location: far } }]
+            : [
+                { name: 'Near Diner', types: ['restaurant'], geometry: { location: near } },
+                { name: 'Far Coffee', types: ['cafe'], geometry: { location: far } },
+              ]
+        return Promise.resolve({ ok: true, json: async () => ({ results }) })
+      }),
+    )
+
+    const out = await searchPlaces(43.48, -110.76, 'k')
+    const names = out.map((p) => p.name)
+    expect(names).toContain('Near Diner')
+    expect(names).toContain('Distant Overlook')
+    expect(names).not.toContain('Far Coffee')
+  })
+})

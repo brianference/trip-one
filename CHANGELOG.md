@@ -3,6 +3,50 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v11.1.0 — Audience filtering that holds, and a simulation that tells the truth
+
+### Fixed
+- **Bars reached family trips.** Audience was judged from a place's single
+  `category`, but the food promotion in `places.ts` deliberately moves
+  `restaurant` ahead of `bar` so meal slots get detected — so by the time a
+  venue reached the filter, a saloon looked like a restaurant. Classification
+  now reads the full Places `types` plus a qualified name pattern. Measured
+  across 10 family and 6 adult scenarios: zero audience violations.
+- **A first attempt at that filter over-fired** and was corrected before
+  release: it flagged Pinky G's Pizzeria and Bar T 5, both family-friendly,
+  because Google tags any restaurant with a drinks licence as `bar`. It now
+  only counts `bar` when the place is not also somewhere to eat.
+- **Food was chosen from up to 50km away.** The nearby search spans 50km so a
+  national park's attractions are reachable; applied to restaurants that put a
+  Tim Hortons 47km from Whistler on a plan. Food now has its own 15km ceiling
+  while attractions keep the generous radius.
+- **Requests that state no party failed intermittently with a 502.** The intent
+  schema declared `party`, `interests`, `audience` and `foodFocused` optional
+  but not nullable, and the model returns an explicit `null` for anything the
+  request doesn't mention. "5 day hiking trip in Ouray Colorado" succeeded 1
+  time in 3 before the fix and 8 of 8 after.
+- **Cached places kept their old classification.** Cache entries store derived
+  metadata, so fixing the classifier left stale entries returning saloons for
+  family trips. Keys now carry `PLACE_CACHE_VERSION`.
+
+### Changed
+- **The simulation harness measured a pipeline nobody gets.** It ran no
+  discovery, passed no traveler profile and never filled empty days, which is
+  why it reported 27% food where browser QA measured 48% in production. It now
+  mirrors the real flow and reports audience violations, out-of-region stops
+  and thin or empty days as defects rather than folding them into an average.
+  Earlier quality figures produced by it are not reliable.
+- 30 new simulation scenarios on fresh destinations, weighted toward the
+  failure modes real QA found. Honest current numbers on activity-led trips:
+  32% food, 72% on-theme, zero audience violations, zero empty or thin days.
+  See `simulations/FINDINGS.md`.
+
+### Known open
+- Small bases whose venues run out still reach a larger city nearby without
+  saying so (Hallstatt scheduling Salzburg sights 50km away).
+- Mean stop relevance of 1.67/3 on activity-led trips — selection quality is
+  the largest remaining gap, ahead of any defect on this list.
+
 ## v11.0.1 — Fix trips that name no activities
 
 ### Fixed

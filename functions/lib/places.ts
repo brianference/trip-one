@@ -104,6 +104,18 @@ async function searchPlacesByType(lat: number, lng: number, type: string, apiKey
       // It's not somewhere a traveler plans a meal or coffee, so drop
       // lodging-typed results from those searches.
       if (FOOD_SEARCH_TYPES.includes(type) && (item.types ?? []).includes('lodging')) return false
+      // The nearby search spans SEARCH_RADIUS_M (50km) so a national park's
+      // spread-out attractions are reachable, but that radius applied to food
+      // put a Tim Hortons 47km from Whistler on the plan. Attractions justify
+      // the drive; a coffee stop does not.
+      // Only drop on a KNOWN excessive distance. A result without coordinates
+      // can't be measured, and dropping it would silently delete places whose
+      // source simply omits geometry.
+      if (FOOD_SEARCH_TYPES.includes(type)) {
+        const plat = item.geometry?.location?.lat
+        const plng = item.geometry?.location?.lng
+        if (plat != null && plng != null && distanceKm(lat, lng, plat, plng) > FOOD_MAX_KM) return false
+      }
       return true
     })
     .map((item) => ({
