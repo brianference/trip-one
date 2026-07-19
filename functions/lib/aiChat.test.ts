@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildChatPrompt, normalizeChatResponse, protectExistingStops } from './aiChat'
+import { buildChatPrompt, normalizeChatResponse, protectExistingStops, parseDayCommand, enforceDayCommand } from './aiChat'
 
 const candidates = [
   { name: 'Balboa Park', category: 'park', rating: 4.8 },
@@ -163,5 +163,65 @@ describe('clearing a day', () => {
     const prompt = buildChatPrompt({ message: 'clear day 5', days: 5, candidates: [{ name: 'A', category: 'park' }] })
     expect(prompt).toContain('CLEARING OR EMPTYING a day')
     expect(prompt).toContain('empty placeIndexes array')
+  })
+})
+
+// Two destructive instructions the model kept getting wrong even after the
+// prompt spelled them out: "clear day 5 entirely" returned one stop instead of
+// none (deleting four), and "remove the last stop on day 4" returned MORE stops
+// than before while claiming it had removed one. Both are now carried out
+// deterministically rather than trusted to the model.
+describe('parseDayCommand', () => {
+  it('recognises clearing a day', () => {
+    for (const m of ['clear day 5 entirely', 'empty day 2', 'remove everything on day 3', 'delete all stops on day 1']) {
+      expect(parseDayCommand(m), m).toEqual({ op: 'clear', day: Number(/\d+/.exec(m)![0]) })
+    }
+  })
+
+  it('recognises removing from a day', () => {
+    expect(parseDayCommand('remove the last stop on day 4')).toEqual({ op: 'remove', day: 4 })
+    expect(parseDayCommand('drop a stop from day 2')).toEqual({ op: 'remove', day: 2 })
+  })
+
+  // Additive requests are handled correctly by the model, so they stay with it.
+  it('ignores additive and vague messages', () => {
+    for (const m of ['add a food stop on day 2', 'make day 3 more relaxed', 'what is the weather', 'remove something']) {
+      expect(parseDayCommand(m), m).toBeNull()
+    }
+  })
+})
+
+describe('enforceDayCommand', () => {
+  const currentPlan = [{ day: 4, placeNames: ['A', 'B', 'C', 'D'] }, { day: 5, placeNames: ['E', 'F', 'G', 'H'] }]
+  const candidates = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map((name) => ({ name, category: 'park' }))
+
+  it('empties the day even when the model returned stops for it', () => {
+    // The real failure: "clear day 5" came back with a single restaurant.
+    const out = enforceDayCommand({ op: 'clear', day: 5 }, [{ day: 5, placeIndexes: [26] }], currentPlan, candidates)
+    expect(out.days).toEqual([{ day: 5, placeIndexes: [] }])
+    expect(out.failed).toBe(false)
+  })
+
+  it('leaves other days untouched when clearing one', () => {
+    const out = enforceDayCommand(
+      { op: 'clear', day: 5 },
+      [{ day: 4, placeIndexes: [0, 1] }, { day: 5, placeIndexes: [2] }],
+      currentPlan,
+      candidates,
+    )
+    expect(out.days).toEqual([{ day: 4, placeIndexes: [0, 1] }, { day: 5, placeIndexes: [] }])
+  })
+
+  it('refuses a "removal" that did not remove anything', () => {
+    // Day 4 had 4 stops; the model returned 5.
+    const out = enforceDayCommand({ op: 'remove', day: 4 }, [{ day: 4, placeIndexes: [0, 1, 2, 3, 4] }], currentPlan, candidates)
+    expect(out.days.find((d) => d.day === 4)).toBeUndefined()
+    expect(out.failed).toBe(true)
+  })
+
+  it('accepts a genuine removal', () => {
+    const out = enforceDayCommand({ op: 'remove', day: 4 }, [{ day: 4, placeIndexes: [0, 1, 2] }], currentPlan, candidates)
+    expect(out.days).toEqual([{ day: 4, placeIndexes: [0, 1, 2] }])
+    expect(out.failed).toBe(false)
   })
 })

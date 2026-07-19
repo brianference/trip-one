@@ -2,7 +2,7 @@ import { z } from 'zod'
 import type { Env } from '../lib/db'
 import { countRecentRequests, insertRequestLog } from '../lib/db'
 import { isUnderRateLimit, hashIp } from '../../src/lib/rateLimit'
-import { buildChatPrompt, normalizeChatResponse } from '../lib/aiChat'
+import { buildChatPrompt, normalizeChatResponse, parseDayCommand, enforceDayCommand } from '../lib/aiChat'
 import { balanceDayFood } from '../lib/aiPlan'
 import { openAiResponseSchema } from '../lib/openAi'
 import { logger } from '../../src/lib/logger'
@@ -102,6 +102,28 @@ export async function onRequestPost({ env, request }: { env: ChatEnv; request: R
     // model dropped without being asked (see protectExistingStops).
     const result = normalizeChatResponse(raw, places.length, days, itinerary, places)
     if (!result) return json({ error: 'AI assistant could not respond, try again' }, 502)
+
+    // An explicit "clear day 3" or "remove ... day 4" is carried out here
+    // rather than trusted to the model, which repeatedly did the opposite and
+    // then claimed success. Only fires on an explicit day number and verb.
+    if (result.action === 'plan' && result.days && itinerary && itinerary.length > 0) {
+      const command = parseDayCommand(message)
+      if (command) {
+        const enforced = enforceDayCommand(command, result.days, itinerary, places)
+        result.days = enforced.days
+        if (enforced.failed) {
+          // Never repeat the model's claim that it removed something when the
+          // day is unchanged. Say what actually happened.
+          result.message = `I couldn't work out which stop to remove from day ${command.day}, so I've left it as it was. Tell me the place by name and I'll remove it.`
+        }
+      }
+    }
+
+    // A blank message renders as an empty assistant bubble, which reads as the
+    // assistant having failed silently.
+    if (!result.message.trim()) {
+      result.message = result.action === 'plan' ? 'Done — your itinerary is updated.' : 'Sorry, could you say that another way?'
+    }
 
     // On a re-plan, guarantee ≥3 food stops per day near each day's stops.
     if (result.action === 'plan' && result.days) {

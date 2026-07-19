@@ -212,3 +212,74 @@ export function protectExistingStops(
     return { ...day, placeIndexes: [...day.placeIndexes, ...dropped] }
   })
 }
+
+/** An explicit, unambiguous instruction about one day, parsed from the message. */
+export interface DayCommand {
+  op: 'clear' | 'remove'
+  day: number
+}
+
+/**
+ * Recognises the two destructive instructions the model keeps getting wrong.
+ *
+ * Observed on the live site, after the prompt already spelled both out:
+ *   "clear day 5 entirely"        -> returned ONE stop for day 5, deleting four
+ *   "remove the last stop on day 4" -> returned MORE stops than before, and the
+ *                                      reply claimed a stop had been removed
+ *
+ * Additive requests ("add a museum on day 1") the model handles correctly, so
+ * they are left to it. These two are parsed deterministically instead, because
+ * a destructive instruction that silently does the opposite is the worst
+ * failure this chat can have, and no amount of prompt wording has fixed it.
+ *
+ * Deliberately narrow: it only fires on an explicit day number with an explicit
+ * verb. Anything vaguer stays with the model.
+ */
+export function parseDayCommand(message: string): DayCommand | null {
+  const text = message.toLowerCase()
+  const dayMatch = /\bday\s*(\d{1,2})\b/.exec(text)
+  if (!dayMatch) return null
+  const day = Number.parseInt(dayMatch[1], 10)
+  if (!Number.isInteger(day) || day < 1 || day > 30) return null
+
+  // "clear day 3", "empty day 3", "remove everything/all on day 3".
+  if (/\b(clear|empty|wipe|delete everything|remove everything|remove all|delete all)\b/.test(text)) {
+    return { op: 'clear', day }
+  }
+  // "remove the last stop on day 4", "delete a stop from day 4".
+  if (/\b(remove|delete|drop|take out|get rid of)\b/.test(text)) return { op: 'remove', day }
+  return null
+}
+
+/**
+ * Makes the response actually obey an explicit destructive instruction.
+ *
+ * @returns The corrected days, plus `failed` when the instruction could not be
+ * carried out — so the caller can tell the traveler the truth instead of
+ * repeating the model's claim.
+ */
+export function enforceDayCommand(
+  command: DayCommand,
+  days: PlanDay[],
+  currentPlan: CurrentPlanDay[],
+  candidates: PlanCandidate[],
+): { days: PlanDay[]; failed: boolean } {
+  const existingCount = currentPlan.find((d) => d.day === command.day)?.placeNames.length ?? 0
+
+  if (command.op === 'clear') {
+    // Emptying is unambiguous and always achievable, so just do it rather than
+    // hoping the model returned [].
+    const others = days.filter((d) => d.day !== command.day)
+    return { days: [...others, { day: command.day, placeIndexes: [] }].sort((a, b) => a.day - b.day), failed: false }
+  }
+
+  const returned = days.find((d) => d.day === command.day)
+  // A removal that came back the same length or longer did not remove anything.
+  // Applying it would silently swap the day's contents under the guise of a
+  // delete, so the day is left exactly as it was and the caller says so.
+  if (!returned || (existingCount > 0 && returned.placeIndexes.length >= existingCount)) {
+    return { days: days.filter((d) => d.day !== command.day), failed: true }
+  }
+  void candidates
+  return { days, failed: false }
+}

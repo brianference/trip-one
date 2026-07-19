@@ -325,6 +325,11 @@ export function balanceDayFood(plan: PlanDay[], candidates: PlanCandidate[], min
 
   const result = trimmed.map((d) => ({ day: d.day, placeIndexes: [...d.placeIndexes] }))
   for (const day of result) {
+    // An empty day is intentional — it is how "clear day 5" is expressed, and a
+    // fresh plan never contains one (normalizePlan drops them). Adding meals to
+    // a day the traveler just emptied would undo their instruction.
+    if (day.placeIndexes.length === 0) continue
+
     let foodCount = day.placeIndexes.filter((i) => isFoodCategory(candidates[i]?.category)).length
     if (foodCount >= minFood) continue
 
