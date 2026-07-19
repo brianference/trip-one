@@ -77,24 +77,39 @@ export function TripChatPanel({
   const showStarters = messages.filter((m) => m.role === 'user').length === 0 && !isThinking
 
   return (
-    <section className="chronicle-chat" aria-label="Trip planner chat">
-      <header className="chronicle-chat-header">
+    <section className="flex h-full min-h-0 flex-col bg-[var(--surface)]" aria-label="Trip planner chat">
+      <header className="relative shrink-0 border-b border-[var(--hairline)] px-4 py-4">
         {onClose && (
-          <button type="button" className="chronicle-chat-collapse" onClick={onClose} aria-label="Hide chat">
+          <button
+            type="button"
+            className="absolute right-2 top-2 grid size-9 place-items-center rounded-lg text-xl leading-none hover:bg-[var(--surface-muted)]"
+            onClick={onClose}
+            aria-label="Hide chat"
+          >
             ×
           </button>
         )}
-        <p className="chronicle-ai-kicker">✨ Your AI Trip</p>
-        <h2 className="chronicle-chat-title">Plan by chat</h2>
-        <p className="chronicle-chat-subtitle">Refine your trip in plain language — every stop stays a real place nearby.</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent-text)]">✨ Your AI Trip</p>
+        <h2 className="mt-1 font-[family-name:var(--font-display)] text-lg font-semibold">Plan by chat</h2>
+        <p className="mt-1 text-sm leading-relaxed opacity-75">Refine your trip in plain language — every stop stays a real place nearby.</p>
         {onNewTrip && (
-          <button type="button" className="chronicle-chat-newtrip" onClick={onNewTrip}>
+          <button
+            type="button"
+            className="mt-3 inline-flex min-h-[40px] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--hairline)] px-3 text-sm font-medium text-[var(--accent-text)] hover:bg-[var(--surface-muted)]"
+            onClick={onNewTrip}
+          >
             <span aria-hidden="true">＋</span> Start a new trip
           </button>
         )}
       </header>
 
-      <div className="chronicle-chat-messages" ref={listRef} role="log" aria-live="polite" aria-busy={isThinking}>
+      <div
+        className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4"
+        ref={listRef}
+        role="log"
+        aria-live="polite"
+        aria-busy={isThinking}
+      >
         {messages.map((m) => (
           <ChatMessageBubble key={m.id} message={m} onPlaceClick={onPlaceClick} />
         ))}
@@ -102,9 +117,15 @@ export function TripChatPanel({
       </div>
 
       {showStarters && (
-        <div className="chronicle-chat-starters" aria-label="Conversation starters">
+        <div className="flex shrink-0 flex-wrap gap-2 px-4 pb-3" aria-label="Conversation starters">
           {starters.map((starter) => (
-            <button key={starter} type="button" className="chronicle-ai-suggestion" onClick={() => submit(starter)} disabled={disabled}>
+            <button
+              key={starter}
+              type="button"
+              className="min-h-[36px] rounded-[var(--radius-pill)] border border-[var(--hairline)] px-3 text-sm hover:bg-[var(--surface-muted)] disabled:opacity-50"
+              onClick={() => submit(starter)}
+              disabled={disabled}
+            >
               {starter}
             </button>
           ))}
@@ -112,29 +133,39 @@ export function TripChatPanel({
       )}
 
       {error && (
-        <p role="alert" className="chronicle-ai-error chronicle-chat-error">
+        <p role="alert" className="shrink-0 px-4 pb-2 text-sm text-danger-500">
           {error}
         </p>
       )}
 
       {pendingRelocate && onConfirmRelocate && onCancelRelocate && (
-        <div className="chronicle-chat-confirm" role="group" aria-label={`Start a new trip to ${pendingRelocate.destination}?`}>
-          <button type="button" className="chronicle-chat-confirm-yes" onClick={onConfirmRelocate} disabled={isThinking}>
+        <div className="flex shrink-0 gap-2 px-4 pb-3" role="group" aria-label={`Start a new trip to ${pendingRelocate.destination}?`}>
+          <button
+            type="button"
+            className="min-h-[44px] flex-1 rounded-[var(--radius-pill)] bg-dusk-500 px-4 text-sm font-medium text-[var(--color-on-accent)] hover:bg-dusk-400 disabled:opacity-50"
+            onClick={onConfirmRelocate}
+            disabled={isThinking}
+          >
             Yes, start it
           </button>
-          <button type="button" className="chronicle-chat-confirm-no" onClick={onCancelRelocate} disabled={isThinking}>
+          <button
+            type="button"
+            className="min-h-[44px] flex-1 rounded-[var(--radius-pill)] border border-[var(--hairline)] px-4 text-sm font-medium hover:bg-[var(--surface-muted)] disabled:opacity-50"
+            onClick={onCancelRelocate}
+            disabled={isThinking}
+          >
             No, stay here
           </button>
         </div>
       )}
 
-      <form className="chronicle-chat-composer" onSubmit={handleSubmit}>
-        <label htmlFor="chronicle-chat-input" className="chronicle-sr-only">
+      <form className="flex shrink-0 items-end gap-2 border-t border-[var(--hairline)] p-3" onSubmit={handleSubmit}>
+        <label htmlFor="chronicle-chat-input" className="sr-only">
           Message the trip planner
         </label>
         <textarea
           id="chronicle-chat-input"
-          className="chronicle-chat-input"
+          className="min-h-[44px] flex-1 resize-none rounded-xl border border-[var(--hairline)] bg-[var(--surface)] px-3 py-2.5 text-base disabled:opacity-60"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -143,7 +174,12 @@ export function TripChatPanel({
           maxLength={500}
           disabled={disabled || isThinking}
         />
-        <button type="submit" className="chronicle-chat-send" disabled={disabled || isThinking || !draft.trim()} aria-label="Send">
+        <button
+          type="submit"
+          className="min-h-[44px] shrink-0 rounded-[var(--radius-pill)] bg-dusk-500 px-4 text-sm font-medium text-[var(--color-on-accent)] hover:bg-dusk-400 disabled:opacity-40"
+          disabled={disabled || isThinking || !draft.trim()}
+          aria-label="Send"
+        >
           {isThinking ? '…' : 'Send'}
         </button>
       </form>
