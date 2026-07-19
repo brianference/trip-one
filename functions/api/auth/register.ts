@@ -53,7 +53,7 @@ export async function onRequestPost({ env, request }: { env: AuthEnv; request: R
 
     const user = await createUser(env as Env, {
       email,
-      password_hash: await hashPassword(password),
+      password_hash: await hashPassword(password, env.PASSWORD_PEPPER),
       display_name: displayName ?? null,
     })
 

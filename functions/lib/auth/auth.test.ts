@@ -114,3 +114,40 @@ describe('credential validation', () => {
     if (parsed.success) expect(parsed.data.email).toBe('Person@Example.com')
   })
 })
+
+// The work factor is capped by the Workers CPU limit, so a pepper carries the
+// weight instead: a stolen database alone is unusable without the secret, which
+// lives in the Worker environment rather than in the database.
+describe('peppered hashing', () => {
+  const PEPPER = 'server-side-pepper-secret'
+
+  it('round-trips with the pepper', { timeout: SLOW }, async () => {
+    const hash = await hashPassword('a-long-enough-password', PEPPER)
+    expect(await verifyPassword('a-long-enough-password', hash, PEPPER)).toBe(true)
+    expect(await verifyPassword('wrong-password-here', hash, PEPPER)).toBe(false)
+  })
+
+  // The whole point: the digest cannot be attacked without the secret.
+  it('cannot be verified without the pepper, or with the wrong one', { timeout: SLOW }, async () => {
+    const hash = await hashPassword('a-long-enough-password', PEPPER)
+    expect(await verifyPassword('a-long-enough-password', hash)).toBe(false)
+    expect(await verifyPassword('a-long-enough-password', hash, 'wrong-pepper')).toBe(false)
+  })
+
+  it('marks peppered hashes distinctly from legacy ones', { timeout: SLOW }, async () => {
+    expect((await hashPassword('a-long-enough-password', PEPPER)).startsWith('pbkdf2p$sha256$')).toBe(true)
+    expect((await hashPassword('a-long-enough-password')).startsWith('pbkdf2$sha256$')).toBe(true)
+  })
+
+  // Existing accounts must keep working and gain the pepper on next login.
+  it('still verifies legacy un-peppered hashes and flags them for upgrade', { timeout: SLOW }, async () => {
+    const legacy = await hashPassword('a-long-enough-password')
+    expect(await verifyPassword('a-long-enough-password', legacy, PEPPER)).toBe(true)
+    expect(needsRehash(legacy, true)).toBe(true)
+    expect(needsRehash(legacy, false)).toBe(false)
+  })
+
+  it('does not re-flag an already-peppered hash', { timeout: SLOW }, async () => {
+    expect(needsRehash(await hashPassword('a-long-enough-password', PEPPER), true)).toBe(false)
+  })
+})

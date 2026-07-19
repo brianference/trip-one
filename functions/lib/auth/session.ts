@@ -18,7 +18,15 @@ export interface AuthedUser {
   displayName: string | null
 }
 
-export type AuthEnv = Env & { JWT_SECRET?: string }
+export type AuthEnv = Env & {
+  JWT_SECRET?: string
+  /**
+   * Server-side pepper for password hashing. Optional: without it the app
+   * still works and hashes are stored un-peppered, which is what local dev and
+   * the test suite use.
+   */
+  PASSWORD_PEPPER?: string
+}
 
 /** The cookie the browser app authenticates with. */
 export const SESSION_COOKIE = 'trip_one_session'

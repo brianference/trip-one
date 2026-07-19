@@ -45,16 +45,16 @@ export async function onRequestPost({ env, request }: { env: AuthEnv; request: R
     if (!user) {
       // Hash anyway so a missing account doesn't return measurably faster than
       // a wrong password, which would leak which emails are registered.
-      await hashPassword(password)
+      await hashPassword(password, env.PASSWORD_PEPPER)
       return invalid
     }
-    if (!(await verifyPassword(password, user.password_hash))) return invalid
+    if (!(await verifyPassword(password, user.password_hash, env.PASSWORD_PEPPER))) return invalid
 
     // Transparently upgrade a hash made at an older work factor, now that the
     // plaintext is in hand and known correct.
-    if (needsRehash(user.password_hash)) {
+    if (needsRehash(user.password_hash, Boolean(env.PASSWORD_PEPPER))) {
       try {
-        await updateUserPasswordHash(env as Env, user.id, await hashPassword(password))
+        await updateUserPasswordHash(env as Env, user.id, await hashPassword(password, env.PASSWORD_PEPPER))
       } catch (err) {
         // A failed upgrade must not fail the login; it retries next time.
         logger.warn('password rehash failed', { reason: err instanceof Error ? err.message : String(err) })

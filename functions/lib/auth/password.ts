@@ -49,7 +49,39 @@
 export const PBKDF2_ITERATIONS = 100_000
 const SALT_BYTES = 16
 const KEY_BITS = 256
+
+/** Legacy, un-peppered hashes. Still verified; upgraded on next login. */
 const PREFIX = 'pbkdf2$sha256'
+/** Peppered hashes — see {@link hashPassword}. */
+const PREFIX_PEPPERED = 'pbkdf2p$sha256'
+
+/**
+ * Pre-hashes the password with a server-side secret before PBKDF2.
+ *
+ * This is the standard mitigation for exactly the situation above: the work
+ * factor is capped by the platform's CPU limit and cannot be raised, so the
+ * per-guess cost to an attacker is fixed and lower than it should be.
+ *
+ * A pepper changes the threat model rather than the cost. The secret lives in
+ * the Worker's environment, NOT in the database, so an attacker who walks off
+ * with a database dump — the overwhelmingly common breach — holds digests they
+ * cannot attack offline at any speed, because they are missing an input. It
+ * only helps if the two are compromised separately, which is precisely why it
+ * is worth having: they usually are.
+ *
+ * Costs one HMAC, microseconds, so it does not move the CPU budget at all.
+ */
+async function pepper(password: string, secret: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  )
+  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(password))
+  return toBase64(new Uint8Array(mac))
+}
 
 function toBase64(bytes: Uint8Array): string {
   let binary = ''
@@ -82,10 +114,12 @@ async function derive(password: string, salt: Uint8Array, iterations: number): P
  * @param password - The plaintext password, already length-validated by the caller
  * @returns A self-describing hash string safe to store
  */
-export async function hashPassword(password: string): Promise<string> {
+export async function hashPassword(password: string, pepperSecret?: string): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES))
-  const digest = await derive(password, salt, PBKDF2_ITERATIONS)
-  return `${PREFIX}$${PBKDF2_ITERATIONS}$${toBase64(salt)}$${toBase64(digest)}`
+  const input = pepperSecret ? await pepper(password, pepperSecret) : password
+  const digest = await derive(input, salt, PBKDF2_ITERATIONS)
+  const prefix = pepperSecret ? PREFIX_PEPPERED : PREFIX
+  return `${prefix}$${PBKDF2_ITERATIONS}$${toBase64(salt)}$${toBase64(digest)}`
 }
 
 /**
@@ -108,16 +142,24 @@ function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
  * @param password - The plaintext password supplied at login
  * @param stored - The hash string produced by {@link hashPassword}
  */
-export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+export async function verifyPassword(password: string, stored: string, pepperSecret?: string): Promise<boolean> {
   try {
     const parts = stored.split('$')
     if (parts.length !== 5) return false
     const [algo, hash, iterationsRaw, saltB64, digestB64] = parts
-    if (`${algo}$${hash}` !== PREFIX) return false
+    const scheme = `${algo}$${hash}`
+    // A peppered hash is unverifiable without the pepper, so a missing secret
+    // must fail the login rather than silently fall back to the plain path and
+    // report every password as wrong for a confusing reason.
+    const peppered = scheme === PREFIX_PEPPERED
+    if (!peppered && scheme !== PREFIX) return false
+    if (peppered && !pepperSecret) return false
+
     const iterations = Number.parseInt(iterationsRaw, 10)
     if (!Number.isInteger(iterations) || iterations < 1 || iterations > 5_000_000) return false
+    const input = peppered ? await pepper(password, pepperSecret as string) : password
     const expected = fromBase64(digestB64)
-    const actual = await derive(password, fromBase64(saltB64), iterations)
+    const actual = await derive(input, fromBase64(saltB64), iterations)
     return timingSafeEqual(actual, expected)
   } catch {
     return false
@@ -128,9 +170,12 @@ export async function verifyPassword(password: string, stored: string): Promise<
  * Whether a stored hash was made with a weaker work factor than the current
  * one, so the login route can transparently re-hash it.
  */
-export function needsRehash(stored: string): boolean {
+export function needsRehash(stored: string, pepperConfigured = false): boolean {
   const parts = stored.split('$')
   if (parts.length !== 5) return true
+  // An un-peppered hash is due for upgrade once a pepper is configured, so
+  // existing accounts gain the protection on their next login with no reset.
+  if (pepperConfigured && `${parts[0]}$${parts[1]}` !== PREFIX_PEPPERED) return true
   const iterations = Number.parseInt(parts[2], 10)
   return !Number.isInteger(iterations) || iterations < PBKDF2_ITERATIONS
 }
