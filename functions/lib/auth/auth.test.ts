@@ -1,3 +1,9 @@
+// @vitest-environment node
+//
+// These exercise real Web Crypto (PBKDF2, HMAC). The project default is jsdom,
+// whose `crypto` does not reliably expose `subtle` — the suite passed locally
+// and failed in CI for exactly that reason. Node's environment provides the
+// real implementation, which is also what Workers runs.
 import { describe, it, expect } from 'vitest'
 import { hashPassword, verifyPassword, needsRehash, PBKDF2_ITERATIONS } from './password'
 import { signToken, verifyToken, TOKEN_TTL_SECONDS } from './jwt'
