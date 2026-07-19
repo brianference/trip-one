@@ -87,11 +87,11 @@ export function TripPlanPage() {
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight">Your trip</h1>
         <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-sm [&_input]:min-h-[40px] [&_input]:w-20 [&_input]:rounded-lg [&_input]:border [&_input]:border-[var(--hairline)] [&_input]:bg-[var(--surface)] [&_input]:px-2 [&_input]:text-sm">
+          <label className="flex items-center gap-2 text-sm [&_input]:min-h-[44px] [&_input]:w-20 [&_input]:rounded-lg [&_input]:border [&_input]:border-[var(--hairline)] [&_input]:bg-[var(--surface)] [&_input]:px-2 [&_input]:text-sm">
             <span>Start date</span>
             <input type="date" value={startDate ?? ''} onChange={(e) => setStartDate(e.target.value || null)} />
           </label>
-          <label className="flex items-center gap-2 text-sm [&_input]:min-h-[40px] [&_input]:w-20 [&_input]:rounded-lg [&_input]:border [&_input]:border-[var(--hairline)] [&_input]:bg-[var(--surface)] [&_input]:px-2 [&_input]:text-sm">
+          <label className="flex items-center gap-2 text-sm [&_input]:min-h-[44px] [&_input]:w-20 [&_input]:rounded-lg [&_input]:border [&_input]:border-[var(--hairline)] [&_input]:bg-[var(--surface)] [&_input]:px-2 [&_input]:text-sm">
             <span>Trip length</span>
             <select
               value={tripLengthDays ?? ''}

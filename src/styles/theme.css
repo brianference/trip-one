@@ -76,6 +76,27 @@
 }
 
 /**
+ * Z-INDEX SCALE — read this before adding a fixed/absolute layer.
+ *
+ * The trip experience pins its own chrome high (the header/nav wrapper is 900),
+ * so anything that must cover the page has to clear that. Converting the place
+ * detail sheet from CSS to utilities silently dropped it from 1000 to 90, which
+ * put the trip's bottom nav in front of the sheet's own "Add to trip" and
+ * "Get Directions" buttons and made them untappable.
+ *
+ *     40    in-page sticky helpers
+ *     50    site header (marketing/account pages)
+ *    840    trip chat FAB
+ *    850    trip chat dock
+ *    900    trip header + bottom section nav
+ *    950    update toast
+ *   1000    sheets and overlays (place detail)
+ *   1100    confirmation dialogs — must sit above every one of the above,
+ *           because a destructive confirm is the last thing a user sees
+ *   2000    full-screen trip-building overlay (blocks all interaction)
+ */
+
+/**
  * Base layer.
  *
  * `color-scheme` tells the browser to render native controls (scrollbars, form

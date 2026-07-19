@@ -84,7 +84,7 @@ export function ConfirmDialog({
   if (!open) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] grid place-items-center p-4">
+    <div className="fixed inset-0 z-[1100] grid place-items-center p-4">
       {/* Clicking the backdrop cancels — the same as Escape, never confirms. */}
       <div className="absolute inset-0 bg-ink-900/60 backdrop-blur-sm" onClick={onCancel} aria-hidden="true" />
       <div

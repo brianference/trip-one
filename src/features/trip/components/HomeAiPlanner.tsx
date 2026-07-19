@@ -120,7 +120,7 @@ export function HomeAiPlanner() {
             <li key={prompt}>
               <button
                 type="button"
-                className="min-h-[36px] rounded-[var(--radius-pill)] border border-[var(--hairline)] px-3 text-sm hover:bg-[var(--surface-muted)] disabled:opacity-50"
+                className="min-h-[44px] rounded-[var(--radius-pill)] border border-[var(--hairline)] px-3.5 text-sm hover:bg-[var(--surface-muted)] disabled:opacity-50"
                 onClick={() => {
                   setText(prompt)
                   void planTrip(prompt)

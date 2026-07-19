@@ -95,7 +95,7 @@ export function TripChatPanel({
         {onNewTrip && (
           <button
             type="button"
-            className="mt-3 inline-flex min-h-[40px] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--hairline)] px-3 text-sm font-medium text-[var(--accent-text)] hover:bg-[var(--surface-muted)]"
+            className="mt-3 inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--hairline)] px-3 text-sm font-medium text-[var(--accent-text)] hover:bg-[var(--surface-muted)]"
             onClick={onNewTrip}
           >
             <span aria-hidden="true">＋</span> Start a new trip
@@ -122,7 +122,7 @@ export function TripChatPanel({
             <button
               key={starter}
               type="button"
-              className="min-h-[36px] rounded-[var(--radius-pill)] border border-[var(--hairline)] px-3 text-sm hover:bg-[var(--surface-muted)] disabled:opacity-50"
+              className="min-h-[44px] rounded-[var(--radius-pill)] border border-[var(--hairline)] px-3.5 text-sm hover:bg-[var(--surface-muted)] disabled:opacity-50"
               onClick={() => submit(starter)}
               disabled={disabled}
             >
