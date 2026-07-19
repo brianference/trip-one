@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
+import { mergePreservingUnmentionedDays } from './useItineraryActions'
+import type { ItineraryItem } from '../../../lib/validation/schemas'
 import { useItineraryActions } from './useItineraryActions'
 import { useTripStore } from '../../../store/tripStore'
 import * as client from '../../../lib/api/client'
@@ -185,5 +187,48 @@ describe('useItineraryActions', () => {
     expect(updateSpy.mock.calls[0][1].tripLengthDays).toBe(2)
     // old itinerary was fully replaced, not appended
     expect(persisted.map((i) => i.text)).not.toContain('Old plan')
+  })
+})
+
+// A chat edit is scoped to the days it mentions. Applying the model's reply
+// wholesale replaced the itinerary and silently deleted every other day's
+// stops — data loss on a saved trip, triggered by a request to ADD something.
+describe('mergePreservingUnmentionedDays', () => {
+  const item = (day: number, text: string): ItineraryItem => ({ time: '', text, type: 'fixed', day })
+
+  it('keeps days the revision never mentions', () => {
+    const existing = [item(1, 'Fushimi Inari'), item(2, 'Kiyomizu-dera'), item(3, 'Kinkaku-ji')]
+    // The model answered about day 2 only.
+    const planned = [item(2, 'Kiyomizu-dera'), item(2, 'Ramen Sen no Kaze')]
+    const merged = mergePreservingUnmentionedDays(existing, planned, [{ day: 2, placeIndexes: [0, 1] }])
+
+    expect(merged.map((i) => i.text)).toEqual([
+      'Fushimi Inari',
+      'Kiyomizu-dera',
+      'Ramen Sen no Kaze',
+      'Kinkaku-ji',
+    ])
+  })
+
+  // The distinction that makes the merge safe: present-but-empty is a real
+  // instruction ("clear day 3"), absent is not.
+  it('honours an explicit clear of a day', () => {
+    const existing = [item(1, 'Fushimi Inari'), item(3, 'Kinkaku-ji')]
+    const merged = mergePreservingUnmentionedDays(existing, [], [{ day: 3, placeIndexes: [] }])
+    expect(merged.map((i) => i.text)).toEqual(['Fushimi Inari'])
+  })
+
+  it('replaces the stops of a day that IS mentioned', () => {
+    const existing = [item(1, 'Old stop A'), item(1, 'Old stop B'), item(2, 'Untouched')]
+    const planned = [item(1, 'New stop')]
+    const merged = mergePreservingUnmentionedDays(existing, planned, [{ day: 1, placeIndexes: [0] }])
+    expect(merged.map((i) => i.text)).toEqual(['New stop', 'Untouched'])
+  })
+
+  it('returns days in order', () => {
+    const existing = [item(3, 'Day three'), item(1, 'Day one')]
+    const planned = [item(2, 'Day two')]
+    const merged = mergePreservingUnmentionedDays(existing, planned, [{ day: 2, placeIndexes: [0] }])
+    expect(merged.map((i) => i.day)).toEqual([1, 2, 3])
   })
 })

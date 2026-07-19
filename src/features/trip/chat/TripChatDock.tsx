@@ -54,7 +54,9 @@ export function TripChatDock({
       // closure) so Undo restores exactly what was there.
       const store = useTripStore.getState()
       setUndoSnapshot({ itinerary: store.itinerary, days: store.tripLengthDays })
-      applyPlan(plan, candidatePlaces, days)
+      // merge: a chat edit is scoped to the days it mentions. Replacing the
+      // whole itinerary deleted every day the model did not happen to repeat.
+      applyPlan(plan, candidatePlaces, days, { merge: true })
       setShowToast(true)
       // Take the traveler to the consolidated plan page so they SEE the change.
       if (!pathname.endsWith('/plan')) navigate(`/trip/${trip.id}/plan`)

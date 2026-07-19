@@ -192,8 +192,9 @@ export function useItineraryActions(tripId: string) {
    * @param places - The real candidate places the indices refer to
    * @param days - Trip length the plan was built for
    */
-  function applyPlan(plan: PlanDay[], places: ThingToDo[], days: number) {
-    const items = planToItinerary(plan, places)
+  function applyPlan(plan: PlanDay[], places: ThingToDo[], days: number, opts: { merge?: boolean } = {}) {
+    const planned = planToItinerary(plan, places)
+    const items = opts.merge ? mergePreservingUnmentionedDays(itinerary, planned, plan) : planned
     useTripStore.getState().setItinerary(items)
     useTripStore.getState().setTripLengthDays(days)
     persist(tripId, { itinerary: items, tripLengthDays: days })
@@ -217,4 +218,36 @@ export function useItineraryActions(tripId: string) {
   }
 
   return { itinerary, tripLengthDays, adding, addStop, addFromThingToDo, addToDay, addStops, removeStop, moveStop, moveToDay, setStopTime, setTripLength, setStartDate, applyPlan, restorePlan }
+}
+
+/**
+ * Merges a chat-driven plan revision into the existing itinerary, keeping days
+ * the model did not mention.
+ *
+ * A conversational edit is scoped: "add a food stop on day 2" should change day
+ * 2 and nothing else. The model, though, answers with whatever days it
+ * considered — often just the one — and applying that wholesale replaced the
+ * itinerary and silently deleted every other day's stops. That is data loss on
+ * a saved trip, from a request that asked to ADD something.
+ *
+ * The rule that makes this safe is the distinction between absent and empty:
+ *
+ *   - A day PRESENT in the revision (even with no stops) is intentional. That
+ *     is how "clear day 3" and "remove the last stop on day 4" work, so those
+ *     must still be honoured.
+ *   - A day ABSENT from the revision was simply not discussed, so its existing
+ *     stops are carried over untouched.
+ *
+ * @param existing - The itinerary before the edit
+ * @param planned - The revision, already mapped to itinerary items
+ * @param plan - The raw day groups, needed to see which days were mentioned
+ */
+export function mergePreservingUnmentionedDays(
+  existing: ItineraryItem[],
+  planned: ItineraryItem[],
+  plan: PlanDay[],
+): ItineraryItem[] {
+  const mentioned = new Set(plan.map((d) => d.day))
+  const carriedOver = existing.filter((item) => !mentioned.has(item.day ?? 1))
+  return [...carriedOver, ...planned].sort((a, b) => (a.day ?? 1) - (b.day ?? 1))
 }
