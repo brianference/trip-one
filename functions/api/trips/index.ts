@@ -1,6 +1,6 @@
-import type { Env } from '../../lib/db'
 import { createTrip } from '../../lib/db'
 import { isRateLimited } from '../../lib/rateLimitGuard'
+import { getAuthedUser, type AuthEnv } from '../../lib/auth/session'
 import { logger } from '../../../src/lib/logger'
 import { z } from 'zod'
 
@@ -22,7 +22,7 @@ function json(body: unknown, status: number) {
  * @param context - Request context with `env` (bindings/secrets) and `request`
  * @returns JSON response: trip row on success (201), or `{ error }` with 400 (validation) or 500 (internal error)
  */
-export async function onRequestPost({ env, request }: { env: Env; request: Request }): Promise<Response> {
+export async function onRequestPost({ env, request }: { env: AuthEnv; request: Request }): Promise<Response> {
   const parsed = createTripSchema.safeParse(await request.json().catch(() => ({})))
   if (!parsed.success) return json({ error: 'location_slug is required' }, 400)
 
@@ -33,10 +33,16 @@ export async function onRequestPost({ env, request }: { env: Env; request: Reque
   }
 
   try {
+    // Attach the trip to the signed-in user, when there is one. Anonymous
+    // visitors still get a trip -- user_id stays null and the trip remains
+    // reachable by its link -- but a signed-in user's trip must land in their
+    // account, or "My trips" silently stays empty after they plan something.
+    const user = await getAuthedUser(env, request)
     const trip = await createTrip(env, {
       location_slug: parsed.data.location_slug,
       itinerary: [],
       design_style: parsed.data.design_style ?? 'chronicle',
+      user_id: user?.id ?? null,
     })
     return json(trip, 201)
   } catch (err) {

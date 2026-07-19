@@ -225,19 +225,6 @@ export function SearchScreen() {
         </div>
       </section>
 
-      <footer className="chronicle-landing-footer">
-        <div>
-          <Logo size={22} />
-          <br />
-          <span className="chronicle-footer-tagline">Made for wanderers. No accounts, ever.</span>
-        </div>
-        <nav className="chronicle-landing-footer-links" aria-label="Footer">
-          <Link to="/privacy">Privacy</Link>
-          <a href="https://github.com/brianference/trip-one" target="_blank" rel="noreferrer">
-            GitHub
-          </a>
-        </nav>
-      </footer>
     </div>
   )
 }

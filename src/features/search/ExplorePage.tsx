@@ -40,10 +40,23 @@ export function ExplorePage() {
   const fetchSuggestions = useCallback(async (q: string, signal: AbortSignal): Promise<Suggestion[]> => {
     const res = await fetch(`/api/autocomplete?q=${encodeURIComponent(q)}`, { signal })
     if (!res.ok) return []
-    const body = (await res.json()) as { suggestions?: { label?: string; description?: string }[] }
+    // The endpoint returns `displayName` — a full Nominatim string like
+    // "Dublin, Leinster, Ireland". Reading a `label` field that doesn't exist
+    // silently produced empty suggestions and no dropdown ever appeared.
+    const body = (await res.json()) as { suggestions?: { displayName?: string }[] }
     return (body.suggestions ?? [])
-      .map((s) => ({ label: String(s.label ?? s.description ?? '').trim() }))
-      .filter((s) => s.label !== '')
+      .map((s) => String(s.displayName ?? '').trim())
+      .filter((name) => name !== '')
+      .map((name) => {
+        // Show the place as the label and the rest as quiet context, so the
+        // list is scannable instead of eight near-identical long strings.
+        const parts = name.split(',').map((p) => p.trim())
+        return {
+          label: parts[0],
+          context: parts.length > 1 ? parts[parts.length - 1] : undefined,
+          full: name,
+        }
+      })
       .slice(0, 8)
   }, [])
 
@@ -82,12 +95,19 @@ export function ExplorePage() {
               navigate(`/?destination=${encodeURIComponent(q)}`)
             }}
             onQueryChange={(q) => {
-              // Keep the query in the URL so the featured grid filters live and
-              // the resulting view is shareable.
-              const next = new URLSearchParams(params)
-              if (q.trim() === '') next.delete('q')
-              else next.set('q', q)
-              setParams(next, { replace: true })
+              // Keep the query in the URL so the grid filters live and the view
+              // stays shareable — but REPLACE rather than push, or every
+              // keystroke becomes a history entry and Back has to be pressed
+              // once per character typed.
+              setParams(
+                (current) => {
+                  const next = new URLSearchParams(current)
+                  if (q.trim() === '') next.delete('q')
+                  else next.set('q', q)
+                  return next
+                },
+                { replace: true },
+              )
             }}
           />
         </div>
@@ -101,10 +121,15 @@ export function ExplorePage() {
                 type="button"
                 aria-pressed={active}
                 onClick={() => {
-                  const next = new URLSearchParams(params)
-                  if (f === 'All') next.delete('filter')
-                  else next.set('filter', f)
-                  setParams(next, { replace: true })
+                  setParams(
+                    (current) => {
+                      const next = new URLSearchParams(current)
+                      if (f === 'All') next.delete('filter')
+                      else next.set('filter', f)
+                      return next
+                    },
+                    { replace: true },
+                  )
                 }}
                 className={`min-h-[40px] rounded-[var(--radius-pill)] border px-4 text-sm font-medium transition-colors ${
                   active

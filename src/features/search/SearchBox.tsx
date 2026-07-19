@@ -26,6 +26,12 @@ export interface Suggestion {
   slug?: string
   /** Optional secondary line, e.g. "Ireland". */
   context?: string
+  /**
+   * The unambiguous full place string, when the label is only the first part.
+   * Submitted in preference to `label` — "Dublin" alone is ambiguous, but
+   * "Dublin, Leinster, Ireland" geocodes correctly.
+   */
+  full?: string
 }
 
 export function SearchBox({
@@ -108,7 +114,7 @@ export function SearchBox({
     justPicked.current = true
     setQuery(picked.label)
     setOpen(false)
-    onSubmit(picked.label, picked)
+    onSubmit(picked.full ?? picked.label, picked)
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {

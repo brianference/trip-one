@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { ThemeToggle } from './components/ThemeToggle'
 import { ScrollToTop } from './components/ScrollToTop'
 import { AuthProvider } from './features/auth/AuthContext'
 import { SiteHeader } from './components/layout/SiteHeader'
@@ -68,7 +67,6 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <ScrollToTop />
-        <ThemeToggle />
         <Routes>
           <Route
             path="/"

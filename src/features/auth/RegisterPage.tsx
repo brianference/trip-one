@@ -85,7 +85,22 @@ export function RegisterPage() {
             autoComplete="new-password"
             required
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            minLength={MIN_PASSWORD_LENGTH}
+            onChange={(e) => {
+              setPassword(e.target.value)
+              // Clear the error as soon as the value becomes valid, rather than
+              // making the user submit again to find out they fixed it.
+              if (fieldError && e.target.value.length >= MIN_PASSWORD_LENGTH) setFieldError(null)
+            }}
+            // Validate when they leave the field, so the requirement is known
+            // before they reach the submit button.
+            onBlur={(e) =>
+              setFieldError(
+                e.target.value.length > 0 && e.target.value.length < MIN_PASSWORD_LENGTH
+                  ? `Password must be at least ${MIN_PASSWORD_LENGTH} characters`
+                  : null,
+              )
+            }
             error={fieldError}
             hint={`At least ${MIN_PASSWORD_LENGTH} characters. A short phrase works well.`}
           />

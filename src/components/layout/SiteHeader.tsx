@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom'
 import { Logo } from './Logo'
 import { Button, ButtonLink } from '../ui/Button'
 import { useAuth } from '../../features/auth/AuthContext'
+import { ThemeToggle } from '../ThemeToggle'
 
 const NAV = [
   { to: '/', label: 'Plan a trip', end: true },
@@ -83,7 +84,8 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-2 md:ml-3">
+        <div className="ml-auto flex items-center gap-1 md:ml-3 md:gap-2">
+          <ThemeToggle />
           {/* Reserve the space while auth resolves so the header doesn't jump. */}
           {loading ? (
             <div className="hidden h-9 w-32 animate-pulse rounded-full bg-[var(--surface-muted)] md:block" />

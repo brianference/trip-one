@@ -19,9 +19,14 @@ function MoonIcon() {
 }
 
 /**
- * Fixed top-right light/dark toggle, on every page. Sets `data-theme` on the
- * document root (persisted), overriding the OS preference. Shows the icon of
- * the mode you'd switch TO (a sun in dark mode, a moon in light mode).
+ * Light/dark toggle. Sets `data-theme` on the document root (persisted),
+ * overriding the OS preference. Shows the icon of the mode you'd switch TO
+ * (a sun in dark mode, a moon in light mode).
+ *
+ * This used to be `position: fixed` in the top-right corner. Once the sticky
+ * site header shipped it sat ON TOP of the header's hamburger button and stole
+ * its taps, and being first in the DOM it also became the first Tab stop,
+ * pushing the skip link to second. It now renders inside the header instead.
  */
 export function ThemeToggle() {
   const [theme, setTheme] = useState<ThemeChoice>(() => initialTheme())
@@ -35,7 +40,7 @@ export function ThemeToggle() {
   return (
     <button
       type="button"
-      className="chronicle-theme-toggle"
+      className="grid size-11 place-items-center rounded-xl text-[var(--page-fg)] hover:bg-[var(--surface-muted)]"
       onClick={toggle}
       aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
       title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
