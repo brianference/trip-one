@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildChatPrompt, normalizeChatResponse } from './aiChat'
+import { buildChatPrompt, normalizeChatResponse, protectExistingStops } from './aiChat'
 
 const candidates = [
   { name: 'Balboa Park', category: 'park', rating: 4.8 },
@@ -71,5 +71,74 @@ describe('normalizeChatResponse', () => {
   it('returns null when there is nothing usable', () => {
     expect(normalizeChatResponse({ action: 'answer' }, 2, 3)).toBeNull()
     expect(normalizeChatResponse(null, 2, 3)).toBeNull()
+  })
+})
+
+// Reproduced on the live site: a scoped chat edit came back having silently
+// deleted stops the traveler never mentioned. "add a food stop on day 2"
+// returned 3 indices for a day that had 5; "add a museum on day 1" replaced all
+// four of the trip's flagship sights. The prompt now asks the model to echo
+// what it keeps, but a prompt is a request, so the rule is enforced here.
+describe('protectExistingStops', () => {
+  const candidates = [
+    { name: 'Sagrada Familia', category: 'tourist_attraction' },
+    { name: 'Casa Batlló', category: 'tourist_attraction' },
+    { name: 'La Boqueria', category: 'market' },
+    { name: 'Ciutadella Park', category: 'park' },
+    { name: 'Picasso Museum', category: 'museum' },
+    { name: 'Ocaña', category: 'restaurant' },
+  ]
+
+  it('restores stops the model dropped without being asked', () => {
+    // Day 2 had Ciutadella + Picasso; the model answered with only the new food stop.
+    const out = protectExistingStops(
+      [{ day: 2, placeIndexes: [5] }],
+      [{ day: 2, placeNames: ['Ciutadella Park', 'Picasso Museum'] }],
+      candidates,
+    )
+    expect(out[0].placeIndexes).toEqual([5, 3, 4])
+  })
+
+  it('keeps the model ordering for what it did return', () => {
+    const out = protectExistingStops(
+      [{ day: 1, placeIndexes: [2, 0] }],
+      [{ day: 1, placeNames: ['Sagrada Familia', 'Casa Batlló', 'La Boqueria'] }],
+      candidates,
+    )
+    // Returned order first, then whatever was silently dropped.
+    expect(out[0].placeIndexes).toEqual([2, 0, 1])
+  })
+
+  // The distinction that keeps removal working: emptied is intentional.
+  it('honours an explicitly emptied day', () => {
+    const out = protectExistingStops(
+      [{ day: 3, placeIndexes: [] }],
+      [{ day: 3, placeNames: ['Sagrada Familia'] }],
+      candidates,
+    )
+    expect(out[0].placeIndexes).toEqual([])
+  })
+
+  it('leaves a day alone when nothing was dropped', () => {
+    const out = protectExistingStops(
+      [{ day: 1, placeIndexes: [0, 1, 5] }],
+      [{ day: 1, placeNames: ['Sagrada Familia', 'Casa Batlló'] }],
+      candidates,
+    )
+    expect(out[0].placeIndexes).toEqual([0, 1, 5])
+  })
+
+  it('ignores existing stops that are no longer in the candidate list', () => {
+    const out = protectExistingStops(
+      [{ day: 1, placeIndexes: [0] }],
+      [{ day: 1, placeNames: ['Sagrada Familia', 'A place that vanished'] }],
+      candidates,
+    )
+    expect(out[0].placeIndexes).toEqual([0])
+  })
+
+  it('does not touch days with no existing plan', () => {
+    const out = protectExistingStops([{ day: 4, placeIndexes: [1] }], [{ day: 1, placeNames: ['Sagrada Familia'] }], candidates)
+    expect(out[0].placeIndexes).toEqual([1])
   })
 })

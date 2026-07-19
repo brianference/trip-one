@@ -124,7 +124,7 @@
 
 .chronicle-share-btn {
   flex: none;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 var(--chronicle-space-md);
   border: 1px solid var(--chronicle-teal);
   border-radius: var(--chronicle-radius-pill);
@@ -838,7 +838,7 @@ body {
 .chronicle-ttd-details,
 .chronicle-ttd-directions,
 .chronicle-ttd-add {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 14px;
   border-radius: var(--chronicle-radius-pill);
   font-family: var(--chronicle-font-mono);
@@ -960,7 +960,7 @@ body {
 }
 
 .chronicle-place-remove {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 14px;
   border: 1px solid var(--chronicle-danger);
   border-radius: var(--chronicle-radius-pill);
@@ -1889,7 +1889,7 @@ body:has(.chronicle-page) label {
 
 .chronicle-save-error-retry {
   flex: none;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 var(--chronicle-space-md);
   border: 1px solid var(--chronicle-danger);
   border-radius: var(--chronicle-radius-pill);
@@ -3061,7 +3061,8 @@ body:has(.chronicle-page) label {
 }
 
 .chronicle-export-btn {
-  min-height: 40px;
+  /* 44px is the comfortable minimum touch target. */
+  min-height: 44px;
   padding: 0 16px;
   border: 1px solid var(--chronicle-border-subtle);
   border-radius: var(--chronicle-radius-pill);

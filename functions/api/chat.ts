@@ -98,7 +98,9 @@ export async function onRequestPost({ env, request }: { env: ChatEnv; request: R
       return json({ error: 'AI assistant returned an unreadable response, try again' }, 502)
     }
 
-    const result = normalizeChatResponse(raw, places.length, days)
+    // currentPlan + places let the normalizer put back any existing stop the
+    // model dropped without being asked (see protectExistingStops).
+    const result = normalizeChatResponse(raw, places.length, days, itinerary, places)
     if (!result) return json({ error: 'AI assistant could not respond, try again' }, 502)
 
     // On a re-plan, guarantee ≥3 food stops per day near each day's stops.
