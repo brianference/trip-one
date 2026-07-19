@@ -3,6 +3,86 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v11.0.0 — Trips that match the trip you asked for
+
+The planner used to arrange whatever Google returned near a coordinate. A
+walleye-and-grouse trip in northern Minnesota came back as a restaurant tour; a
+21st-birthday trip to Dublin got a zoo and a lighthouse; a 7-day Jackson Hole
+family ski trip printed 2 days. This release rebuilds how a plan is sourced,
+who it is sourced for, and where it is stored.
+
+### Trips are now built from real travel guides
+Every plan starts with a live web search for guides matching that specific trip
+(party, season, interests), extracts the venues those guides actually name, and
+verifies each one against Google Places. Anything that fails to verify is
+dropped, so nothing invented reaches a plan.
+
+A family Jackson Hole request now returns Snow King tubing, the Cowboy Coaster,
+Elk Refuge sleigh rides and the Children's Museum. A 21st-birthday Dublin
+request returns the Guinness Storehouse, Teeling, Jameson, The Cobblestone and
+Temple Bar.
+
+### The planner knows who is travelling
+Requests are parsed into a traveler profile (party, occasion, season, and a
+kids/adults/general audience). A kids trip never gets bars, breweries or
+distilleries; an adults trip never gets zoos, playgrounds or aquariums. The
+filter runs at the candidate-pool level, so the day-filler that tops up long
+trips cannot reach for an off-audience place either.
+
+### Fewer restaurants, more of the point of the trip
+Candidates are pooled by role rather than one global rating sort, which food
+always won. Incidental restaurants get a per-day budget; food the traveler
+explicitly asked for is exempt, so a New Orleans eat-everything trip stays a
+food trip. Across nine simulated trips, food fell from 58% to 27% of stops and
+on-theme stops rose from 65% to 83%. Six held-out destinations, never used
+during tuning, scored 29% food and 93% on-theme.
+
+### Every day prints
+The PDF view now renders a section per requested day instead of only the days
+the planner happened to fill, and the planner is required to fill all of them.
+The candidate pool and venue discovery both scale with trip length, which is
+what starved days 8-12 of a long trip. A 12-day plan prints 12 days; a 7-day
+plan prints 7.
+
+### Destinations resolve to somewhere you can stay
+"Jackson Hole" resolves to Jackson, Wyoming rather than Jackson Hole Airport,
+and "northern Minnesota" resolves to a base town like Ely instead of a region
+centroid. Airports, states, countries and wilderness areas are rejected.
+
+### Things to do are ranked by popularity
+Attraction lists are scored by rating weighted by review count, so a landmark
+with 50,000 reviews outranks an obscure high-rated cafe. The list shows the top
+10 with a toggle for the rest.
+
+### Backend moved from Supabase to Cloudflare D1
+**Breaking (infrastructure).** All persistence runs on Cloudflare D1, bound
+directly into Pages Functions as `env.DB`. Supabase and PostgREST are gone.
+D1 never pauses for inactivity, which repeatedly took the free-tier Supabase
+project offline. Existing data was migrated with no loss. Deploys now require
+the D1 binding in `wrangler.toml` plus the Google Places, Tripadvisor, Brave
+and OpenAI secrets set on the Pages project.
+
+### Fixed
+- **Discovery no longer gives up when a request names no activities.** "12 day
+  trip to Dublin for a father and son, the son is turning 21" extracts a party
+  and an occasion but no interests, and the discovery endpoint rejected the
+  empty string, so the whole web-grounded step silently no-opped and the trip
+  fell back to the generic nearby pool. Interests are now derived from the
+  occasion, party and audience when none are stated. The same request now
+  returns 39 verified pub, whiskey and nightlife venues.
+- Discovery failures are logged instead of swallowed, so a degraded plan is
+  visible rather than looking like a bad planner.
+
+### Under the hood
+- New `functions/lib/db.ts` D1 data layer; `d1/schema.sql` ports the Postgres
+  schema to SQLite.
+- New `functions/lib/webSearch.ts`, `functions/lib/aiDiscover.ts` and the
+  `/api/discover-venues` endpoint; results cached per destination and profile
+  so repeat trips pay nothing.
+- New `simulations/` harness (`npm run sim`) with tuned and held-out scenarios
+  for measuring plan quality. Not part of CI, since it calls paid APIs.
+- 540 automated tests; typecheck, tests and build gate every push.
+
 ## v10.0.0 — Mobile-first, end to end
 
 A major milestone consolidating the v9.x line into a stable, phone-first

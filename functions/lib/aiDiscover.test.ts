@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildDiscoverPrompt, normalizeDiscoveredVenues, discoveredVenuesForDays, MAX_DISCOVERED_VENUES, type TravelerProfile } from './aiDiscover'
+import { describeInterests, buildDiscoverPrompt, normalizeDiscoveredVenues, discoveredVenuesForDays, MAX_DISCOVERED_VENUES, type TravelerProfile } from './aiDiscover'
 
 const kidsProfile: TravelerProfile = {
   party: 'family with two young kids',
@@ -78,5 +78,34 @@ describe('discoveredVenuesForDays', () => {
     expect(discoveredVenuesForDays(7)).toBe(28)
     expect(discoveredVenuesForDays(12)).toBe(45)
     expect(discoveredVenuesForDays(30)).toBe(MAX_DISCOVERED_VENUES)
+  })
+})
+
+describe('describeInterests', () => {
+  const base = { party: 'father and son', audience: 'adults' as const, interests: '', foodFocused: false }
+
+  it('keeps stated interests verbatim', () => {
+    expect(describeInterests({ ...base, interests: 'walleye fishing, grouse hunting' })).toBe(
+      'walleye fishing, grouse hunting',
+    )
+  })
+
+  // The Dublin regression: a rich profile with no named activities used to be
+  // rejected outright, dropping the trip to the generic nearby pool.
+  it('falls back to the occasion and party when no activities are named', () => {
+    const out = describeInterests({ ...base, occasion: '21st birthday' })
+    expect(out).toContain('21st birthday')
+    expect(out).toContain('father and son')
+    expect(out).toContain('pubs')
+  })
+
+  it('uses family wording for a kids trip', () => {
+    const out = describeInterests({ ...base, party: 'family with two kids', audience: 'kids' })
+    expect(out).toContain('family activities')
+    expect(out).not.toContain('pubs')
+  })
+
+  it('never returns an empty string', () => {
+    expect(describeInterests({ party: '', audience: 'general', interests: '', foodFocused: false }).trim()).not.toBe('')
   })
 })

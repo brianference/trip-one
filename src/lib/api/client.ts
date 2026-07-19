@@ -309,7 +309,13 @@ export async function fetchDiscoveredVenues(intent: TripIntent, lat: number, lng
         lng,
       }),
     })
-    if (!res.ok) return []
+    // Fail soft, but never silently: a non-ok here means the trip quietly
+    // degrades to the generic nearby pool, which reads as a bad planner rather
+    // than a rejected request. A 400 hid the empty-interests bug.
+    if (!res.ok) {
+      logger.warn('venue discovery rejected; falling back to the nearby pool', { status: res.status })
+      return []
+    }
     const body = await res.json()
     const places: ThingToDo[] = (body.places ?? []).filter((t: ThingToDo) => isRequestedExperienceCategory(t.category))
     return places.map((p) => ({ ...p, themed: true }))

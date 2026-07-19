@@ -53,6 +53,37 @@ export function discoveredVenuesForDays(days: number): number {
 }
 
 /**
+ * What this trip is actually about, in words the search and the prompt can use.
+ *
+ * A request can carry a rich profile and still name no activities: "12 day trip
+ * to Dublin for a father and son, the son is turning 21" extracts a party and an
+ * occasion but an EMPTY interests string. Discovery used to reject that outright
+ * and fall back to the generic nearby pool, which is how the trip that prompted
+ * this feature came back with a zoo and a lighthouse.
+ *
+ * The occasion, party and audience describe the trip perfectly well on their
+ * own, so fall back to them rather than giving up.
+ */
+export function describeInterests(profile: TravelerProfile): string {
+  const stated = profile.interests.trim()
+  if (stated !== '') return stated
+
+  const parts: string[] = []
+  if (profile.occasion) parts.push(`celebrating a ${profile.occasion}`)
+  if (profile.party) parts.push(`travelling as ${profile.party}`)
+  if (parts.length === 0) {
+    parts.push('the destination’s best-known highlights')
+  }
+  const audienceHint =
+    profile.audience === 'adults'
+      ? 'nightlife, pubs and bars, and iconic local experiences'
+      : profile.audience === 'kids'
+        ? 'family activities and hands-on attractions'
+        : 'the destination’s best-known highlights'
+  return `${parts.join(', ')}; ${audienceHint}`
+}
+
+/**
  * Builds the prompt that turns travel-guide content into a list of specific
  * named venues fitting the traveler.
  *
@@ -82,7 +113,7 @@ export function buildDiscoverPrompt(
     `List the specific, real, named places and activities a great ${destination} trip should include for this traveler.`,
     '',
     `TRAVELER: ${profile.party}${profile.occasion ? `, for a ${profile.occasion}` : ''}.`,
-    `INTERESTS: ${profile.interests}`,
+    `INTERESTS: ${describeInterests(profile)}`,
     audienceRule,
     seasonRule,
     '',

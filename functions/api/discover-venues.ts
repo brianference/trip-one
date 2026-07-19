@@ -4,7 +4,7 @@ import { getInterestPlacesCache, upsertInterestPlacesCache } from '../lib/db'
 import { findPlaceByName } from '../lib/places'
 import { isRateLimited } from '../lib/rateLimitGuard'
 import { openAiResponseSchema } from '../lib/openAi'
-import { buildDiscoverPrompt, normalizeDiscoveredVenues, discoveredVenuesForDays, type TravelerProfile } from '../lib/aiDiscover'
+import { buildDiscoverPrompt, normalizeDiscoveredVenues, discoveredVenuesForDays, describeInterests, type TravelerProfile } from '../lib/aiDiscover'
 import { buildInterestCacheKey } from '../lib/interestCache'
 import { gatherGuideContent } from '../lib/webSearch'
 import { isRequestedExperienceCategory } from '../../src/lib/location/experienceFilter'
@@ -27,7 +27,10 @@ const DEFAULT_MODEL = 'gpt-4o-mini'
 
 const requestSchema = z.object({
   destination: z.string().trim().min(1).max(200),
-  interests: z.string().trim().min(1).max(300),
+  // May be empty: a request can name a party and an occasion but no activities
+  // ("a father and son, the son is turning 21"). The profile still describes the
+  // trip, so discovery derives interests from it rather than rejecting.
+  interests: z.string().trim().max(300).optional().default(''),
   days: z.number().int().min(1).max(30).optional(),
   party: z.string().trim().max(120).optional(),
   occasion: z.string().trim().max(120).nullable().optional(),
@@ -44,7 +47,7 @@ function json(body: unknown, status: number) {
 
 /** Builds the web-search query that finds the right travel guides for this trip. */
 function guideQuery(destination: string, profile: TravelerProfile): string {
-  const bits = [destination, profile.season ?? '', profile.party, profile.interests, 'best things to do itinerary']
+  const bits = [destination, profile.season ?? '', profile.party, describeInterests(profile), 'best things to do itinerary']
   return bits.filter(Boolean).join(' ').slice(0, 200)
 }
 
