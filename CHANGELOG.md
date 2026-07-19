@@ -3,6 +3,49 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v12.1.0 — Accessible colour, and more of the app on Tailwind
+
+### Fixed — colour contrast
+v12.0.0 shipped with text that failed WCAG AA in several places. All of it is
+fixed and independently verified with computed colours on the live site.
+
+- **Dark mode was broadly unreadable on trip pages.** Unifying the trip views
+  with the site design system mapped their secondary accent to a mid-tone green
+  that measured 2.92:1 on the dark surfaces — below AA — across roughly two
+  dozen elements: the weather and currency badges, "Hourly" links, the current
+  temperature, day distance and sight/food meta lines, and the "stops planned"
+  callouts. Accent TEXT now uses tokens that flip with the theme; those
+  elements measure 7.15–14.73:1.
+- **Primary buttons failed AA in light mode.** White on the dusk accent is
+  3.18:1, below AA for a 14px label. This affected every primary button and
+  predates v12.0.0. Buttons now use dark text on the accent, 5.89:1, which
+  keeps the vibrant orange rather than muddying it.
+- **The first attempt at that fix only reached half the buttons.** Chronicle's
+  rules coloured their labels with the PAGE BACKGROUND, which inverts with the
+  theme — so they were light-on-orange in light mode and passed in dark only by
+  accident. The Explore filter pill had a hardcoded white that no token could
+  reach. There is now one `--color-on-accent` token, deliberately not
+  theme-aware, driving every element that sits on the accent.
+
+The logo mark keeps white on the accent by design: it is a graphic, not text,
+so WCAG 1.4.11 asks for 3:1 and it measures 3.18.
+
+### Fixed — other
+- A signed-in user with a trip open could not switch theme, reach their
+  account, or navigate away, because the trip layout omits the site header to
+  save vertical space on a phone. The trip top bar now carries a theme toggle
+  and a My trips link.
+
+### Changed
+- The homepage, the place detail sheet and the trip chat panel are rewritten in
+  Tailwind, removing 93 bespoke class rules between them. Pinned headers,
+  pinned footers and independent scrolling are preserved in each.
+- The homepage now uses the same search component as Explore, so there is one
+  search implementation rather than two — it inherits prefix search and full
+  keyboard navigation, which the homepage previously lacked.
+- Arriving with `?destination=` starts that trip immediately, so searching from
+  Explore leads somewhere instead of only prefilling the box.
+
 ## v12.0.0 — Accounts, a premium frontend, and search that finds things
 
 A major release. Trip One gains user accounts, a rebuilt interface on Tailwind,
