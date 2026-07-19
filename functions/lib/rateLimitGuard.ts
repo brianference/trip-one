@@ -21,7 +21,8 @@ export async function isRateLimited(env: Env, request: Request, endpoint: string
     const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown'
     const ipHash = await hashIp(ip, env.RATE_LIMIT_SALT)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
-    const recent = await countRecentRequests(env, ipHash, oneHourAgo)
+    // Scoped to THIS endpoint; see countRecentRequests for why.
+    const recent = await countRecentRequests(env, ipHash, oneHourAgo, endpoint)
     if (!isUnderRateLimit(recent, perHour)) return true
     await insertRequestLog(env, ipHash, endpoint)
     return false

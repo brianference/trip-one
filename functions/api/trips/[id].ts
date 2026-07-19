@@ -1,5 +1,6 @@
 import type { Env } from '../../lib/db'
-import { getTrip, updateTrip } from '../../lib/db'
+import { getTrip, updateTrip, deleteTripOwnedBy } from '../../lib/db'
+import { getAuthedUser, type AuthEnv } from '../../lib/auth/session'
 import { itineraryItemSchema } from '../../../src/lib/validation/schemas'
 import { logger } from '../../../src/lib/logger'
 import { z } from 'zod'
@@ -58,5 +59,43 @@ export async function onRequestPatch({
   } catch (err) {
     logger.error('trip update failed', err)
     return json({ error: 'internal error' }, 500)
+  }
+}
+
+/**
+ * DELETE /api/trips/:id
+ *
+ * Deletes a trip the signed-in user owns.
+ *
+ * Ownership is enforced inside the SQL (`WHERE id = ? AND user_id = ?`) rather
+ * than by reading the row and comparing: a check-then-delete can race, and
+ * folding it into the statement makes it impossible to forget at a call site.
+ *
+ * A trip that does not exist and a trip belonging to someone else both answer
+ * 404, so this cannot be used to discover which trip ids are real. Anonymous
+ * trips have no owner and so can never be deleted through this route.
+ */
+export async function onRequestDelete({
+  env,
+  request,
+  params,
+}: {
+  env: AuthEnv
+  request: Request
+  params: { id: string }
+}): Promise<Response> {
+  const user = await getAuthedUser(env, request)
+  if (!user) return json({ error: 'Please sign in to delete a trip' }, 401)
+
+  const id = typeof params.id === 'string' ? params.id.trim() : ''
+  if (id === '') return json({ error: 'invalid request' }, 400)
+
+  try {
+    const deleted = await deleteTripOwnedBy(env, id, user.id)
+    if (!deleted) return json({ error: 'Trip not found' }, 404)
+    return json({ ok: true }, 200)
+  } catch (err) {
+    logger.error('delete trip failed', err)
+    return json({ error: 'Could not delete that trip. Please try again.' }, 500)
   }
 }

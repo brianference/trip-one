@@ -42,6 +42,24 @@ export interface TripRow {
   trip_length_days?: number | null
   /** Optional trip start date (YYYY-MM-DD), for date labels and date-aligned weather. */
   start_date?: string | null
+  /**
+   * Owner, or null for an anonymous trip. Nullable on purpose: every trip made
+   * before accounts existed, and every trip made by a signed-out visitor, stays
+   * reachable by its link.
+   */
+  user_id?: string | null
+  /** User-supplied name for a saved trip; anonymous trips don't need one. */
+  title?: string | null
+}
+
+/** A row in `users`. `password_hash` never leaves the data layer. */
+export interface UserRow {
+  id: string
+  email: string
+  password_hash: string
+  display_name: string | null
+  created_at: string
+  token_version: number
 }
 
 export interface PlaceDetailRow {
@@ -179,13 +197,29 @@ export async function upsertInterestPlacesCache(env: Env, row: InterestPlacesRow
 
 // --- rate limiting ---
 
-export async function countRecentRequests(env: Env, ipHash: string, sinceIso: string): Promise<number> {
+export async function countRecentRequests(
+  env: Env,
+  ipHash: string,
+  sinceIso: string,
+  endpoint?: string,
+): Promise<number> {
   // Fail closed: a throw here (which propagates) is correct, because the rate
   // limiter must not treat a DB error as "zero recent requests" and wave the
   // caller through. D1 throws on query failure, so this needs no extra guard.
-  const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM request_log WHERE ip_hash = ? AND created_at >= ?')
-    .bind(ipHash, sinceIso)
-    .first<{ n: number }>()
+  //
+  // `endpoint` scopes the count to one route. Without it every per-route limit
+  // shared a single budget, so the effective limit was the SMALLEST one across
+  // all routes: planning a trip spends dozens of calls, which used up
+  // registration's allowance of 10 and made it impossible to sign up.
+  const row = endpoint
+    ? await env.DB.prepare(
+        'SELECT COUNT(*) AS n FROM request_log WHERE ip_hash = ? AND endpoint = ? AND created_at >= ?',
+      )
+        .bind(ipHash, endpoint, sinceIso)
+        .first<{ n: number }>()
+    : await env.DB.prepare('SELECT COUNT(*) AS n FROM request_log WHERE ip_hash = ? AND created_at >= ?')
+        .bind(ipHash, sinceIso)
+        .first<{ n: number }>()
   return row?.n ?? 0
 }
 
@@ -199,16 +233,24 @@ export async function insertRequestLog(env: Env, ipHash: string, endpoint: strin
 
 export async function createTrip(
   env: Env,
-  row: Pick<TripRow, 'location_slug' | 'itinerary' | 'design_style'>,
+  row: Pick<TripRow, 'location_slug' | 'itinerary' | 'design_style'> & { user_id?: string | null; title?: string | null },
 ): Promise<TripRow> {
   // SQLite has no gen_random_uuid(); the id and created_at that Postgres
   // defaulted are generated here instead.
   const id = crypto.randomUUID()
   const created_at = nowIso()
   await env.DB.prepare(
-    'INSERT INTO trips (id, location_slug, itinerary, design_style, created_at) VALUES (?, ?, ?, ?, ?)',
+    'INSERT INTO trips (id, location_slug, itinerary, design_style, created_at, user_id, title) VALUES (?, ?, ?, ?, ?, ?, ?)',
   )
-    .bind(id, row.location_slug, JSON.stringify(row.itinerary ?? []), row.design_style, created_at)
+    .bind(
+      id,
+      row.location_slug,
+      JSON.stringify(row.itinerary ?? []),
+      row.design_style,
+      created_at,
+      row.user_id ?? null,
+      row.title ?? null,
+    )
     .run()
   return {
     id,
@@ -218,6 +260,8 @@ export async function createTrip(
     created_at,
     trip_length_days: null,
     start_date: null,
+    user_id: row.user_id ?? null,
+    title: row.title ?? null,
   }
 }
 
@@ -238,7 +282,7 @@ export async function getTrip(env: Env, id: string): Promise<TripRow | null> {
 export async function updateTrip(
   env: Env,
   id: string,
-  patch: Partial<Pick<TripRow, 'itinerary' | 'design_style' | 'trip_length_days' | 'start_date'>>,
+  patch: Partial<Pick<TripRow, 'itinerary' | 'design_style' | 'trip_length_days' | 'start_date' | 'user_id' | 'title'>>,
 ): Promise<TripRow> {
   // Build the SET clause from only the fields actually present, so a patch of
   // one column never clobbers the others with undefined.
@@ -270,4 +314,81 @@ export async function updateTrip(
   const updated = await getTrip(env, id)
   if (!updated) throw new Error(`updateTrip: trip ${id} not found`)
   return updated
+}
+
+/** Normalizes an email for storage and lookup: trimmed and lowercased. */
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase()
+}
+
+/**
+ * Creates a user. The caller must have already validated and hashed.
+ * @throws If the email is already registered (SQLite unique constraint)
+ */
+export async function createUser(
+  env: Env,
+  row: { email: string; password_hash: string; display_name?: string | null },
+): Promise<UserRow> {
+  const id = crypto.randomUUID()
+  const created_at = nowIso()
+  const email = normalizeEmail(row.email)
+  await env.DB.prepare(
+    'INSERT INTO users (id, email, password_hash, display_name, created_at, token_version) VALUES (?, ?, ?, ?, ?, 0)',
+  )
+    .bind(id, email, row.password_hash, row.display_name ?? null, created_at)
+    .run()
+  return { id, email, password_hash: row.password_hash, display_name: row.display_name ?? null, created_at, token_version: 0 }
+}
+
+/** Looks up a user by email (normalized), or null. */
+export async function getUserByEmail(env: Env, email: string): Promise<UserRow | null> {
+  const row = await env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(normalizeEmail(email)).first<UserRow>()
+  return row ?? null
+}
+
+/** Looks up a user by id, or null. */
+export async function getUserById(env: Env, id: string): Promise<UserRow | null> {
+  const row = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<UserRow>()
+  return row ?? null
+}
+
+/** Replaces a user's password hash (used by the transparent rehash on login). */
+export async function updateUserPasswordHash(env: Env, id: string, passwordHash: string): Promise<void> {
+  await env.DB.prepare('UPDATE users SET password_hash = ? WHERE id = ?').bind(passwordHash, id).run()
+}
+
+/** Trips owned by a user, newest first. */
+export async function listTripsForUser(env: Env, userId: string): Promise<TripRow[]> {
+  const res = await env.DB.prepare(
+    'SELECT t.*, l.display_name AS location_name FROM trips t LEFT JOIN locations l ON l.slug = t.location_slug WHERE t.user_id = ? ORDER BY t.created_at DESC',
+  )
+    .bind(userId)
+    .all<TripRow & { itinerary: string; location_name?: string }>()
+  return (res.results ?? []).map((r) => ({ ...r, itinerary: parseJson<unknown[]>(r.itinerary, []) }))
+}
+
+/**
+ * Deletes a trip, but only if it belongs to this user.
+ *
+ * Ownership is part of the WHERE clause rather than a separate read-then-check:
+ * a check-then-delete can race, and more importantly it makes it impossible to
+ * forget the ownership test at a call site.
+ *
+ * @returns True if a row was deleted, false if it didn't exist or wasn't theirs
+ */
+export async function deleteTripOwnedBy(env: Env, tripId: string, userId: string): Promise<boolean> {
+  const res = await env.DB.prepare('DELETE FROM trips WHERE id = ? AND user_id = ?').bind(tripId, userId).run()
+  return (res.meta?.changes ?? 0) > 0
+}
+
+/**
+ * Attaches an anonymous trip to a user, but never steals one that already has
+ * an owner — `user_id IS NULL` is part of the WHERE clause.
+ * @returns True if the trip was claimed
+ */
+export async function claimTripForUser(env: Env, tripId: string, userId: string): Promise<boolean> {
+  const res = await env.DB.prepare('UPDATE trips SET user_id = ? WHERE id = ? AND user_id IS NULL')
+    .bind(userId, tripId)
+    .run()
+  return (res.meta?.changes ?? 0) > 0
 }

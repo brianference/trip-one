@@ -66,7 +66,7 @@ export async function onRequestGet({ env, request }: { env: PlaceEnv; request: R
     const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown'
     const ipHash = await hashIp(ip, env.RATE_LIMIT_SALT)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
-    if (!isUnderRateLimit(await countRecentRequests(env, ipHash, oneHourAgo), RATE_LIMIT_PER_HOUR)) {
+    if (!isUnderRateLimit(await countRecentRequests(env, ipHash, oneHourAgo, 'place-details'), RATE_LIMIT_PER_HOUR)) {
       return json({ error: 'rate limit exceeded, try again later' }, 429)
     }
 
