@@ -142,3 +142,26 @@ describe('protectExistingStops', () => {
     expect(out[0].placeIndexes).toEqual([1])
   })
 })
+
+// The chat told the traveler "I've cleared Day 5 entirely for you" while
+// returning action:"answer" and no plan, so nothing was cleared. A message that
+// claims a change the response doesn't make is worse than a refusal.
+describe('clearing a day', () => {
+  it('treats an emptied day as a plan, not an answer', () => {
+    const out = normalizeChatResponse(
+      { action: 'plan', message: 'Cleared day 3.', days: [{ day: 3, placeIndexes: [] }] },
+      10,
+      5,
+      [{ day: 3, placeNames: ['Somewhere'] }],
+      [{ name: 'Somewhere', category: 'park' }],
+    )
+    expect(out?.action).toBe('plan')
+    expect(out?.days).toEqual([{ day: 3, placeIndexes: [] }])
+  })
+
+  it('instructs the model that clearing is a plan action', () => {
+    const prompt = buildChatPrompt({ message: 'clear day 5', days: 5, candidates: [{ name: 'A', category: 'park' }] })
+    expect(prompt).toContain('CLEARING OR EMPTYING a day')
+    expect(prompt).toContain('empty placeIndexes array')
+  })
+})

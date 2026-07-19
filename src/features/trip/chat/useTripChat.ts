@@ -106,10 +106,16 @@ export function useTripChat(
       setIsThinking(true)
 
       try {
-        const candidatePlaces = [...places]
-          .sort((a, b) => (b.rating ?? -Infinity) - (a.rating ?? -Infinity))
-          .slice(0, MAX_CANDIDATES)
-        const candidates = candidatePlaces.map((p) => ({ name: p.name, category: p.category, rating: p.rating, lat: p.lat, lng: p.lng }))
+        // ONE array drives both the request and the index mapping below —
+        // if these ever diverge, the model's indices point at the wrong places.
+        const candidatePlaces = buildChatCandidates(places, currentItinerary)
+        const candidates = candidatePlaces.map((p) => ({
+          name: p.name,
+          category: p.category,
+          rating: p.rating,
+          lat: p.lat,
+          lng: p.lng,
+        }))
         const currentPlan = summarizeItinerary(currentItinerary)
         // An explicit "make it N days" in the message changes the trip length —
         // otherwise the model is told the current count and can never expand it
@@ -226,4 +232,63 @@ export function useTripChat(
   }, [locationName])
 
   return { messages, isThinking, error, send, pendingRelocate, confirmRelocate, cancelRelocate }
+}
+
+/**
+ * Builds the place list the chat model chooses from.
+ *
+ * The traveler's CURRENT stops go first, unconditionally. This is not a
+ * preference — it is what makes editing possible at all. The model answers with
+ * indices into this list, so a stop that isn't in it has no index, cannot be
+ * kept, and silently disappears the moment the model rewrites that day.
+ *
+ * That is exactly what was happening. The list was the top 40 places by rating,
+ * and an unrated place sorts to the bottom: measured on Barcelona, 15 of 50
+ * places carry no rating, including the Sagrada Familia, Barceloneta Beach and
+ * Ciutadella Park. Asking to "add a food stop on day 2" deleted stops the model
+ * had no way to preserve, and no server-side guard could restore them either,
+ * because they had no index to restore.
+ *
+ * A current stop that is no longer in the nearby pool is reconstructed from the
+ * itinerary item itself, so it still gets an index.
+ *
+ * @param places - The nearby pool
+ * @param itinerary - The trip's current stops, which must all survive
+ */
+export function buildChatCandidates(places: ThingToDo[], itinerary: ItineraryItem[]): ThingToDo[] {
+  const byName = new Map(places.map((p) => [p.name.trim().toLowerCase(), p]))
+  const out: ThingToDo[] = []
+  const seen = new Set<string>()
+
+  const take = (c: ThingToDo): void => {
+    const key = c.name.trim().toLowerCase()
+    if (key === '' || seen.has(key)) return
+    seen.add(key)
+    out.push(c)
+  }
+
+  for (const item of itinerary) {
+    const match = byName.get(item.text.trim().toLowerCase())
+    take(
+      match ?? {
+        // No longer in the nearby pool: rebuild it from the itinerary item so
+        // it still gets an index the model can keep.
+        name: item.text,
+        category: item.category ?? 'point_of_interest',
+        source: 'places' as const,
+        lat: item.lat,
+        lng: item.lng,
+      },
+    )
+  }
+
+  // Then the best of the rest, so the model still has new places to offer.
+  for (const p of [...places].sort((a, b) => (b.rating ?? -Infinity) - (a.rating ?? -Infinity))) {
+    if (out.length >= MAX_CANDIDATES) break
+    take(p)
+  }
+
+  // The endpoint caps the list; current stops are first, so a very long trip
+  // keeps its own places rather than losing them to higher-rated strangers.
+  return out.slice(0, MAX_CANDIDATES)
 }

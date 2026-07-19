@@ -366,7 +366,12 @@ export function balanceDayFood(plan: PlanDay[], candidates: PlanCandidate[], min
  * @param placeCount - Number of real candidates (valid indices are 0..placeCount-1)
  * @param maxDays - Requested trip length
  */
-export function normalizePlan(raw: unknown, placeCount: number, maxDays: number): PlanDay[] | null {
+export function normalizePlan(
+  raw: unknown,
+  placeCount: number,
+  maxDays: number,
+  opts: { keepEmptyDays?: boolean } = {},
+): PlanDay[] | null {
   if (typeof raw !== 'object' || raw === null) return null
   const daysRaw = (raw as { days?: unknown }).days
   if (!Array.isArray(daysRaw)) return null
@@ -389,7 +394,14 @@ export function normalizePlan(raw: unknown, placeCount: number, maxDays: number)
       used.add(idx)
       placeIndexes.push(idx)
     }
-    if (placeIndexes.length > 0) result.push({ day: Math.floor(dayNum), placeIndexes })
+    // A day with no indices is dropped for a FRESH plan, where it is just a
+    // useless entry. For a chat EDIT it is meaningful: an emptied day is how
+    // "clear day 5" is expressed, and discarding it made clearing impossible —
+    // the whole plan collapsed to nothing and was downgraded to a chat reply
+    // that claimed the day was cleared while leaving it untouched.
+    if (placeIndexes.length > 0 || opts.keepEmptyDays) {
+      result.push({ day: Math.floor(dayNum), placeIndexes })
+    }
   }
 
   if (result.length === 0) return null

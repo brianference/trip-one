@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
-import { useTripChat } from './useTripChat'
+import { useTripChat, buildChatCandidates } from './useTripChat'
 import { stashOpeningChat } from './chatHandoff'
 import { CHAT_GREETING } from './chatTypes'
 import * as client from '../../../lib/api/client'
@@ -210,5 +210,51 @@ describe('useTripChat', () => {
     })
     expect(chatSpy).not.toHaveBeenCalled()
     expect(result.current.error).toMatch(/nothing to plan from/i)
+  })
+})
+
+// The real cause of the chat deleting stops: the candidate list was the top 40
+// places BY RATING, and an unrated place sorts last. Measured on Barcelona, 15
+// of 50 places carry no rating — including the Sagrada Familia. The model
+// answers with indices into this list, so a stop that isn't in it has no index,
+// cannot be kept, and vanishes the moment the model rewrites that day.
+describe('buildChatCandidates', () => {
+  const place = (name: string, rating?: number) => ({
+    name,
+    category: 'tourist_attraction',
+    source: 'places' as const,
+    rating,
+  })
+  const stop = (text: string) => ({ time: '', text, type: 'fixed' as const, day: 1 })
+
+  it('includes every current stop, even unrated ones that would sort last', () => {
+    const places = [place('Highly Rated Cafe', 4.9), place('Sagrada Familia'), place('Barceloneta Beach')]
+    const out = buildChatCandidates(places, [stop('Sagrada Familia'), stop('Barceloneta Beach')])
+    const names = out.map((p) => p.name)
+    expect(names).toContain('Sagrada Familia')
+    expect(names).toContain('Barceloneta Beach')
+  })
+
+  it('puts current stops first so a long trip never loses them to the cap', () => {
+    const many = Array.from({ length: 60 }, (_, i) => place(`Rated ${i}`, 5 - i * 0.01))
+    const out = buildChatCandidates([...many, place('My Unrated Stop')], [stop('My Unrated Stop')])
+    expect(out[0].name).toBe('My Unrated Stop')
+  })
+
+  it('reconstructs a stop that is no longer in the nearby pool', () => {
+    const out = buildChatCandidates([place('Something Else', 4.5)], [
+      { time: '', text: 'A Vanished Place', type: 'fixed', day: 1, lat: 1, lng: 2, category: 'museum' },
+    ])
+    expect(out[0]).toMatchObject({ name: 'A Vanished Place', category: 'museum', lat: 1, lng: 2 })
+  })
+
+  it('still offers new places after the current stops', () => {
+    const out = buildChatCandidates([place('New Option', 4.8), place('Current', 3)], [stop('Current')])
+    expect(out.map((p) => p.name)).toEqual(['Current', 'New Option'])
+  })
+
+  it('does not duplicate a stop that is also in the pool', () => {
+    const out = buildChatCandidates([place('Current', 3)], [stop('Current')])
+    expect(out).toHaveLength(1)
   })
 })
