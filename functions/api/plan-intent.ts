@@ -4,6 +4,7 @@ import { countRecentRequests, insertRequestLog } from '../lib/db'
 import { isUnderRateLimit, hashIp } from '../../src/lib/rateLimit'
 import { openAiResponseSchema } from '../lib/openAi'
 import { buildIntentPrompt, extractedIntentSchema } from '../lib/aiIntent'
+import { describeInterests } from '../lib/aiDiscover'
 import { logger } from '../../src/lib/logger'
 
 const RATE_LIMIT_PER_HOUR = 200
@@ -73,15 +74,30 @@ export async function onRequestPost({ env, request }: { env: PlanEnv; request: R
     const extracted = extractedIntentSchema.safeParse(raw)
     if (!extracted.success) return json({ error: 'AI planner unavailable, try again' }, 502)
 
+    // The model returns "" (not null) when a request names a destination and a
+    // party but no activities — "12 days in Dublin for a father and son, the
+    // son is turning 21". `??` doesn't catch that, so an empty intent reached
+    // every downstream endpoint, all of which reject it, and the user was left
+    // on the home page with "invalid request". Synthesize one from what the
+    // request DID say instead.
+    const audience = extracted.data.audience ?? 'general'
+    const party = extracted.data.party ?? ''
+    const occasion = extracted.data.occasion ?? null
+    const statedInterests = (extracted.data.interests ?? '').trim()
+    const interests =
+      statedInterests !== ''
+        ? statedInterests
+        : describeInterests({ party, occasion: occasion ?? undefined, audience, interests: '', foodFocused: false })
+
     return json(
       {
         destination: extracted.data.destination ?? null,
         days: extracted.data.days ?? null,
-        interests: extracted.data.interests ?? parsed.data.text,
-        party: extracted.data.party ?? '',
-        occasion: extracted.data.occasion ?? null,
+        interests,
+        party,
+        occasion,
         season: extracted.data.season ?? null,
-        audience: extracted.data.audience ?? 'general',
+        audience,
         foodFocused: extracted.data.foodFocused ?? false,
       },
       200,

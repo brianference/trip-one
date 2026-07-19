@@ -3,6 +3,23 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v11.0.1 — Fix trips that name no activities
+
+### Fixed
+- **Requests that name a destination and a party but no activities failed
+  outright.** "12 day trip to Dublin for a father and son, the son is turning
+  21" made `/api/plan-intent` return an empty interests string, which
+  `/api/plan`, `/api/interest-places` and `/api/discover-venues` all rejected
+  with a 400. The user got "invalid request" and was left on the home page with
+  no trip, while an orphaned trip row stayed behind in the database. Intent is
+  now synthesized from the occasion, party and audience when a request names no
+  activities, and all three endpoints accept an empty intent rather than
+  failing the trip. Shipped in v11.0.0 and found in browser QA immediately
+  after; fixed the same day.
+- Raised the Testing Library async timeout so CI stops flaking on slow runners,
+  and unstubbed globals between tests so a leaked `fetch` stub can't make a
+  failure depend on file order.
+
 ## v11.0.0 — Trips that match the trip you asked for
 
 The planner used to arrange whatever Google returned near a coordinate. A
@@ -81,7 +98,7 @@ and OpenAI secrets set on the Pages project.
   so repeat trips pay nothing.
 - New `simulations/` harness (`npm run sim`) with tuned and held-out scenarios
   for measuring plan quality. Not part of CI, since it calls paid APIs.
-- 540 automated tests; typecheck, tests and build gate every push.
+- 543 automated tests; typecheck, tests and build gate every push.
 
 ## v10.0.0 — Mobile-first, end to end
 

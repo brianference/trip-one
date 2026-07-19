@@ -20,7 +20,10 @@ const DEFAULT_MODEL = 'gpt-4o-mini'
 type PlanEnv = Env & { OPENAI_API_KEY?: string; AI_MODEL?: string }
 
 const planRequestSchema = z.object({
-  intent: z.string().trim().min(1).max(500),
+  // May be empty. A request can name a destination and a party but no
+  // activities; rejecting that stranded the user with "invalid request".
+  // An empty intent plans the destination's best-known highlights.
+  intent: z.string().trim().max(500).optional().default(''),
   days: z.number().int().min(1).max(14),
   places: z
     .array(
@@ -95,7 +98,7 @@ export async function onRequestPost({ env, request }: { env: PlanEnv; request: R
     await insertRequestLog(env, ipHash, 'plan')
 
     const prompt = buildPlanPrompt({
-      intent,
+      intent: intent.trim() === '' ? 'the destination’s best-known highlights' : intent,
       days,
       candidates: places,
       profile: { party, occasion, season, audience },

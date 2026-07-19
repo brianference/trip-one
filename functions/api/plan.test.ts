@@ -110,3 +110,38 @@ describe('POST /api/plan', () => {
     expect(res.status).toBe(500)
   })
 })
+
+// A request can name a destination and a party but no activities ("12 days in
+// Dublin for a father and son, the son is turning 21"). That reached /api/plan
+// as an empty intent, which used to 400 and strand the user on the home page
+// with "invalid request" and no trip.
+describe('POST /api/plan with no stated interests', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  it('plans a trip instead of rejecting an empty intent', async () => {
+    vi.stubGlobal('fetch', mockOpenAi(JSON.stringify({ days: [{ day: 1, placeIndexes: [0] }, { day: 2, placeIndexes: [1] }] })))
+    const res = await onRequestPost({ env: mkEnv(), request: req({ ...validBody, intent: '' }) } as never)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.days).toHaveLength(2)
+  })
+
+  it('plans a trip when intent is omitted entirely', async () => {
+    vi.stubGlobal('fetch', mockOpenAi(JSON.stringify({ days: [{ day: 1, placeIndexes: [0] }, { day: 2, placeIndexes: [1] }] })))
+    const { intent: _intent, ...noIntent } = validBody
+    const res = await onRequestPost({ env: mkEnv(), request: req(noIntent) } as never)
+    expect(res.status).toBe(200)
+  })
+
+  it('asks the model for the destination highlights rather than an empty brief', async () => {
+    const spy = mockOpenAi(JSON.stringify({ days: [{ day: 1, placeIndexes: [0] }, { day: 2, placeIndexes: [1] }] }))
+    vi.stubGlobal('fetch', spy)
+    await onRequestPost({ env: mkEnv(), request: req({ ...validBody, intent: '' }) } as never)
+    const [, init] = spy.mock.calls[0] as unknown as [string, { body: string }]
+    const sent = JSON.parse(init.body)
+    expect(sent.messages[0].content).toContain('best-known highlights')
+  })
+})

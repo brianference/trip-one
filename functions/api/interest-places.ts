@@ -31,7 +31,10 @@ const RESULTS_PER_QUERY = 6
 const GOOGLE_ENOUGH = 3
 
 const requestSchema = z.object({
-  interests: z.string().trim().min(1).max(300),
+  // May be empty: a request can name a party and an occasion but no
+  // activities. There is simply nothing to expand into searches then, so
+  // return an empty list rather than failing the whole trip with a 400.
+  interests: z.string().trim().max(300).optional().default(''),
   destination: z.string().trim().min(1).max(200),
   lat: z.number().gte(-90).lte(90),
   lng: z.number().gte(-180).lte(180),
@@ -74,6 +77,10 @@ export async function onRequestPost({ env, request }: { env: InterestEnv; reques
   if (!parsed.success) return json({ error: 'invalid request' }, 400)
 
   const { interests, destination, lat, lng } = parsed.data
+
+  // Nothing to search for. The trip still works: it falls back to the nearby
+  // pool and to web-grounded discovery, both of which handle an empty intent.
+  if (interests === '') return json({ places: [], queries: [] }, 200)
 
   // Cache lookup comes BEFORE the rate-limit gate: a hit costs nothing to
   // serve (a single D1 read, no AI or Places calls), so it shouldn't spend a
