@@ -21,9 +21,14 @@ import { z } from 'zod'
 export const extractedIntentSchema = z.object({
   destination: z.string().nullable().optional(),
   days: z.number().int().min(1).max(30).nullable().optional(),
-  interests: z.string().optional(),
+  // Nullable, not merely optional. The model emits an explicit `null` for a
+  // field the request doesn't mention -- "5 day hiking trip in Ouray Colorado"
+  // states no party, so it returns `"party": null`. A non-nullable schema
+  // rejected that, the endpoint answered 502, and the whole trip failed. It
+  // was intermittent only because the model sometimes chose "general" instead.
+  interests: z.string().nullable().optional(),
   /** Who is travelling, e.g. "family with two young kids", "group of friends". */
-  party: z.string().optional(),
+  party: z.string().nullable().optional(),
   /** The reason for the trip, e.g. "21st birthday", "spring break". */
   occasion: z.string().nullable().optional(),
   /** Season the trip happens in, inferred from the activity or stated dates. */
@@ -33,7 +38,7 @@ export const extractedIntentSchema = z.object({
    * favours family activities; `adults` favours nightlife and drops
    * kid-focused attractions; `general` applies no audience filter.
    */
-  audience: z.enum(['kids', 'adults', 'general']).optional(),
+  audience: z.enum(['kids', 'adults', 'general']).nullable().optional(),
   /**
    * True when eating and drinking are a main POINT of the trip, rather than
    * something that happens between the real stops. It decides whether
@@ -41,7 +46,7 @@ export const extractedIntentSchema = z.object({
    * ordinary trip from turning into a restaurant tour don't gut a trip whose
    * entire purpose is eating.
    */
-  foodFocused: z.boolean().optional(),
+  foodFocused: z.boolean().nullable().optional(),
 })
 
 /**
