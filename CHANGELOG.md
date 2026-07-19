@@ -3,6 +3,61 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v12.2.0 — The chat stops deleting your trip
+
+### Fixed — data loss in the itinerary chat
+Asking the chat to change one day was silently deleting stops from a saved
+trip. Measured before the fix: five scoped requests took a 20-stop Barcelona
+trip down to 13, destroying the Sagrada Familia, Barceloneta Beach and eleven
+other places nobody asked to remove. After: six requests, no losses, every
+originally-planned stop preserved unless the traveler asked for it to go.
+
+It took four attempts, and the first three each fixed a real but different
+defect:
+
+1. **Days the model omitted were wiped.** A scoped edit answers about the day
+   it was asked about; applying that wholesale replaced the whole itinerary.
+   Chat edits now merge, keeping days the reply doesn't mention while still
+   honouring a day that comes back deliberately empty.
+2. **Days the model DID return lost their stops.** It was shown the current
+   itinerary as place NAMES but had to answer in INDICES, so keeping a stop
+   meant reverse-engineering its index — it re-picked each day from scratch
+   instead. The itinerary is now shown in the same index space the reply uses,
+   and a server-side guard restores anything dropped.
+3. **The real cause: the stops had no index at all.** The candidate list was
+   the top 40 places BY RATING, and an unrated place sorts last — 15 of
+   Barcelona's 50 places carry no rating, including the Sagrada Familia. A stop
+   missing from that list cannot be referenced, so the model could not keep it
+   and the guard could not restore it. The traveler's current stops now lead
+   the list unconditionally, and a stop no longer in the nearby pool is rebuilt
+   from the itinerary itself.
+
+With those in place the additive requests came good on their own — the model
+now echoes the indices it is keeping. Two destructive commands still misfired,
+so they no longer go through the model at all:
+
+- **"clear day 5" now clears day 5.** It previously returned one stop instead
+  of none (deleting four), or answered conversationally that the day was
+  cleared while leaving it untouched.
+- **"remove the last stop on day 4" no longer adds one.** A response that comes
+  back the same length or longer removed nothing, so the day is left exactly as
+  it was and the reply says the stop couldn't be identified — rather than
+  claiming a removal that never happened.
+
+### Fixed — other
+- Clearing a day was impossible even when the model got it right: empty days
+  were discarded before they reached the client, and the food balancer would
+  have refilled a cleared day with three restaurants.
+- The place detail sheet's "Add to trip" and "Get Directions" were unreachable
+  on trip pages — the sheet sat below the trip's own navigation. There is now a
+  documented z-index scale, and the confirmation dialog had the same latent bug.
+- An empty reply from the model rendered as a blank assistant bubble.
+- Nine controls below the 44px touch target were raised.
+
+### Changed
+- The AI planner form and trip plan page are on Tailwind. Print layout classes
+  are deliberately left alone; the print stylesheet targets them.
+
 ## v12.1.0 — Accessible colour, and more of the app on Tailwind
 
 ### Fixed — colour contrast
