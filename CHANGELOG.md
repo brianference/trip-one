@@ -3,6 +3,31 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v15.0.0 — A footer that carries its weight
+
+### Changed — the site footer
+Rebuilt against a reference the user pointed at, whose structure was read from
+its shipped bundle and stylesheet rather than reproduced from memory. What
+separates a premium footer from a link dump, and what was adopted:
+
+- **An asymmetric grid** (`1.55fr` brand against three `0.85fr` link columns),
+  so the footer has a clear starting point instead of four equal blocks.
+- **A gradient into the footer** with a soft upward shadow, so it arrives as a
+  surface rather than a hard rule drawn across the page.
+- **Capability badges** — day-by-day plans, live weather, printable itinerary —
+  which say what the product does without another paragraph.
+- **One forward action**, with an arrow that moves on hover. It is auth-aware:
+  "Plan a trip" signed out, "Go to my trips" signed in.
+- **A separate, tinted base bar** for copyright, service status and data
+  attribution, so the legal line stops competing with navigation.
+
+Everything is expressed in the app's own tokens rather than the reference's
+colours, so it stays part of this product.
+
+Accessibility is unchanged in structure: one `<footer>`, three `<nav>`
+landmarks with accessible names, and the badge list labelled. Verified on the
+live site with no horizontal overflow, and the base bar stacks on mobile.
+
 ## v14.0.0 — Longer trips, and errors that say something
 
 ### Fixed — trips longer than 14 days failed silently
