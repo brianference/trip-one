@@ -7,13 +7,13 @@ export function AboutPage() {
     <>
       <Seo
         title="About us"
-        description="Why Trip One exists: itineraries built from real, verified places instead of invented ones, matched to who is actually travelling."
+        description="Why Trip One exists: itineraries built from checked place data and matched to who is actually travelling."
         path="/about"
         jsonLd={{
           '@context': 'https://schema.org',
           '@type': 'AboutPage',
           name: 'About Trip One',
-          description: 'Trip One plans day-by-day itineraries from real, verified places.',
+          description: 'Trip One plans day-by-day itineraries matched to who is travelling.',
         }}
       />
       <PageShell
@@ -29,14 +29,14 @@ export function AboutPage() {
             rating, which is how a fishing trip in northern Minnesota comes back as a tour of cafés.
           </p>
           <p>
-            Both failures have the same root: the tool doesn't know what a real place is, or who is asking.
+            Both failures have the same root: the tool doesn't check whether a place exists, or ask who wants to go.
           </p>
 
           <h2>How Trip One works</h2>
           <p>
             We search real travel guides for your specific trip, pull out the places those guides actually name, and
-            then verify every one against a real place database. Anything that fails to verify is dropped before it ever
-            reaches your itinerary.
+            then check each one against Google Places before it goes anywhere near your itinerary. Anything that
+            doesn't check out is dropped.
           </p>
           <p>
             The planner can only choose from that verified list. It cannot invent a place, because it never gets to

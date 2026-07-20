@@ -24,7 +24,7 @@ function json(body: unknown, status: number, headers: Record<string, string> = {
 export async function onRequestPost({ env, request }: { env: AuthEnv; request: Request }): Promise<Response> {
   if (!env.JWT_SECRET) {
     logger.error('login called with no JWT_SECRET configured')
-    return json({ error: 'Accounts are not available right now' }, 500)
+    return json({ error: 'Accounts are temporarily unavailable. Please try again later.' }, 500)
   }
 
   const raw = (await request.json().catch(() => ({}))) as Record<string, unknown>

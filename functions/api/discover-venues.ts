@@ -69,11 +69,11 @@ function guideQuery(destination: string, profile: TravelerProfile): string {
  */
 export async function onRequestPost({ env, request }: { env: DiscoverEnv; request: Request }): Promise<Response> {
   if (!env.OPENAI_API_KEY || !env.GOOGLE_PLACES_API_KEY) {
-    return json({ error: 'discovery is not configured' }, 500)
+    return json({ error: 'Place discovery is temporarily unavailable. Please try again later.' }, 500)
   }
 
   const parsed = requestSchema.safeParse(await request.json().catch(() => ({})))
-  if (!parsed.success) return json({ error: 'invalid request' }, 400)
+  if (!parsed.success) return json({ error: 'Something in that request didn’t look right. Please try again.' }, 400)
 
   const { destination, interests, days, party, occasion, season, audience, foodFocused, lat, lng } = parsed.data
   const maxVenues = discoveredVenuesForDays(days ?? 4)
@@ -102,7 +102,7 @@ export async function onRequestPost({ env, request }: { env: DiscoverEnv; reques
   }
 
   if (await isRateLimited(env, request, 'discover-venues', RATE_LIMIT_PER_HOUR)) {
-    return json({ error: 'rate limit exceeded, try again later' }, 429)
+    return json({ error: 'You’ve made a lot of requests in a short time. Please wait a few minutes and try again.' }, 429)
   }
 
   const respond = async (places: ThingToDo[], venues: string[]): Promise<Response> => {

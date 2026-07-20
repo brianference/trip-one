@@ -18,7 +18,7 @@ export function TripBuildingOverlay({ status }: { status?: string }) {
         </div>
         <Logo size={26} />
         <p className="chronicle-building-status">{status || 'Building your trip…'}</p>
-        <p className="chronicle-building-sub">Finding real places, then planning your days.</p>
+        <p className="chronicle-building-sub">Planning your trip, day by day.</p>
       </div>
     </div>
   )

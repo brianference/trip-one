@@ -43,7 +43,7 @@ export async function onRequestGet({
 }): Promise<Response> {
   const q = new URL(request.url).searchParams.get('q') ?? ''
   const parsed = locationQuerySchema.safeParse(q)
-  if (!parsed.success) return json({ error: 'invalid query' }, 400)
+  if (!parsed.success) return json({ error: 'That search didn’t look right. Try a different wording.' }, 400)
 
   try {
     const slug = normalizeLocationSlug(parsed.data)
@@ -98,12 +98,12 @@ export async function onRequestGet({
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
     const recentCount = await countRecentRequests(env, ipHash, oneHourAgo, 'location')
     if (!isUnderRateLimit(recentCount, RATE_LIMIT_PER_HOUR)) {
-      return json({ error: 'rate limit exceeded, try again later' }, 429)
+      return json({ error: 'You’ve made a lot of requests in a short time. Please wait a few minutes and try again.' }, 429)
     }
     await insertRequestLog(env, ipHash, 'location')
 
     const geo = await geocode(parsed.data)
-    if (!geo) return json({ error: 'location not found' }, 404)
+    if (!geo) return json({ error: 'We couldn’t find that place. Try a nearby city or check the spelling.' }, 404)
 
     const [tripadvisorResults, placesResults] = await Promise.all([
       searchThingsToDo(slug, geo.lat, geo.lng, env.TRIPADVISOR_API_KEY),
@@ -130,6 +130,6 @@ export async function onRequestGet({
     )
   } catch (err) {
     logger.error('location lookup failed', err)
-    return json({ error: 'internal error' }, 500)
+    return json({ error: 'Something went wrong on our end. Please try again in a moment.' }, 500)
   }
 }

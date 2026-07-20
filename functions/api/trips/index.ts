@@ -24,12 +24,12 @@ function json(body: unknown, status: number) {
  */
 export async function onRequestPost({ env, request }: { env: AuthEnv; request: Request }): Promise<Response> {
   const parsed = createTripSchema.safeParse(await request.json().catch(() => ({})))
-  if (!parsed.success) return json({ error: 'location_slug is required' }, 400)
+  if (!parsed.success) return json({ error: 'We need a destination to create a trip.' }, 400)
 
   // Unauthenticated write — cap trip creation per IP so it can't be scripted
   // into unbounded DB rows.
   if (await isRateLimited(env, request, 'trips', CREATE_TRIPS_PER_HOUR)) {
-    return json({ error: 'rate limit exceeded, try again later' }, 429)
+    return json({ error: 'You’ve made a lot of requests in a short time. Please wait a few minutes and try again.' }, 429)
   }
 
   try {
@@ -47,6 +47,6 @@ export async function onRequestPost({ env, request }: { env: AuthEnv; request: R
     return json(trip, 201)
   } catch (err) {
     logger.error('trip creation failed', err)
-    return json({ error: 'internal error' }, 500)
+    return json({ error: 'Something went wrong on our end. Please try again in a moment.' }, 500)
   }
 }

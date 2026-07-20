@@ -145,3 +145,31 @@ describe('POST /api/plan with no stated interests', () => {
     expect(sent.messages[0].content).toContain('best-known highlights')
   })
 })
+
+// A "15 day scuba diving trip in Thailand" parsed fine, discovered its venues,
+// then died here with a bare 400 because this endpoint capped days at 14 while
+// intent extraction and discovery allowed 30. The homepage sat on its planning
+// spinner with nothing to show.
+describe('POST /api/plan trip length', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  it('accepts a trip longer than 14 days', async () => {
+    vi.stubGlobal('fetch', mockOpenAi(JSON.stringify({ days: [{ day: 1, placeIndexes: [0] }, { day: 15, placeIndexes: [1] }] })))
+    const res = await onRequestPost({ env: mkEnv(), request: req({ ...validBody, days: 15 }) } as never)
+    expect(res.status).toBe(200)
+  })
+
+  it('accepts the documented maximum', async () => {
+    vi.stubGlobal('fetch', mockOpenAi(JSON.stringify({ days: [{ day: 1, placeIndexes: [0] }] })))
+    const res = await onRequestPost({ env: mkEnv(), request: req({ ...validBody, days: 30 }) } as never)
+    expect(res.status).toBe(200)
+  })
+
+  it('still rejects a length beyond the maximum', async () => {
+    const res = await onRequestPost({ env: mkEnv(), request: req({ ...validBody, days: 31 }) } as never)
+    expect(res.status).toBe(400)
+  })
+})

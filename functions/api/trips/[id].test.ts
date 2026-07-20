@@ -31,7 +31,7 @@ describe('GET /api/trips/:id', () => {
     const { env } = fakeD1({ fail: true })
     const res = await onRequestGet({ env, params: { id: 'abc-123' } } as never)
     expect(res.status).toBe(500)
-    expect((await res.json()).error).toBe('internal error')
+    expect((await res.json()).error).toBe('Something went wrong on our end. Please try again in a moment.')
   })
 })
 
@@ -67,6 +67,6 @@ describe('PATCH /api/trips/:id', () => {
     })
     const res = await onRequestPatch({ env, request, params: { id: 'abc-123' } } as never)
     expect(res.status).toBe(500)
-    expect((await res.json()).error).toBe('internal error')
+    expect((await res.json()).error).toBe('Something went wrong on our end. Please try again in a moment.')
   })
 })

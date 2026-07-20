@@ -92,6 +92,19 @@
   --color-primary: var(--color-pine-600);
   --color-primary-hover: var(--color-pine-500);
   --color-on-primary: #ffffff;
+
+  /**
+   * SELECTED-STATE GREEN — light, not the solid primary.
+   *
+   * The solid pine is right for a button you press, but wrong for the chrome
+   * that merely marks "this one is selected": the active nav item, the active
+   * day tab, the active filter, your own chat bubble. Painting those in solid
+   * dark green made the app look heavy and army-ish, and it is a lot of green
+   * for something that is only indicating state.
+   *
+   * These are set per theme below because, unlike the button, they sit ON the
+   * page and have to work with it.
+   */
 }
 
 /**
@@ -142,6 +155,8 @@
     --accent-secondary: var(--color-pine-600);
     /* Was dusk-700. Orange is no longer used for body-level emphasis. */
     --accent-text: var(--color-pine-600);
+    --color-primary-soft: #dbeae2;
+    --color-on-primary-soft: var(--color-ink-800);
   }
 
   /* Dark applies ONLY when the visitor asks for it via the toggle
@@ -157,6 +172,8 @@
       --hairline: var(--color-ink-600);
       --accent-secondary: var(--color-pine-300);
       --accent-text: var(--color-pine-300);
+      --color-primary-soft: #24382f;
+      --color-on-primary-soft: var(--color-sand-100);
     }
   }
 
@@ -169,6 +186,8 @@
     --hairline: var(--color-ink-600);
     --accent-secondary: var(--color-pine-300);
     --accent-text: var(--color-pine-300);
+    --color-primary-soft: #24382f;
+    --color-on-primary-soft: var(--color-sand-100);
   }
 
   html {

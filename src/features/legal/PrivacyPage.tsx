@@ -102,7 +102,7 @@ export function PrivacyPage() {
               don't type personal or sensitive information into it.
             </li>
             <li>
-              <strong>Google Places</strong> and <strong>Tripadvisor</strong> — the destination, to find real places,
+              <strong>Google Places</strong> and <strong>Tripadvisor</strong> — the destination, to look up places,
               details, and photos.
             </li>
             <li>

@@ -15,7 +15,7 @@ const FEATURES = [
   {
     title: 'Grounded AI',
     description:
-      'Describe your trip in a sentence and get a real day-by-day plan — every stop a real place, never invented.',
+      'Describe your trip in a sentence and get a day-by-day plan you can actually follow.',
   },
   {
     title: 'Day plan + map',
@@ -29,7 +29,7 @@ const FEATURES = [
   {
     title: 'Refine by chat',
     description:
-      'Ask the assistant to add food, relax a day, or change destination — it re-plans from real places.',
+      'Ask the assistant to add food, relax a day, or change destination — it reshapes the plan around you.',
   },
 ]
 
@@ -65,7 +65,7 @@ export function SearchScreen() {
       setBusy(true)
       setError(null)
       try {
-        setBuildStatus(`Finding real places in ${locationQuery.trim()}…`)
+        setBuildStatus(`Planning your trip to ${locationQuery.trim()}…`)
         const location = await fetchLocation(locationQuery)
         const trip = await createTrip(location.slug, 'chronicle')
         setBuildStatus('Planning your first days…')
@@ -105,7 +105,7 @@ export function SearchScreen() {
     <main id="main">
       <Seo
         title="Trip One"
-        description="Describe a trip in one sentence and Trip One builds a real, day-by-day itinerary from verified places — then refine it by chatting."
+        description="Describe a trip in one sentence and Trip One builds a day-by-day itinerary you can follow — then refine it by chatting."
         path="/"
         jsonLd={{
           '@context': 'https://schema.org',
@@ -129,7 +129,7 @@ export function SearchScreen() {
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-lg leading-relaxed opacity-80">
             Tell us where you want to go and what you’re after — we turn one sentence into a real day-by-day itinerary
-            made from actual places there.
+            you can actually follow.
           </p>
         </div>
 
@@ -211,7 +211,7 @@ export function SearchScreen() {
           Four things, done well.
         </h2>
         <p className="mt-2 max-w-2xl opacity-75">
-          Every stop is a real place from Google and Tripadvisor — never invented. You can plan a full trip without an
+          Place details come from Google and Tripadvisor. You can plan a full trip without an
           account.
         </p>
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

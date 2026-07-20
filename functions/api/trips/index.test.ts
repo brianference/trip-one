@@ -57,6 +57,6 @@ describe('POST /api/trips', () => {
     })
     const res = await onRequestPost({ env, request } as never)
     expect(res.status).toBe(500)
-    expect((await res.json()).error).toBe('internal error')
+    expect((await res.json()).error).toBe('Something went wrong on our end. Please try again in a moment.')
   })
 })

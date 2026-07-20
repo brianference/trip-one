@@ -37,4 +37,4 @@ export function chatStartersFor(place?: string): string[] {
 
 /** How the assistant opens the conversation on a fresh trip. */
 export const CHAT_GREETING =
-  'Hi! Tell me what you’re after — pace, who’s coming, what you love — and I’ll shape your itinerary from real places here. You can keep refining as we go.'
+  'Hi! Tell me what you’re after — pace, who’s coming, what you love — and I’ll shape your itinerary around it. You can keep refining as we go.'

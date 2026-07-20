@@ -43,8 +43,8 @@ export function SiteFooter() {
           <div className="max-w-xs">
             <Logo size={24} />
             <p className="mt-3 text-sm leading-relaxed opacity-75">
-              Real places, real itineraries. Trip One plans day-by-day trips from verified places — never invented
-              ones.
+              Trip One turns one sentence into a day-by-day itinerary you can follow, then lets you reshape it by
+              chatting.
             </p>
           </div>
 

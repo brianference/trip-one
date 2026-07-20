@@ -26,11 +26,11 @@ function json(body: unknown, status: number) {
 export async function onRequestGet({ env, params }: { env: Env; params: { id: string } }): Promise<Response> {
   try {
     const trip = await getTrip(env, params.id)
-    if (!trip) return json({ error: 'not found' }, 404)
+    if (!trip) return json({ error: 'We couldn’t find that.' }, 404)
     return json(trip, 200)
   } catch (err) {
     logger.error('trip lookup failed', err)
-    return json({ error: 'internal error' }, 500)
+    return json({ error: 'Something went wrong on our end. Please try again in a moment.' }, 500)
   }
 }
 
@@ -51,14 +51,14 @@ export async function onRequestPatch({
   params: { id: string }
 }): Promise<Response> {
   const parsed = patchSchema.safeParse(await request.json().catch(() => ({})))
-  if (!parsed.success) return json({ error: 'invalid patch body' }, 400)
+  if (!parsed.success) return json({ error: 'We couldn’t save that change. Please try again.' }, 400)
 
   try {
     const updated = await updateTrip(env, params.id, parsed.data)
     return json(updated, 200)
   } catch (err) {
     logger.error('trip update failed', err)
-    return json({ error: 'internal error' }, 500)
+    return json({ error: 'Something went wrong on our end. Please try again in a moment.' }, 500)
   }
 }
 
@@ -88,11 +88,11 @@ export async function onRequestDelete({
   if (!user) return json({ error: 'Please sign in to delete a trip' }, 401)
 
   const id = typeof params.id === 'string' ? params.id.trim() : ''
-  if (id === '') return json({ error: 'invalid request' }, 400)
+  if (id === '') return json({ error: 'Something in that request didn’t look right. Please try again.' }, 400)
 
   try {
     const deleted = await deleteTripOwnedBy(env, id, user.id)
-    if (!deleted) return json({ error: 'Trip not found' }, 404)
+    if (!deleted) return json({ error: 'We couldn’t find that trip. It may have already been deleted.' }, 404)
     return json({ ok: true }, 200)
   } catch (err) {
     logger.error('delete trip failed', err)

@@ -91,7 +91,7 @@ export function TripChatPanel({
         )}
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent-text)]">✨ Your AI Trip</p>
         <h2 className="mt-1 font-[family-name:var(--font-display)] text-lg font-semibold">Plan by chat</h2>
-        <p className="mt-1 text-sm leading-relaxed opacity-75">Refine your trip in plain language — every stop stays a real place nearby.</p>
+        <p className="mt-1 text-sm leading-relaxed opacity-75">Refine your trip in plain language — add, remove or reshape any day.</p>
         {onNewTrip && (
           <button
             type="button"

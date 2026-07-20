@@ -69,9 +69,9 @@ export function TermsPage() {
           </p>
           <p>
             Trip One builds itineraries automatically, using AI and data from third parties such as Google Places and
-            Tripadvisor. Every place we suggest is checked against a real place database, but we cannot guarantee that
-            opening hours, prices, availability, accessibility, or safety information are accurate or current. Places
-            close. Details change. Automated systems make mistakes.
+            Tripadvisor. Every place we suggest is checked against that data, but we cannot guarantee that opening
+            hours, prices, availability, accessibility, or safety information are accurate or current. Places close.
+            Details change. Automated systems make mistakes.
           </p>
           <p>
             Always confirm the important things yourself before you travel — especially anything involving money,

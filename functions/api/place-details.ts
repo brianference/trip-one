@@ -49,7 +49,7 @@ async function resolvePlaceId(name: string, lat: number | undefined, lng: number
  * @returns `PlaceDetail` JSON, or `{ error }` with 400/404/429/500
  */
 export async function onRequestGet({ env, request }: { env: PlaceEnv; request: Request }): Promise<Response> {
-  if (!env.GOOGLE_PLACES_API_KEY) return json({ error: 'place details not configured' }, 500)
+  if (!env.GOOGLE_PLACES_API_KEY) return json({ error: 'Place details are temporarily unavailable. Please try again later.' }, 500)
 
   const url = new URL(request.url)
   const parsed = querySchema.safeParse({
@@ -59,7 +59,7 @@ export async function onRequestGet({ env, request }: { env: PlaceEnv; request: R
     lng: url.searchParams.get('lng') ?? undefined,
   })
   if (!parsed.success || (!parsed.data.placeId && !parsed.data.name)) {
-    return json({ error: 'placeId or name is required' }, 400)
+    return json({ error: 'We need a place to look up.' }, 400)
   }
 
   try {
@@ -67,7 +67,7 @@ export async function onRequestGet({ env, request }: { env: PlaceEnv; request: R
     const ipHash = await hashIp(ip, env.RATE_LIMIT_SALT)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
     if (!isUnderRateLimit(await countRecentRequests(env, ipHash, oneHourAgo, 'place-details'), RATE_LIMIT_PER_HOUR)) {
-      return json({ error: 'rate limit exceeded, try again later' }, 429)
+      return json({ error: 'You’ve made a lot of requests in a short time. Please wait a few minutes and try again.' }, 429)
     }
 
     const apiKey = env.GOOGLE_PLACES_API_KEY
@@ -75,7 +75,7 @@ export async function onRequestGet({ env, request }: { env: PlaceEnv; request: R
     if (!placeId && parsed.data.name) {
       placeId = await resolvePlaceId(parsed.data.name, parsed.data.lat, parsed.data.lng, apiKey)
     }
-    if (!placeId) return json({ error: 'place not found' }, 404)
+    if (!placeId) return json({ error: 'We couldn’t find details for that place.' }, 404)
 
     // Cache-first: serve a fresh cached row without touching Google.
     const cached = await getPlaceDetailCache(env, placeId)
@@ -91,20 +91,20 @@ export async function onRequestGet({ env, request }: { env: PlaceEnv; request: R
       logger.error('place details non-ok', { status: res.status })
       // Fall back to a stale cache entry rather than failing the panel.
       if (cached) return json(cached.detail, 200)
-      return json({ error: 'place details unavailable, try again' }, 502)
+      return json({ error: 'We couldn’t load details for that place. Please try again.' }, 502)
     }
 
     const body = (await res.json()) as { result?: unknown; status?: string }
     const detail: PlaceDetail | null = normalizePlaceDetail(body.result, placeId)
     if (!detail) {
       if (cached) return json(cached.detail, 200)
-      return json({ error: 'place not found' }, 404)
+      return json({ error: 'We couldn’t find details for that place.' }, 404)
     }
 
     await upsertPlaceDetailCache(env, { place_id: placeId, detail })
     return json(detail, 200)
   } catch (err) {
     logger.error('place-details failed', err)
-    return json({ error: 'internal error' }, 500)
+    return json({ error: 'Something went wrong on our end. Please try again in a moment.' }, 500)
   }
 }

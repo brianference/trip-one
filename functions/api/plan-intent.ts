@@ -29,17 +29,17 @@ function json(body: unknown, status: number) {
  * @returns `{ destination, days, interests, foodFocused }`, or `{ error }` with 400/429/500
  */
 export async function onRequestPost({ env, request }: { env: PlanEnv; request: Request }): Promise<Response> {
-  if (!env.OPENAI_API_KEY) return json({ error: 'AI planner is not configured' }, 500)
+  if (!env.OPENAI_API_KEY) return json({ error: 'The trip planner is temporarily unavailable. Please try again later.' }, 500)
 
   const parsed = intentRequestSchema.safeParse(await request.json().catch(() => ({})))
-  if (!parsed.success) return json({ error: 'invalid request' }, 400)
+  if (!parsed.success) return json({ error: 'Something in that request didn’t look right. Please try again.' }, 400)
 
   try {
     const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown'
     const ipHash = await hashIp(ip, env.RATE_LIMIT_SALT)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
     if (!isUnderRateLimit(await countRecentRequests(env, ipHash, oneHourAgo, 'plan-intent'), RATE_LIMIT_PER_HOUR)) {
-      return json({ error: 'rate limit exceeded, try again later' }, 429)
+      return json({ error: 'You’ve made a lot of requests in a short time. Please wait a few minutes and try again.' }, 429)
     }
     await insertRequestLog(env, ipHash, 'plan-intent')
 
@@ -58,21 +58,21 @@ export async function onRequestPost({ env, request }: { env: PlanEnv; request: R
     })
     if (!res.ok) {
       logger.error('plan-intent openai non-ok', { status: res.status })
-      return json({ error: 'AI planner unavailable, try again' }, 502)
+      return json({ error: 'The planner is busy right now. Please try again in a moment.' }, 502)
     }
 
     const bodyParsed = openAiResponseSchema.safeParse(await res.json())
-    if (!bodyParsed.success) return json({ error: 'AI planner unavailable, try again' }, 502)
+    if (!bodyParsed.success) return json({ error: 'The planner is busy right now. Please try again in a moment.' }, 502)
 
     let raw: unknown
     try {
       raw = JSON.parse(bodyParsed.data.choices[0].message.content)
     } catch {
-      return json({ error: 'AI planner returned an unreadable response, try again' }, 502)
+      return json({ error: 'We couldn’t read the response that came back. Please try again.' }, 502)
     }
 
     const extracted = extractedIntentSchema.safeParse(raw)
-    if (!extracted.success) return json({ error: 'AI planner unavailable, try again' }, 502)
+    if (!extracted.success) return json({ error: 'The planner is busy right now. Please try again in a moment.' }, 502)
 
     // The model returns "" (not null) when a request names a destination and a
     // party but no activities — "12 days in Dublin for a father and son, the
@@ -104,6 +104,6 @@ export async function onRequestPost({ env, request }: { env: PlanEnv; request: R
     )
   } catch (err) {
     logger.error('plan-intent failed', err)
-    return json({ error: 'internal error' }, 500)
+    return json({ error: 'Something went wrong on our end. Please try again in a moment.' }, 500)
   }
 }

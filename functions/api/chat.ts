@@ -5,6 +5,8 @@ import { isUnderRateLimit, hashIp } from '../../src/lib/rateLimit'
 import { buildChatPrompt, normalizeChatResponse, parseDayCommand, enforceDayCommand } from '../lib/aiChat'
 import { balanceDayFood } from '../lib/aiPlan'
 import { openAiResponseSchema } from '../lib/openAi'
+import { MAX_TRIP_DAYS } from '../lib/tripLimits'
+import { describeRequestError } from '../lib/requestErrors'
 import { logger } from '../../src/lib/logger'
 
 // AI calls cost money; gated like the planner.
@@ -15,7 +17,7 @@ type ChatEnv = Env & { OPENAI_API_KEY?: string; AI_MODEL?: string }
 
 const chatRequestSchema = z.object({
   message: z.string().trim().min(1).max(500),
-  days: z.number().int().min(1).max(14),
+  days: z.number().int().min(1).max(MAX_TRIP_DAYS),
   locationName: z.string().max(200).optional(),
   places: z
     .array(
@@ -34,8 +36,8 @@ const chatRequestSchema = z.object({
     .min(1)
     .max(40),
   itinerary: z
-    .array(z.object({ day: z.number().int().min(1).max(14), placeNames: z.array(z.string().max(200)).max(40) }))
-    .max(14)
+    .array(z.object({ day: z.number().int().min(1).max(MAX_TRIP_DAYS), placeNames: z.array(z.string().max(200)).max(40) }))
+    .max(MAX_TRIP_DAYS)
     .optional(),
   conversation: z
     .array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().min(1).max(600) }))
@@ -56,10 +58,10 @@ function json(body: unknown, status: number) {
  * @returns `{ action: 'plan'|'answer', message, days? }`, or `{ error }`
  */
 export async function onRequestPost({ env, request }: { env: ChatEnv; request: Request }): Promise<Response> {
-  if (!env.OPENAI_API_KEY) return json({ error: 'AI assistant is not configured' }, 500)
+  if (!env.OPENAI_API_KEY) return json({ error: 'The chat assistant is temporarily unavailable. Please try again later.' }, 500)
 
   const parsed = chatRequestSchema.safeParse(await request.json().catch(() => ({})))
-  if (!parsed.success) return json({ error: 'invalid request' }, 400)
+  if (!parsed.success) return json({ error: describeRequestError(parsed.error) }, 400)
   const { message, days, places, itinerary, conversation, locationName } = parsed.data
 
   try {
@@ -67,7 +69,7 @@ export async function onRequestPost({ env, request }: { env: ChatEnv; request: R
     const ipHash = await hashIp(ip, env.RATE_LIMIT_SALT)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
     if (!isUnderRateLimit(await countRecentRequests(env, ipHash, oneHourAgo, 'chat'), RATE_LIMIT_PER_HOUR)) {
-      return json({ error: 'rate limit exceeded, try again later' }, 429)
+      return json({ error: 'You’ve made a lot of requests in a short time. Please wait a few minutes and try again.' }, 429)
     }
     await insertRequestLog(env, ipHash, 'chat')
 
@@ -85,23 +87,23 @@ export async function onRequestPost({ env, request }: { env: ChatEnv; request: R
     })
     if (!res.ok) {
       logger.error('openai chat request non-ok', { status: res.status })
-      return json({ error: 'AI assistant unavailable, try again' }, 502)
+      return json({ error: 'The assistant is busy right now. Please try again in a moment.' }, 502)
     }
 
     const bodyParsed = openAiResponseSchema.safeParse(await res.json())
-    if (!bodyParsed.success) return json({ error: 'AI assistant unavailable, try again' }, 502)
+    if (!bodyParsed.success) return json({ error: 'The assistant is busy right now. Please try again in a moment.' }, 502)
 
     let raw: unknown
     try {
       raw = JSON.parse(bodyParsed.data.choices[0].message.content)
     } catch {
-      return json({ error: 'AI assistant returned an unreadable response, try again' }, 502)
+      return json({ error: 'We couldn’t read the reply that came back. Please try again.' }, 502)
     }
 
     // currentPlan + places let the normalizer put back any existing stop the
     // model dropped without being asked (see protectExistingStops).
     const result = normalizeChatResponse(raw, places.length, days, itinerary, places)
-    if (!result) return json({ error: 'AI assistant could not respond, try again' }, 502)
+    if (!result) return json({ error: 'The assistant couldn’t answer that. Try rephrasing it.' }, 502)
 
     // An explicit "clear day 3" or "remove ... day 4" is carried out here
     // rather than trusted to the model, which repeatedly did the opposite and
@@ -132,6 +134,6 @@ export async function onRequestPost({ env, request }: { env: ChatEnv; request: R
     return json(result, 200)
   } catch (err) {
     logger.error('chat turn failed', err)
-    return json({ error: 'internal error' }, 500)
+    return json({ error: 'Something went wrong on our end. Please try again in a moment.' }, 500)
   }
 }

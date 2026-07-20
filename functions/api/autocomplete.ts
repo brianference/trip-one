@@ -27,7 +27,7 @@ function json(body: unknown, status: number) {
 export async function onRequestGet({ env, request }: { env: Env; request: Request }): Promise<Response> {
   const q = new URL(request.url).searchParams.get('q') ?? ''
   const parsed = autocompleteQuerySchema.safeParse(q)
-  if (!parsed.success) return json({ error: 'invalid query' }, 400)
+  if (!parsed.success) return json({ error: 'That search didn’t look right. Try a different wording.' }, 400)
 
   if (await isRateLimited(env, request, 'autocomplete', AUTOCOMPLETE_PER_HOUR)) {
     return json({ suggestions: [] }, 200)

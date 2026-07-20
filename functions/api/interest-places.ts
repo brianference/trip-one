@@ -70,11 +70,11 @@ function json(body: unknown, status: number) {
  */
 export async function onRequestPost({ env, request }: { env: InterestEnv; request: Request }): Promise<Response> {
   if (!env.OPENAI_API_KEY || !env.GOOGLE_PLACES_API_KEY) {
-    return json({ error: 'interest search is not configured' }, 500)
+    return json({ error: 'Place search is temporarily unavailable. Please try again later.' }, 500)
   }
 
   const parsed = requestSchema.safeParse(await request.json().catch(() => ({})))
-  if (!parsed.success) return json({ error: 'invalid request' }, 400)
+  if (!parsed.success) return json({ error: 'Something in that request didn’t look right. Please try again.' }, 400)
 
   const { interests, destination, lat, lng } = parsed.data
 
@@ -100,7 +100,7 @@ export async function onRequestPost({ env, request }: { env: InterestEnv; reques
   }
 
   if (await isRateLimited(env, request, 'interest-places', RATE_LIMIT_PER_HOUR)) {
-    return json({ error: 'rate limit exceeded, try again later' }, 429)
+    return json({ error: 'You’ve made a lot of requests in a short time. Please wait a few minutes and try again.' }, 429)
   }
 
   // Stores a computed result and returns it. Only reached after a successful

@@ -42,7 +42,7 @@ export function HomeAiPlanner() {
         return
       }
 
-      setStatus(`Finding real places in ${intent.destination}…`)
+      setStatus(`Planning your trip to ${intent.destination}…`)
       const built = await createTripForDestination({
         destination: intent.destination,
         interests: intent.interests,
@@ -91,7 +91,7 @@ export function HomeAiPlanner() {
         Describe your trip
       </h2>
       <p className="mt-1.5 text-sm leading-relaxed opacity-75">
-        Say where you want to go and what you’re after — we’ll build a real day-by-day plan from actual places there.
+        Say where you want to go and what you’re after — we’ll build your day-by-day plan.
       </p>
       <textarea
         className="mt-3 w-full resize-none rounded-xl border border-[var(--hairline)] bg-[var(--surface)] px-3.5 py-3 text-base disabled:opacity-60"

@@ -4,6 +4,8 @@ import { countRecentRequests, insertRequestLog } from '../lib/db'
 import { isUnderRateLimit, hashIp } from '../../src/lib/rateLimit'
 import { buildPlanPrompt, normalizePlan, extractPlanMessage, balanceDayFood, ensureAllDays } from '../lib/aiPlan'
 import { openAiResponseSchema } from '../lib/openAi'
+import { MAX_TRIP_DAYS } from '../lib/tripLimits'
+import { describeRequestError } from '../lib/requestErrors'
 import { logger } from '../../src/lib/logger'
 
 // A short, friendly default when the model omits its own reply, so the chat
@@ -24,7 +26,7 @@ const planRequestSchema = z.object({
   // activities; rejecting that stranded the user with "invalid request".
   // An empty intent plans the destination's best-known highlights.
   intent: z.string().trim().max(500).optional().default(''),
-  days: z.number().int().min(1).max(14),
+  days: z.number().int().min(1).max(MAX_TRIP_DAYS),
   places: z
     .array(
       z.object({
@@ -56,8 +58,8 @@ const planRequestSchema = z.object({
     .max(16)
     .optional(),
   currentPlan: z
-    .array(z.object({ day: z.number().int().min(1).max(14), placeNames: z.array(z.string().max(200)).max(40) }))
-    .max(14)
+    .array(z.object({ day: z.number().int().min(1).max(MAX_TRIP_DAYS), placeNames: z.array(z.string().max(200)).max(40) }))
+    .max(MAX_TRIP_DAYS)
     .optional(),
 })
 
@@ -80,11 +82,11 @@ function json(body: unknown, status: number) {
 export async function onRequestPost({ env, request }: { env: PlanEnv; request: Request }): Promise<Response> {
   if (!env.OPENAI_API_KEY) {
     logger.error('AI planner called without OPENAI_API_KEY configured')
-    return json({ error: 'AI planner is not configured' }, 500)
+    return json({ error: 'The trip planner is temporarily unavailable. Please try again later.' }, 500)
   }
 
   const parsed = planRequestSchema.safeParse(await request.json().catch(() => ({})))
-  if (!parsed.success) return json({ error: 'invalid request' }, 400)
+  if (!parsed.success) return json({ error: describeRequestError(parsed.error) }, 400)
   const { intent, days, places, party, occasion, season, audience, conversation, currentPlan } = parsed.data
 
   try {
@@ -93,7 +95,7 @@ export async function onRequestPost({ env, request }: { env: PlanEnv; request: R
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
     const recentCount = await countRecentRequests(env, ipHash, oneHourAgo, 'plan')
     if (!isUnderRateLimit(recentCount, RATE_LIMIT_PER_HOUR)) {
-      return json({ error: 'rate limit exceeded, try again later' }, 429)
+      return json({ error: 'You’ve made a lot of requests in a short time. Please wait a few minutes and try again.' }, 429)
     }
     await insertRequestLog(env, ipHash, 'plan')
 
@@ -118,24 +120,24 @@ export async function onRequestPost({ env, request }: { env: PlanEnv; request: R
     })
     if (!res.ok) {
       logger.error('openai plan request non-ok', { status: res.status })
-      return json({ error: 'AI planner unavailable, try again' }, 502)
+      return json({ error: 'The planner is busy right now. Please try again in a moment.' }, 502)
     }
 
     const bodyParsed = openAiResponseSchema.safeParse(await res.json())
     if (!bodyParsed.success) {
       logger.error('openai response shape unexpected')
-      return json({ error: 'AI planner unavailable, try again' }, 502)
+      return json({ error: 'The planner is busy right now. Please try again in a moment.' }, 502)
     }
 
     let rawPlan: unknown
     try {
       rawPlan = JSON.parse(bodyParsed.data.choices[0].message.content)
     } catch {
-      return json({ error: 'AI planner returned an unreadable plan, try again' }, 502)
+      return json({ error: 'We couldn’t read the plan that came back. Please try again.' }, 502)
     }
 
     const plan = normalizePlan(rawPlan, places.length, days)
-    if (!plan) return json({ error: 'AI planner could not build a plan from nearby places, try again' }, 502)
+    if (!plan) return json({ error: 'We couldn’t build a plan from the places we found there. Try a nearby city, or a different wording.' }, 502)
 
     // Deterministically guarantee each day has a meal, and trim any incidental
     // food the model padded the day with beyond its share.
@@ -149,6 +151,6 @@ export async function onRequestPost({ env, request }: { env: PlanEnv; request: R
     return json({ days: finalDays, message: extractPlanMessage(rawPlan) ?? DEFAULT_PLAN_MESSAGE }, 200)
   } catch (err) {
     logger.error('AI plan generation failed', err)
-    return json({ error: 'internal error' }, 500)
+    return json({ error: 'Something went wrong on our end. Please try again in a moment.' }, 500)
   }
 }

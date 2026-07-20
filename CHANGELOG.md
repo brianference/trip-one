@@ -3,6 +3,47 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v14.0.0 — Longer trips, and errors that say something
+
+### Fixed — trips longer than 14 days failed silently
+A "15 day scuba diving trip in Thailand" parsed correctly, discovered its
+venues, and then died. The day ceiling was declared separately in each endpoint
+and they disagreed: intent extraction and venue discovery accepted 30 days,
+while `/api/plan` and `/api/chat` accepted 14. The traveler saw the planning
+spinner and a bare "invalid request".
+
+The ceiling is now a single shared constant, and it is **30 days** everywhere.
+
+### Fixed — error messages nobody could act on
+The client shows whatever the API returns, and the API was returning developer
+shorthand. Every message a traveler can see has been rewritten:
+
+| Before | After |
+|---|---|
+| invalid request | Trips can be between 1 and 30 days. Try asking for a shorter trip. |
+| internal error | Something went wrong on our end. Please try again in a moment. |
+| location not found | We couldn't find that place. Try a nearby city or check the spelling. |
+| location_slug is required | We need a destination to create a trip. |
+| AI planner is not configured | The trip planner is temporarily unavailable. Please try again later. |
+| rate limit exceeded, try again later | You've made a lot of requests in a short time. Please wait a few minutes and try again. |
+
+Validation failures now name the field that was wrong where a traveler can act
+on it — a rejected trip length says so and gives the range, rather than leaving
+someone to guess. A test asserts no message reads as developer shorthand.
+
+### Changed — plainer language throughout
+"Finding real places, then planning your days" is now "Planning your trip, day
+by day", and the same claim is gone from the homepage, chat, footer, about page
+and meta descriptions. Of course they are real places; saying so repeatedly
+implied the alternative was in doubt.
+
+### Fixed — unreadable green
+The previous release swapped the action colour to pine but left the dark text
+that belonged to the old orange, giving **2.29:1** on the day tab, the chat
+bubble and the nav pill. Solid buttons now use white text (8.17:1), and the
+chrome that merely marks a selection uses a light green with dark text
+(13.2:1 light, 11.2:1 dark) rather than a heavy block of dark green.
+
 ## v13.0.0 — Light by default, and a calmer palette
 
 **Breaking (visual).** The product's default appearance changed. Anyone who had

@@ -24,7 +24,7 @@ function json(body: unknown, status: number) {
 export async function onRequestGet({ env, request }: { env: Env; request: Request }): Promise<Response> {
   const to = new URL(request.url).searchParams.get('to') ?? ''
   const parsed = currencyQuerySchema.safeParse(to)
-  if (!parsed.success) return json({ error: 'invalid currency code' }, 400)
+  if (!parsed.success) return json({ error: 'That currency code isn’t one we recognise.' }, 400)
 
   if (await isRateLimited(env, request, 'currency', CURRENCY_PER_HOUR)) {
     return json({ rate: null }, 200)
