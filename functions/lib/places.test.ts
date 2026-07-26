@@ -40,7 +40,7 @@ describe('places searchPlaces', () => {
     expect(await searchPlaces(0, 0, 'k')).toEqual({ ok: false })
   })
 
-  it('queries attractions, restaurants, and cafes, merges them, and captures place_id (so meals and coffee can be scheduled)', async () => {
+  it('queries attractions, restaurants, and cafes via nearbysearch, merges them, and captures place_id (so meals and coffee can be scheduled)', async () => {
     const fetchMock = vi
       .fn()
       // first call = tourist_attraction type
@@ -64,6 +64,9 @@ describe('places searchPlaces', () => {
     expect(outcome.ok).toBe(true)
     if (!outcome.ok) return
     expect(fetchMock).toHaveBeenCalledTimes(3)
+    for (const call of fetchMock.mock.calls) {
+      expect(String(call[0])).toContain('/nearbysearch/json')
+    }
     expect(fetchMock.mock.calls[0][0]).toContain('type=tourist_attraction')
     expect(fetchMock.mock.calls[1][0]).toContain('type=restaurant')
     expect(fetchMock.mock.calls[2][0]).toContain('type=cafe')
@@ -71,6 +74,67 @@ describe('places searchPlaces', () => {
     expect(outcome.places.find((r) => r.name === 'Cafe Rico')?.category).toBe('restaurant')
     expect(outcome.places.find((r) => r.name === 'Third Wave Coffee')?.category).toBe('cafe')
     expect(outcome.places.find((r) => r.name === 'Museum')?.placeId).toBe('p1')
+  })
+
+  it('returns ok:false on Nearby REQUEST_DENIED without calling textsearch (fallback removed)', async () => {
+    // Nearby works from Workers (measured). The old textsearch fallback solved
+    // a non-problem and could cache ZERO_RESULTS — do not reintroduce it.
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {})
+    const fetchMock = vi.fn((url: string) => {
+      expect(String(url)).toContain('/nearbysearch/')
+      expect(String(url)).not.toContain('/textsearch/')
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          status: 'REQUEST_DENIED',
+          error_message: 'This API project is not authorized to use this API.',
+          results: [],
+        }),
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const outcome = await searchPlaces(35.68, 139.76, 'secret-key-must-not-appear')
+    expect(outcome).toEqual({ ok: false })
+    expect(fetchMock.mock.calls.every((c) => String(c[0]).includes('/nearbysearch/'))).toBe(true)
+    expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('/textsearch/'))).toBe(false)
+    expect(warnSpy).toHaveBeenCalled()
+    for (const call of warnSpy.mock.calls) {
+      expect(JSON.stringify(call)).not.toContain('secret-key-must-not-appear')
+      if (String(call[0]).includes('body-level')) {
+        expect((call[1] as { status?: string }).status).toBe('REQUEST_DENIED')
+        expect((call[1] as { error_message?: string }).error_message).toBeDefined()
+      }
+    }
+  })
+
+  it('tags nearby results with the intended category when Google only returns establishment', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          okBody([
+            {
+              place_id: 'est-1',
+              name: 'Porto Cathedral',
+              types: ['establishment', 'point_of_interest'],
+              geometry: { location: { lat: 41.14, lng: -8.61 } },
+            },
+          ]),
+      })
+      .mockResolvedValueOnce({ ok: true, json: async () => okBody([]) })
+      .mockResolvedValueOnce({ ok: true, json: async () => okBody([]) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const outcome = await searchPlaces(41.15, -8.61, 'k')
+    expect(outcome.ok).toBe(true)
+    if (!outcome.ok) return
+    expect(outcome.places[0]).toMatchObject({
+      name: 'Porto Cathedral',
+      category: 'tourist_attraction',
+      placeId: 'est-1',
+    })
   })
 
   it('categorizes restaurant-search results as food even when a food type is not first', async () => {
@@ -289,7 +353,7 @@ describe('food distance ceiling', () => {
     vi.unstubAllGlobals()
   })
 
-  // The nearby search spans 50km so a national park's attractions are
+  // The typed search spans 50km so a national park's attractions are
   // reachable. Applied to food, that radius put a Tim Hortons 47km from
   // Whistler on the plan.
   it('drops food beyond the food radius but keeps distant attractions', async () => {
@@ -316,6 +380,104 @@ describe('food distance ceiling', () => {
     const names = out.places.map((p) => p.name)
     expect(names).toContain('Near Diner')
     expect(names).toContain('Distant Overlook')
+    expect(names).not.toContain('Far Coffee')
+  })
+
+  it('maps formatted_address when vicinity is absent', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          okBody([
+            {
+              place_id: 'a1',
+              name: 'Harpa',
+              types: ['tourist_attraction'],
+              formatted_address: 'Austurbakki 2, Reykjavík',
+              geometry: { location: { lat: 64.15, lng: -21.93 } },
+            },
+          ]),
+      })
+      .mockResolvedValueOnce({ ok: true, json: async () => okBody([]) })
+      .mockResolvedValueOnce({ ok: true, json: async () => okBody([]) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const out = await searchPlaces(64.15, -21.94, 'k')
+    expect(out.ok).toBe(true)
+    if (!out.ok) return
+    expect(out.places[0]).toMatchObject({
+      name: 'Harpa',
+      address: 'Austurbakki 2, Reykjavík',
+      placeId: 'a1',
+      lat: 64.15,
+      lng: -21.93,
+      category: 'tourist_attraction',
+    })
+  })
+
+  it('applies FOOD_MAX_KM and lodging drop on nearby restaurant results', async () => {
+    const near = { lat: 43.48, lng: -110.76 }
+    const far = { lat: 43.9, lng: -110.76 } // ~47km north
+    const fetchMock = vi.fn((url: string) => {
+      expect(String(url)).toContain('/nearbysearch/')
+      const type = /type=([a-z_]+)/.exec(String(url))?.[1]
+      if (type === 'tourist_attraction') {
+        return Promise.resolve({
+          ok: true,
+          json: async () =>
+            okBody([
+              {
+                place_id: 'att',
+                name: 'Distant Overlook',
+                types: ['tourist_attraction'],
+                geometry: { location: far },
+              },
+            ]),
+        })
+      }
+      if (type === 'restaurant') {
+        return Promise.resolve({
+          ok: true,
+          json: async () =>
+            okBody([
+              {
+                place_id: 'h',
+                name: 'Grand Hotel Dining',
+                types: ['restaurant', 'lodging'],
+                geometry: { location: near },
+              },
+              {
+                place_id: 'r',
+                name: 'Near Diner',
+                types: ['restaurant'],
+                geometry: { location: near },
+              },
+            ]),
+        })
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () =>
+          okBody([
+            {
+              place_id: 'c',
+              name: 'Far Coffee',
+              types: ['cafe'],
+              geometry: { location: far },
+            },
+          ]),
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const out = await searchPlaces(43.48, -110.76, 'k')
+    expect(out.ok).toBe(true)
+    if (!out.ok) return
+    const names = out.places.map((p) => p.name)
+    expect(names).toContain('Distant Overlook')
+    expect(names).toContain('Near Diner')
+    expect(names).not.toContain('Grand Hotel Dining')
     expect(names).not.toContain('Far Coffee')
   })
 })

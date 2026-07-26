@@ -52,6 +52,17 @@ export interface PlaceDetail {
   photoRefs: string[]
   serves: string[]
   types: string[]
+  /**
+   * True when Google Place Details could not be resolved and this object is
+   * built only from the request's name/coords (or known list fields). The
+   * panel must still render — never 404 / empty / console-error for this case.
+   */
+  partial?: boolean
+  /** Known category from the map/list pin, when details were not resolved. */
+  category?: string | null
+  /** Coordinates used to build the directions link, when known. */
+  lat?: number | null
+  lng?: number | null
 }
 
 const MAX_REVIEWS = 3
@@ -130,5 +141,60 @@ export function normalizePlaceDetail(raw: unknown, fallbackPlaceId: string): Pla
     photoRefs,
     serves,
     types,
+  }
+}
+
+/**
+ * Builds a real Google Maps directions URL from name and optional coordinates.
+ * Prefer lat/lng when present so unresolvable Tripadvisor names still navigate
+ * to the correct pin (name-only search often fails for those labels).
+ * @param name - Place display name
+ * @param lat - Optional latitude
+ * @param lng - Optional longitude
+ */
+export function mapsDirectionsUrl(name: string, lat?: number | null, lng?: number | null): string {
+  if (lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng)) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+  }
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(name)}`
+}
+
+/**
+ * Minimal place detail when Google cannot resolve a place_id (Find Place
+ * ZERO_RESULTS). Measured on production: Tripadvisor-sourced pins often have
+ * no placeId (Porto: 10 of 49), and names like "PadToGo" return ZERO_RESULTS
+ * from Find Place — a 404 then left the client with a console error and an
+ * empty PlaceDetailPanel. Returning a 200 partial keeps the panel useful.
+ *
+ * @param name - Display name we already know from the pin/list
+ * @param opts - Optional category and coordinates from the pin
+ */
+export function buildPartialPlaceDetail(
+  name: string,
+  opts: { category?: string | null; lat?: number | null; lng?: number | null } = {},
+): PlaceDetail {
+  const lat = opts.lat != null && Number.isFinite(opts.lat) ? opts.lat : null
+  const lng = opts.lng != null && Number.isFinite(opts.lng) ? opts.lng : null
+  return {
+    placeId: '',
+    name,
+    address: null,
+    phone: null,
+    rating: null,
+    reviewCount: null,
+    priceLevel: null,
+    website: null,
+    mapsUrl: mapsDirectionsUrl(name, lat, lng),
+    openNow: null,
+    hours: [],
+    summary: null,
+    reviews: [],
+    photoRefs: [],
+    serves: [],
+    types: opts.category ? [opts.category] : [],
+    partial: true,
+    category: opts.category ?? null,
+    lat,
+    lng,
   }
 }

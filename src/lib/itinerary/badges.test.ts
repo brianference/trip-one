@@ -23,6 +23,12 @@ describe('directionsUrl', () => {
   it('builds a real Google Maps directions URL for the destination', () => {
     expect(directionsUrl('Eiffel Tower')).toBe('https://www.google.com/maps/dir/?api=1&destination=Eiffel%20Tower')
   })
+
+  it('prefers lat/lng over name when coordinates are known', () => {
+    expect(directionsUrl('PadToGo', { lat: 41.15, lng: -8.61 })).toBe(
+      'https://www.google.com/maps/dir/?api=1&destination=41.15,-8.61',
+    )
+  })
 })
 
 describe('roleFor', () => {

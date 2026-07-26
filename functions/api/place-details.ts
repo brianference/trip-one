@@ -2,7 +2,12 @@ import { z } from 'zod'
 import type { Env } from '../lib/db'
 import { getPlaceDetailCache, upsertPlaceDetailCache, countRecentRequests, insertRequestLog } from '../lib/db'
 import { isUnderRateLimit, hashIp } from '../../src/lib/rateLimit'
-import { PLACE_DETAILS_FIELDS, normalizePlaceDetail, type PlaceDetail } from '../lib/placeDetails'
+import {
+  PLACE_DETAILS_FIELDS,
+  normalizePlaceDetail,
+  buildPartialPlaceDetail,
+  type PlaceDetail,
+} from '../lib/placeDetails'
 import { logger } from '../../src/lib/logger'
 
 // Details is a paid Google call, but cached per place, so the limit is
@@ -46,7 +51,16 @@ async function resolvePlaceId(name: string, lat: number | undefined, lng: number
  * per 30 days. Nothing is fabricated; a place with no phone/hours simply omits
  * them. When only a name is given (e.g. an itinerary stop with no place_id) it
  * resolves the id via Find Place first.
- * @returns `PlaceDetail` JSON, or `{ error }` with 400/404/429/500
+ *
+ * WHY 200 + partial (not 404) when the name cannot be resolved: Tripadvisor-
+ * sourced pins often have no placeId, and Find Place returns ZERO_RESULTS for
+ * many of those names (measured: "PadToGo" at 41.15014,-8.61102). A 404 made
+ * the browser log a failed resource and left PlaceDetailPanel empty. A 200 with
+ * `partial: true` and a Maps directions link from name+coords is still useful
+ * and produces zero console errors. Partial responses are not D1-cached (they
+ * are not Google Details).
+ *
+ * @returns `PlaceDetail` JSON (full or partial), or `{ error }` with 400/429/500/502
  */
 export async function onRequestGet({ env, request }: { env: PlaceEnv; request: Request }): Promise<Response> {
   if (!env.GOOGLE_PLACES_API_KEY) return json({ error: 'Place details are temporarily unavailable. Please try again later.' }, 500)
@@ -62,6 +76,8 @@ export async function onRequestGet({ env, request }: { env: PlaceEnv; request: R
     return json({ error: 'We need a place to look up.' }, 400)
   }
 
+  const knownName = parsed.data.name?.trim() || null
+
   try {
     const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown'
     const ipHash = await hashIp(ip, env.RATE_LIMIT_SALT)
@@ -75,7 +91,16 @@ export async function onRequestGet({ env, request }: { env: PlaceEnv; request: R
     if (!placeId && parsed.data.name) {
       placeId = await resolvePlaceId(parsed.data.name, parsed.data.lat, parsed.data.lng, apiKey)
     }
-    if (!placeId) return json({ error: 'We couldn’t find details for that place.' }, 404)
+    // Unresolvable name is a normal outcome for TA-sourced pins — not a client error.
+    if (!placeId) {
+      if (knownName) {
+        return json(
+          buildPartialPlaceDetail(knownName, { lat: parsed.data.lat, lng: parsed.data.lng }),
+          200,
+        )
+      }
+      return json({ error: 'We need a place to look up.' }, 400)
+    }
 
     // Cache-first: serve a fresh cached row without touching Google.
     const cached = await getPlaceDetailCache(env, placeId)
@@ -91,6 +116,12 @@ export async function onRequestGet({ env, request }: { env: PlaceEnv; request: R
       logger.error('place details non-ok', { status: res.status })
       // Fall back to a stale cache entry rather than failing the panel.
       if (cached) return json(cached.detail, 200)
+      if (knownName) {
+        return json(
+          buildPartialPlaceDetail(knownName, { lat: parsed.data.lat, lng: parsed.data.lng }),
+          200,
+        )
+      }
       return json({ error: 'We couldn’t load details for that place. Please try again.' }, 502)
     }
 
@@ -98,6 +129,12 @@ export async function onRequestGet({ env, request }: { env: PlaceEnv; request: R
     const detail: PlaceDetail | null = normalizePlaceDetail(body.result, placeId)
     if (!detail) {
       if (cached) return json(cached.detail, 200)
+      if (knownName) {
+        return json(
+          buildPartialPlaceDetail(knownName, { lat: parsed.data.lat, lng: parsed.data.lng }),
+          200,
+        )
+      }
       return json({ error: 'We couldn’t find details for that place.' }, 404)
     }
 
@@ -105,6 +142,16 @@ export async function onRequestGet({ env, request }: { env: PlaceEnv; request: R
     return json(detail, 200)
   } catch (err) {
     logger.error('place-details failed', err)
+    // Prefer a usable partial panel over a hard 500 when we already know the name.
+    if (knownName) {
+      return json(
+        buildPartialPlaceDetail(knownName, {
+          lat: parsed.success ? parsed.data.lat : undefined,
+          lng: parsed.success ? parsed.data.lng : undefined,
+        }),
+        200,
+      )
+    }
     return json({ error: 'Something went wrong on our end. Please try again in a moment.' }, 500)
   }
 }

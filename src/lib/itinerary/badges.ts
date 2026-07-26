@@ -51,11 +51,20 @@ export function slotLabel(position: number, total: number): string {
 }
 
 /**
- * Builds a real Google Maps directions URL to a destination, using the
- * item's `q` search text (or its display text as a fallback) — the same
- * pattern used throughout this app for "Transit directions" links. Opens in
- * a new tab; never fetches anything itself, so it needs no API key.
+ * Builds a real Google Maps directions URL to a destination. Prefer lat/lng
+ * when known so unresolvable names still navigate to the correct pin; fall
+ * back to a name search. Opens in a new tab; needs no API key.
+ * @param destination - Place name (used when coordinates are missing)
+ * @param coords - Optional pin coordinates
  */
-export function directionsUrl(destination: string): string {
+export function directionsUrl(
+  destination: string,
+  coords?: { lat?: number | null; lng?: number | null },
+): string {
+  const lat = coords?.lat
+  const lng = coords?.lng
+  if (lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng)) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+  }
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`
 }

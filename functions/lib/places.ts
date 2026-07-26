@@ -3,18 +3,18 @@ import { isAdultVenue } from '../../src/lib/places/audience'
 import { isFoodCategory } from '../../src/lib/places/foodCategories'
 import { logger } from '../../src/lib/logger'
 
-// 50000m is the documented maximum radius Google Places Nearby Search accepts.
+// 50000m is the documented maximum radius for legacy Places location bias.
 // A smaller radius works fine for a city but returns almost nothing for a
 // large national park, whose real points of interest can be tens of km from
 // the park's single geocoded center coordinate.
 const SEARCH_RADIUS_M = 50000
 
-// Nearby Search takes a single `type` per call. We query attractions,
-// restaurants, AND cafes so the itinerary has real meals and real coffee to
-// draw from — dedicated coffee shops carry Google's `cafe` type and rarely
-// surface in a `restaurant` search, so "add a coffee shop" had nothing real to
-// ground to before this. Each new location is cached in D1, so the extra
-// calls are paid once per location, not per visit.
+// One call per type. We query attractions, restaurants, AND cafes so the
+// itinerary has real meals and real coffee to draw from — dedicated coffee
+// shops carry Google's `cafe` type and rarely surface in a `restaurant`
+// search, so "add a coffee shop" had nothing real to ground to before this.
+// Each new location is cached in D1, so the extra calls are paid once per
+// location, not per visit.
 const SEARCH_TYPES = ['tourist_attraction', 'restaurant', 'cafe'] as const
 
 // Search types that return food/drink venues (so category promotion and the
@@ -112,9 +112,10 @@ export function distanceKm(aLat: number, aLng: number, bLat: number, bLng: numbe
  * Category for a result, given which search it came from. For the restaurant
  * search we promote any food type to the front (a real eatery often lists
  * `bar`/`point_of_interest` before `restaurant`), defaulting to `restaurant`
- * since that's what we asked for. For the attraction search we keep `types[0]`
- * as-is — otherwise a hotel or museum that merely HAS a restaurant would get
- * mislabeled as food.
+ * since that's what we asked for. For attraction searches we prefer the type
+ * we asked for when it appears in `types`. Free-text search helpers may still
+ * lead with `establishment`/`point_of_interest` — never label those as
+ * "establishment"; fall back to the intended search type instead.
  */
 function pickCategory(types: string[], searchType: string): string {
   if (FOOD_SEARCH_TYPES.includes(searchType)) {
@@ -122,7 +123,14 @@ function pickCategory(types: string[], searchType: string): string {
     // `store`/`point_of_interest` first), defaulting to what we searched for.
     return FOOD_TYPES.find((t) => types.includes(t)) ?? searchType
   }
-  return types[0] ?? 'attraction'
+  if (types.includes(searchType)) return searchType
+  // Prefer a concrete non-generic type (museum, park, …); if Google only
+  // sent establishment/point_of_interest, keep the category we searched for
+  // (Nearby type= is authoritative for the pool role).
+  return (
+    types.find((t) => t !== 'point_of_interest' && t !== 'establishment') ??
+    searchType
+  )
 }
 
 /**
@@ -150,18 +158,18 @@ function parsePlacesApiBody(
 }
 
 /**
- * Maps a Nearby Search hit into the shared ThingToDo shape, applying food
- * lodging/distance filters for restaurant/cafe searches.
+ * Maps a per-type Nearby Search hit into the shared ThingToDo shape, applying
+ * food lodging/distance filters for restaurant/cafe searches.
  */
-function mapNearbyResult(item: PlacesResult, type: string, lat: number, lng: number): ThingToDo | null {
+function mapTypedSearchResult(item: PlacesResult, type: string, lat: number, lng: number): ThingToDo | null {
   // A hotel with a notable restaurant/cafe can surface in a food search.
   // It's not somewhere a traveler plans a meal or coffee, so drop
   // lodging-typed results from those searches.
   if (FOOD_SEARCH_TYPES.includes(type) && (item.types ?? []).includes('lodging')) return null
-  // The nearby search spans SEARCH_RADIUS_M (50km) so a national park's
-  // spread-out attractions are reachable, but that radius applied to food
-  // put a Tim Hortons 47km from Whistler on the plan. Attractions justify
-  // the drive; a coffee stop does not.
+  // The search spans SEARCH_RADIUS_M (50km) so a national park's spread-out
+  // attractions are reachable, but that radius applied to food put a Tim
+  // Hortons 47km from Whistler on the plan. Attractions justify the drive;
+  // a coffee stop does not.
   // Only drop on a KNOWN excessive distance. A result without coordinates
   // can't be measured, and dropping it would silently delete places whose
   // source simply omits geometry.
@@ -180,37 +188,73 @@ function mapNearbyResult(item: PlacesResult, type: string, lat: number, lng: num
     source: 'places' as const,
     rating: item.rating,
     numReviews: item.user_ratings_total,
-    address: item.vicinity,
+    address: item.vicinity ?? item.formatted_address,
     lat: item.geometry?.location?.lat,
     lng: item.geometry?.location?.lng,
     placeId: item.place_id,
   }
 }
 
+/** Raw list fetch: success carries Google `results`; failure already logged. */
+type PlacesListFetch = { ok: true; results: PlacesResult[] } | { ok: false }
+
+/**
+ * Shared HTTP + body parse for one Places list endpoint.
+ * Logs every non-OK body status with status + error_message (never the key).
+ *
+ * @param url - Fully built request URL (key included; never logged)
+ * @param context - Log label, e.g. `nearby:restaurant` or `text:cafe`
+ */
+async function fetchPlacesList(url: string, context: string): Promise<PlacesListFetch> {
+  const res = await fetch(url)
+  if (!res.ok) {
+    logger.warn('places search non-ok response', { status: res.status, context })
+    return { ok: false }
+  }
+  const body = (await res.json()) as PlacesApiBody
+  const parsed = parsePlacesApiBody(body, context)
+  if (!parsed.ok) return { ok: false }
+  return { ok: true, results: parsed.results }
+}
+
+/**
+ * One category search for the location pool via legacy Nearby Search.
+ *
+ * WHY no Nearby→Text Search fallback: an earlier path fell back to Text
+ * Search when Nearby failed, based on a misread of production data
+ * (`things_to_do` vs `thingsToDo` made Nearby look empty while Text Search
+ * looked fine). A deployed diagnostic later showed Nearby works from Workers
+ * (HTTP 200, status OK, 20 results for tourist_attraction and restaurant).
+ * The fallback also introduced a real bug: Text Search with `type=` returned
+ * ZERO_RESULTS that was silently cacheable as an empty city. Body-level
+ * status checking (OK/ZERO_RESULTS success; everything else logged failure)
+ * and "never cache a failed lookup" remain — those are independent of the
+ * removed fallback.
+ *
+ * @param lat - Search centre latitude
+ * @param lng - Search centre longitude
+ * @param type - Google place type (`tourist_attraction` | `restaurant` | `cafe`)
+ * @param apiKey - Google Places API key (never logged)
+ */
 async function searchPlacesByType(
   lat: number,
   lng: number,
   type: string,
   apiKey: string,
 ): Promise<PlacesSearchOutcome> {
-  const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${SEARCH_RADIUS_M}&type=${type}&key=${apiKey}`
-  const res = await fetch(url)
-  if (!res.ok) {
-    logger.warn('places search non-ok response', { status: res.status, type })
-    return { ok: false }
-  }
-  const body = (await res.json()) as PlacesApiBody
-  const parsed = parsePlacesApiBody(body, `nearby:${type}`)
-  if (!parsed.ok) return { ok: false }
-  const places = parsed.results
-    .map((item) => mapNearbyResult(item, type, lat, lng))
+  const nearbyUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${SEARCH_RADIUS_M}&type=${type}&key=${apiKey}`
+  const nearby = await fetchPlacesList(nearbyUrl, `nearby:${type}`)
+  if (!nearby.ok) return { ok: false }
+
+  const places = nearby.results
+    .map((item) => mapTypedSearchResult(item, type, lat, lng))
     .filter((item): item is ThingToDo => item != null)
   return { ok: true, places }
 }
 
 /**
- * Search Google Places near a coordinate for both attractions and
- * restaurants, deduped by name.
+ * Search Google Places near a coordinate for attractions, restaurants, and
+ * cafes, deduped by name. Nearby Search only (no Text Search fallback).
  *
  * Fails soft at the HTTP layer only in the sense that a total outage yields
  * `{ ok: false }` rather than throwing — callers map that to an empty list

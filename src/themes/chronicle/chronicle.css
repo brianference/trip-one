@@ -281,6 +281,9 @@ body {
      scroll-containers (the forecast strip) actually scroll instead. */
   width: 100%;
   min-width: 0;
+  /* Mobile / narrow: keep the previous reading-card width so 375px layout
+     and full-bleed map media rules stay unchanged. Desktop (below) raises
+     the main content to fill the usable column (≥90% of that column). */
   max-width: 760px;
   margin: 0 auto;
   box-sizing: border-box;
@@ -296,6 +299,40 @@ body {
    the same width map-sized text would feel sparse at. */
 .chronicle-chapter--wide {
   max-width: 1040px;
+}
+
+/* Desktop: main content must fill ≥90% of the *viewport* (window.innerWidth).
+   Mobile (max-width: 720px) is left alone so the full-bleed map and 375px
+   layout keep working. Long-form prose inside chapters is re-measured below.
+
+   WHY overlay dock (not a permanent left gutter) — measured on the deployed
+   build at viewport 1780px, page fully loaded with map markers:
+     .chronicle-chapter--wide   width=1373  left=376  => 77.1% of viewport
+     .chronicle-page            padding: 24px 16px 64px 376px
+   The 376px padding-left was reserved for the open chat dock (360px + 16px
+   gutter). Content filled 100% of that padded column, so a column-relative
+   check could never fail — but the real product requirement is ≥90% of the
+   *desktop width*. Fix: the dock is a fixed overlay/drawer (see
+   .chronicle-chat-dock below); page content no longer shifts. Chapter size
+   is width/max-width: 100% of the book column (page side padding only:
+   --chronicle-space-md = 16px each side → ~97%+ of a 1440px viewport).
+
+   Still avoid 90vw: vw includes the scrollbar track and once produced
+   horizontal overflow (scrollWidth 1978 vs clientWidth 1765). Percentage of
+   the containing block cannot overflow the page. */
+@media (min-width: 721px) {
+  .chronicle-chapter,
+  .chronicle-chapter--wide {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Comfortable reading measure for dense prose blocks (legal, long copy).
+     Map / day grids / stop lists stay full chapter width. */
+  .chronicle-legal,
+  .chronicle-chapter .chronicle-prose {
+    max-width: 65ch;
+  }
 }
 
 .chronicle-chapter h1 {
@@ -1279,12 +1316,16 @@ body:has(.chronicle-page) label {
 
 .chronicle-day-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--chronicle-space-xs);
   margin-bottom: var(--chronicle-space-sm);
+  /* Stay visible at all widths: wrap rather than clip multi-day (1–14) tabs. */
+  max-width: 100%;
 }
 
 .chronicle-day-tab {
   min-height: 44px;
+  min-width: 44px;
   padding: 0 var(--chronicle-space-md);
   border-radius: var(--chronicle-radius-sm);
   border: 1px solid var(--chronicle-border-hairline);
@@ -2729,9 +2770,22 @@ body:has(.chronicle-page) label {
 }
 
 /* ---------- Trip assistant dock (every page) ---------- */
-/* A persistent chat panel that slides in from the left on every trip page.
-   Open by default on desktop (content is offset so it isn't covered); a FAB
-   opens it when collapsed and on mobile, where it slides over the page. */
+/* Overlay/drawer chat on every trip page — fixed, slides from the left,
+   does NOT reserve layout width.
+
+   WHY overlay (not a permanent gutter / slim rail) — measured on the
+   deployed build at viewport 1780px with markers loaded:
+     .chronicle-chapter--wide  width=1373  left=376  => 77.1% of viewport
+     .chronicle-page           padding-left: 376px while chat open
+   That gutter made main content permanently ~77% wide. A column-share check
+   still reported "100% usable" because content filled the padded column.
+   Product requirement: main content ≥90% of desktop *viewport* width.
+
+   Overlay (vs slim rail): full chat panel on demand without any permanent
+   width tax. Starts closed so day tabs / map stay clickable; the "Plan by
+   chat" FAB is the open toggle (primary AI surface, one tap). Close is the
+   dock header control. Mobile (≤720px / ≤860px rules below) is unchanged:
+   full-width sheet, same FAB above the tab bar. */
 .chronicle-chat-dock {
   position: fixed;
   top: 0;
@@ -2750,11 +2804,14 @@ body:has(.chronicle-page) label {
   transform: translateX(0);
 }
 
-/* When the dock is open on wide screens, push page content right so the dock
-   sits beside it rather than over it. */
+/* Desktop used to push content with padding-left: 376px on
+   .chronicle-trip-page--chat-open (360px dock + 16px gutter). That is gone
+   on purpose — see the measured 77.1% / 1373px note above. The class may
+   still be toggled from TripShell for semantics / future hooks; it must
+   not reintroduce a layout gutter. */
 @media (min-width: 1024px) {
   .chronicle-trip-page--chat-open {
-    padding-left: 376px;
+    padding-left: 0;
   }
 }
 

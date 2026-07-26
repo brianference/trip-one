@@ -11,15 +11,20 @@ import { createTripForDestination } from '../planning/createTripForDestination'
 import { stashOpeningChat } from './chatHandoff'
 
 /**
- * The trip assistant as a persistent side dock, available on every trip page
+ * The trip assistant as a persistent overlay drawer on every trip page
  * (Home, Itinerary, Map, Things to do, Weather). Chat state lives here in the
  * shell, so the conversation continues as you move between pages and survives
  * reloads. A plan edit re-plans the itinerary (updating the shared store, so
  * whatever page you're on reflects it), a question is answered, and naming a
  * new destination rebuilds the trip there.
  *
- * @param open - Whether the dock is expanded (the shell owns this so it can
- * offset page content when the dock is open on desktop)
+ * Desktop: floats above full-width content (no layout gutter). Measured at
+ * 1780px viewport the old padding-left:376px left main content at 77.1% of
+ * the desktop width; overlay keeps content ≥90% while chat stays open by
+ * default and reachable via the FAB when closed. Mobile sheet behaviour is
+ * unchanged.
+ *
+ * @param open - Whether the drawer is visible (shell owns open state)
  */
 export function TripChatDock({
   trip,

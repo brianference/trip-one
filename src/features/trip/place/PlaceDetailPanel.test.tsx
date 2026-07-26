@@ -61,8 +61,59 @@ describe('PlaceDetailPanel', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('shows an error message when the lookup fails', () => {
-    render(<PlaceDetailPanel query={query} detail={null} loading={false} error="place not found" onClose={vi.fn()} />)
-    expect(screen.getByRole('alert')).toHaveTextContent(/place not found/i)
+  it('shows a graceful partial panel from known pin fields (never empty)', () => {
+    const pinQuery: PlaceQuery = {
+      label: 'PadToGo',
+      name: 'PadToGo',
+      lat: 41.15014,
+      lng: -8.61102,
+      category: 'attraction',
+    }
+    const partial = {
+      placeId: '',
+      name: 'PadToGo',
+      address: null,
+      phone: null,
+      rating: null,
+      reviewCount: null,
+      priceLevel: null,
+      website: null,
+      mapsUrl: 'https://www.google.com/maps/dir/?api=1&destination=41.15014,-8.61102',
+      openNow: null,
+      hours: [] as string[],
+      summary: null,
+      reviews: [] as PlaceDetail['reviews'],
+      photoRefs: [] as string[],
+      serves: [] as string[],
+      types: ['attraction'],
+      partial: true,
+      category: 'attraction',
+      lat: 41.15014,
+      lng: -8.61102,
+    }
+    render(<PlaceDetailPanel query={pinQuery} detail={partial} loading={false} error={null} onClose={vi.fn()} />)
+    expect(screen.getByRole('heading', { name: 'PadToGo' })).toBeInTheDocument()
+    expect(screen.getByText(/full details aren’t available/i)).toBeInTheDocument()
+    expect(screen.getByText(/attraction/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /get directions/i })).toHaveAttribute(
+      'href',
+      'https://www.google.com/maps/dir/?api=1&destination=41.15014,-8.61102',
+    )
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('still surfaces a real transport error when detail is missing and not partial', () => {
+    render(
+      <PlaceDetailPanel
+        query={query}
+        detail={null}
+        loading={false}
+        error="Something went wrong on our end."
+        onClose={vi.fn()}
+      />,
+    )
+    // Body still shows the known label so the panel is not empty.
+    expect(screen.getByRole('heading', { name: 'Sushi Ota' })).toBeInTheDocument()
+    expect(screen.getByText(/full details aren’t available/i)).toBeInTheDocument()
   })
 })

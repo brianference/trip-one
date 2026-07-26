@@ -68,7 +68,17 @@ export function PlaceDetailPanel({
   }, [onClose])
 
   const title = detail?.name ?? query.label
-  const directionsHref = detail?.mapsUrl ?? directionsUrl(detail?.name ?? query.label)
+  const category = detail?.category ?? query.category ?? null
+  const lat = detail?.lat ?? query.lat
+  const lng = detail?.lng ?? query.lng
+  // Prefer Google's canonical maps URL; else name+coords so partial panels still navigate.
+  const directionsHref =
+    detail?.mapsUrl ??
+    directionsUrl(detail?.name ?? query.label, { lat, lng })
+  // After load always render known fields (name/category/coords) so the panel
+  // is never empty — partial API responses and client-side query fields both count.
+  const showBody = !loading
+  const isPartial = Boolean(detail?.partial) || (!loading && detail == null)
 
   return (
     <div
@@ -88,7 +98,7 @@ export function PlaceDetailPanel({
           <h2 className="min-w-0 flex-1 font-[family-name:var(--font-display)] text-lg font-semibold leading-snug">{title}</h2>
           <button
             type="button"
-            className="-mr-1 grid size-9 shrink-0 place-items-center rounded-lg text-xl leading-none hover:bg-[var(--surface-muted)]"
+            className="-mr-1 grid size-11 shrink-0 place-items-center rounded-lg text-xl leading-none hover:bg-[var(--surface-muted)]"
             onClick={onClose}
             aria-label="Close details"
           >
@@ -98,15 +108,17 @@ export function PlaceDetailPanel({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
           {loading && <p className="text-sm opacity-70">Loading details…</p>}
-          {error && (
+          {/* Transient transport/rate-limit failures only — "not found" is a
+              partial panel, not an error (server returns 200 + partial). */}
+          {error && !isPartial && (
             <p role="alert" className="text-sm text-danger-500">
               {error}
             </p>
           )}
 
-          {detail && (
+          {showBody && (
           <div className="space-y-3">
-            {detail.photoRefs.length > 0 && (
+            {detail && detail.photoRefs.length > 0 && (
               <div className="-mx-1 flex snap-x gap-2 overflow-x-auto pb-1">
                 {detail.photoRefs.map((ref) => (
                   <img key={ref} src={placePhotoUrl(ref, 400)} alt={`${detail.name}`} loading="lazy" className="h-32 w-44 shrink-0 snap-start rounded-xl object-cover" width={400} height={300} decoding="async" />
@@ -115,11 +127,16 @@ export function PlaceDetailPanel({
             )}
 
             <div className="flex flex-wrap items-center gap-2">
-              <Stars rating={detail.rating} count={detail.reviewCount} />
-              {detail.priceLevel != null && PRICE[detail.priceLevel] && (
+              {detail && <Stars rating={detail.rating} count={detail.reviewCount} />}
+              {category && (
+                <span className="rounded-full border border-[var(--hairline)] px-2.5 py-1 text-xs font-medium capitalize">
+                  {category.replaceAll('_', ' ')}
+                </span>
+              )}
+              {detail?.priceLevel != null && PRICE[detail.priceLevel] && (
                 <span className="rounded-full border border-[var(--hairline)] px-2.5 py-1 text-xs font-medium">{PRICE[detail.priceLevel]}</span>
               )}
-              {detail.openNow != null && (
+              {detail?.openNow != null && (
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                     detail.openNow
@@ -132,24 +149,36 @@ export function PlaceDetailPanel({
               )}
             </div>
 
-            {detail.serves.length > 0 && (
+            {isPartial && (
+              <p className="text-sm opacity-75">
+                Full details aren’t available for this place. You can still get directions
+                {lat != null && lng != null ? ' from the map pin' : ''}.
+              </p>
+            )}
+
+            {detail && detail.serves.length > 0 && (
               <p className="text-sm opacity-75">Serves: {detail.serves.join(', ')}</p>
             )}
 
-            {detail.summary && <p className="text-sm leading-relaxed">{detail.summary}</p>}
+            {detail?.summary && <p className="text-sm leading-relaxed">{detail.summary}</p>}
 
-            {detail.address && (
+            {detail?.address && (
               <p className="text-sm [&_a]:text-[var(--accent-text)] [&_a]:underline [&_a]:underline-offset-4">
                 <span aria-hidden="true">📍</span> {detail.address}
               </p>
             )}
-            {detail.phone && (
+            {lat != null && lng != null && !detail?.address && (
+              <p className="text-sm opacity-75">
+                <span aria-hidden="true">📍</span> {lat.toFixed(5)}, {lng.toFixed(5)}
+              </p>
+            )}
+            {detail?.phone && (
               <p className="text-sm [&_a]:text-[var(--accent-text)] [&_a]:underline [&_a]:underline-offset-4">
                 <span aria-hidden="true">☎</span>{' '}
                 <a href={`tel:${detail.phone.replace(/[^+\d]/g, '')}`}>{detail.phone}</a>
               </p>
             )}
-            {detail.website && (
+            {detail?.website && (
               <p className="text-sm [&_a]:text-[var(--accent-text)] [&_a]:underline [&_a]:underline-offset-4">
                 <span aria-hidden="true">🔗</span>{' '}
                 <a href={detail.website} target="_blank" rel="noopener noreferrer">
@@ -158,7 +187,7 @@ export function PlaceDetailPanel({
               </p>
             )}
 
-            {detail.hours.length > 0 && (
+            {detail && detail.hours.length > 0 && (
               <details className="rounded-xl border border-[var(--hairline)] px-3.5 py-2.5 text-sm [&_ul]:mt-2 [&_ul]:space-y-1 [&_ul]:opacity-80 [&>summary]:cursor-pointer [&>summary]:font-medium">
                 <summary>Opening hours</summary>
                 <ul>
@@ -169,7 +198,7 @@ export function PlaceDetailPanel({
               </details>
             )}
 
-            {detail.reviews.length > 0 && (
+            {detail && detail.reviews.length > 0 && (
               <div className="space-y-3 pt-1">
                 <h3 className="font-[family-name:var(--font-display)] text-base font-semibold">Reviews</h3>
                 {detail.reviews.map((r, i) => (

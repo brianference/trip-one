@@ -474,6 +474,15 @@ export interface PlaceDetail {
   photoRefs: string[]
   serves: string[]
   types: string[]
+  /**
+   * True when Google could not resolve full details and the server returned
+   * only what the pin already knew (name, category, coords, directions link).
+   * Not an error — the panel must still render.
+   */
+  partial?: boolean
+  category?: string | null
+  lat?: number | null
+  lng?: number | null
 }
 
 /** URL for a place photo, proxied through the backend so the API key stays server-side. */
