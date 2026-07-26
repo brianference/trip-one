@@ -3,8 +3,8 @@
 Real, public trip planner. Chronicle is the only theme. Every place shown is a
 real place (Google Places / Tripadvisor); the AI may only **select and order**
 real places, never invent one. Backend is Cloudflare Pages Functions; data is
-Supabase Postgres. This document describes the features added in the
-"describe-your-trip + rich detail" work.
+Cloudflare D1 (migrated off Supabase on 2026-07-18). This document describes the
+features added in the "describe-your-trip + rich detail" work.
 
 ## F1 — Configurable AI model
 
@@ -38,8 +38,8 @@ summary/reviews, "serves" tags, opening hours, website, and a **Get Directions**
 button.
 
 - Backend `functions/api/place-details.ts` calls Google Place Details, cached in
-  a new Supabase `place_details` table so the paid call runs at most once per
-  place per 30 days. Resolves `name`+coords via Find Place when no `place_id`.
+  the D1 `place_details` table so the paid call runs at most once per place per
+  30 days. Resolves `name`+coords via Find Place when no `place_id`.
 - `functions/api/place-photo.ts` proxies photos so the Google API key never
   reaches the browser.
 - Real data only: there is **no invented "menu"** — we surface Google's real

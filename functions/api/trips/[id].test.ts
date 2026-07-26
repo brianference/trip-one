@@ -69,4 +69,20 @@ describe('PATCH /api/trips/:id', () => {
     expect(res.status).toBe(500)
     expect((await res.json()).error).toBe('Something went wrong on our end. Please try again in a moment.')
   })
+
+  it('rate-limits patches past the hourly cap (and does not update the trip)', async () => {
+    const { env, calls } = fakeD1({
+      first: (sql) => (sql.includes('COUNT(*)') ? { n: 500 } : null),
+    })
+    const request = new Request('https://x/api/trips/abc-123', {
+      method: 'PATCH',
+      body: JSON.stringify({ design_style: 'chronicle' }),
+    })
+    const res = await onRequestPatch({ env, request, params: { id: 'abc-123' } } as never)
+    expect(res.status).toBe(429)
+    expect((await res.json()).error).toBe(
+      'You’ve made a lot of requests in a short time. Please wait a few minutes and try again.',
+    )
+    expect(calls.some((c) => c.sql.includes('UPDATE trips'))).toBe(false)
+  })
 })

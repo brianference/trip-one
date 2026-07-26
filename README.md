@@ -91,9 +91,43 @@ OpenAI gpt-4o-mini . Google Places . Tripadvisor . Open-Meteo . OpenStreetMap
 
 - `locations` — cached destination + real things-to-do (keyed by slug).
 - `trips` — a trip's itinerary + length + design style (random UUID; the URL is
-  the only key, no account).
+  the capability key; optional `user_id` when signed in).
 - `place_details` — cached Google Place Details (keyed by place_id, 30-day TTL).
+- `interest_places` — cached interest-driven place search results.
+- `users` — accounts (`email`, `password_hash`, …); never exposed client-side.
 - `request_log` — hashed IP + endpoint, for rate limiting only.
+
+### Backups
+
+Daily D1 dumps run from `.github/workflows/backup.yml` (cron `17 6 * * *` UTC
+plus `workflow_dispatch`). The script (`.github/scripts/backup-d1.mjs`) queries
+every user table via the Cloudflare D1 REST API, encrypts the dump with
+AES-256-GCM, and uploads the ciphertext as a GitHub Actions **artifact**
+(90-day retention).
+
+This repository is public. On public repos, workflow artifacts are downloadable
+by anyone signed into GitHub (and the REST artifacts endpoint serves them
+without auth) — they are not private. That is why dumps are encrypted before
+upload: the `users` table holds email and password hashes. Dumps are also never
+committed to git.
+
+Required secret `BACKUP_ENCRYPTION_KEY` (64 hex chars). Generate once and store
+in repo secrets **and** offline — losing it makes every dump unrecoverable:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Restore a downloaded artifact (key via env only, never CLI args):
+
+```bash
+# Windows PowerShell
+$env:BACKUP_ENCRYPTION_KEY = "<64-hex-from-offline-store>"
+node .github/scripts/restore-d1.mjs path/to/d1-….json.enc path/to/restored.json
+```
+
+Historical files under `backups/` predate accounts and are frozen history only;
+new exports go to CI artifacts (and local `backup-out/`, gitignored).
 
 ## Tech stack
 

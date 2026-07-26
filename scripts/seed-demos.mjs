@@ -1,13 +1,63 @@
-import { createClient } from '@supabase/supabase-js'
+/**
+ * Seeds the demo trips (Yellowstone, Tokyo) into Cloudflare D1.
+ *
+ * Replaces the retired Supabase seed script. Uses the D1 REST query API with
+ * the same account secrets as the daily backup — never hardcode tokens.
+ *
+ * Required env:
+ *   CLOUDFLARE_ACCOUNT_ID
+ *   CLOUDFLARE_API_TOKEN   (D1:Edit for writes)
+ *   CLOUDFLARE_D1_DATABASE_ID
+ */
 import { DEMO_TRIP_IDS } from '../src/lib/api/demoIds.ts'
 
-const url = process.env.SUPABASE_URL
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-if (!url || !serviceKey) {
-  console.error('Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY first.')
-  process.exit(1)
+/**
+ * @returns {{ accountId: string, apiToken: string, databaseId: string }}
+ */
+function readConfig() {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID?.trim()
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN?.trim()
+  const databaseId = process.env.CLOUDFLARE_D1_DATABASE_ID?.trim()
+  if (!accountId || !apiToken || !databaseId) {
+    console.error(
+      'Set CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, and CLOUDFLARE_D1_DATABASE_ID first.',
+    )
+    process.exit(1)
+  }
+  return { accountId, apiToken, databaseId }
 }
-const supabase = createClient(url, serviceKey)
+
+/**
+ * @param {{ accountId: string, apiToken: string, databaseId: string }} cfg
+ * @param {string} sql
+ * @param {unknown[]} [params]
+ * @returns {Promise<void>}
+ */
+async function d1Query(cfg, sql, params = []) {
+  const url = `https://api.cloudflare.com/client/v4/accounts/${cfg.accountId}/d1/database/${cfg.databaseId}/query`
+  let response
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${cfg.apiToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ sql, params }),
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    throw new Error(`D1 network error: ${message}`)
+  }
+
+  const body = await response.json().catch(() => null)
+  if (!response.ok || !body?.success) {
+    const apiErrors = Array.isArray(body?.errors)
+      ? body.errors.map((e) => e?.message ?? JSON.stringify(e)).join('; ')
+      : `HTTP ${response.status}`
+    throw new Error(`D1 query failed: ${apiErrors}`)
+  }
+}
 
 const demos = [
   {
@@ -22,26 +72,44 @@ const demos = [
   },
 ]
 
-for (const demo of demos) {
-  const mod = await import(demo.module)
-  const data = mod[demo.exportName]
+async function main() {
+  const cfg = readConfig()
 
-  const { error: locError } = await supabase.from('locations').upsert({
-    slug: data.slug,
-    lat: data.lat,
-    lng: data.lng,
-    display_name: data.displayName,
-    things_to_do: [],
-  })
-  if (locError) throw locError
+  for (const demo of demos) {
+    const mod = await import(demo.module)
+    const data = mod[demo.exportName]
+    if (!data) throw new Error(`Missing export ${demo.exportName} from ${demo.module}`)
 
-  const { error: tripError } = await supabase.from('trips').upsert({
-    id: demo.id,
-    location_slug: data.slug,
-    itinerary: data.itinerary,
-    design_style: 'bento',
-  })
-  if (tripError) throw tripError
+    await d1Query(
+      cfg,
+      `INSERT INTO locations (slug, lat, lng, display_name, things_to_do, last_refreshed)
+       VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+       ON CONFLICT(slug) DO UPDATE SET
+         lat = excluded.lat,
+         lng = excluded.lng,
+         display_name = excluded.display_name,
+         things_to_do = excluded.things_to_do,
+         last_refreshed = excluded.last_refreshed`,
+      [data.slug, data.lat, data.lng, data.displayName, JSON.stringify([])],
+    )
 
-  console.log(`Seeded ${data.slug} at trip id ${demo.id}`)
+    await d1Query(
+      cfg,
+      `INSERT INTO trips (id, location_slug, itinerary, design_style, created_at)
+       VALUES (?, ?, ?, 'bento', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+       ON CONFLICT(id) DO UPDATE SET
+         location_slug = excluded.location_slug,
+         itinerary = excluded.itinerary,
+         design_style = excluded.design_style`,
+      [demo.id, data.slug, JSON.stringify(data.itinerary)],
+    )
+
+    console.log(`Seeded ${data.slug} at trip id ${demo.id}`)
+  }
 }
+
+main().catch((err) => {
+  const message = err instanceof Error ? err.message : String(err)
+  console.error(`seed-demos failed: ${message}`)
+  process.exit(1)
+})
