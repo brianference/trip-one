@@ -170,7 +170,8 @@ async function findInterestPlaces(
 
   const perQuery = await Promise.all(
     queries.map(async (q) => {
-      const found = await textSearchPlaces(q, lat, lng, keys.googlePlaces)
+      const googleOutcome = await textSearchPlaces(q, lat, lng, keys.googlePlaces)
+      const found = googleOutcome.ok ? googleOutcome.places : []
       if (found.length >= GOOGLE_ENOUGH || !keys.tripadvisor) return found.slice(0, RESULTS_PER_QUERY)
       const fromTa = await textSearchThingsToDo(q, lat, lng, keys.tripadvisor)
       return mergeThingsToDo(fromTa, found).slice(0, RESULTS_PER_QUERY)
@@ -226,8 +227,9 @@ async function discoverVenues(
     const verified = await Promise.all(venues.map((v) => findPlaceByName(v.name, lat, lng, keys.googlePlaces)))
     const seen = new Set<string>()
     const out: ThingToDo[] = []
-    for (const p of verified) {
-      if (!p || !isRequestedExperienceCategory(p.category)) continue
+    for (const outcome of verified) {
+      if (!outcome.ok || !outcome.place || !isRequestedExperienceCategory(outcome.place.category)) continue
+      const p = outcome.place
       const key = p.name.trim().toLowerCase()
       if (key === '' || seen.has(key)) continue
       seen.add(key)
@@ -298,10 +300,11 @@ export async function runScenario(scenario: Scenario, keys: SimKeys): Promise<Sc
 
     // 3. The real nearby pool (real Tripadvisor + Google Places), filtered the
     //    way fetchLocation filters it before anything sees it.
-    const [taResults, placesResults] = await Promise.all([
+    const [taResults, placesOutcome] = await Promise.all([
       keys.tripadvisor ? searchThingsToDo(scenario.id, geo.lat, geo.lng, keys.tripadvisor) : Promise.resolve([]),
       searchPlaces(geo.lat, geo.lng, keys.googlePlaces),
     ])
+    const placesResults = placesOutcome.ok ? placesOutcome.places : []
     const nearby = dropCorruptNames(mergeThingsToDo(taResults, placesResults)).filter((t) =>
       isExperienceCategory(t.category),
     )

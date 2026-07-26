@@ -70,11 +70,24 @@ export function useItineraryActions(tripId: string) {
 
   /** Adds a things-to-do suggestion, carrying its real coordinates/category through. */
   function addFromThingToDo(item: ThingToDo) {
-    organizeAndPersist(
-      [...itinerary, { time: '', text: item.name, type: 'option', q: item.name, lat: item.lat, lng: item.lng, category: item.category }],
-      tripLengthDays,
-      tripId,
-    )
+    const stop: ItineraryItem = {
+      time: '',
+      text: item.name,
+      type: 'option',
+      q: item.name,
+      lat: item.lat,
+      lng: item.lng,
+      category: item.category,
+    }
+    // Carry bookable experience fields so the itinerary can show a booking card.
+    if (item.source) stop.source = item.source
+    if (item.productCode) stop.productCode = item.productCode
+    if (item.priceFrom != null) stop.priceFrom = item.priceFrom
+    if (item.currency) stop.currency = item.currency
+    if (item.durationMinutes != null) stop.durationMinutes = item.durationMinutes
+    if (item.bookingUrl) stop.bookingUrl = item.bookingUrl
+    if (item.freeCancellation === true) stop.freeCancellation = true
+    organizeAndPersist([...itinerary, stop], tripLengthDays, tripId)
   }
 
   /**

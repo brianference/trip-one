@@ -37,13 +37,18 @@ function cachedLocation(slug: string, thingsToDo: unknown[], extra: Record<strin
 }
 
 /** A fetch mock covering ONLY the external APIs (the DB no longer goes through fetch). */
-function externalFetch(googleResults: unknown[] = []) {
+function externalFetch(googleResults: unknown[] = [], googleStatus = 'OK') {
   return vi.fn((url: string) => {
     if (url.includes('nominatim.openstreetmap.org')) {
       return Promise.resolve({ ok: true, json: async () => [{ lat: '10', lon: '20', display_name: 'Somewhere' }] })
     }
     if (url.includes('tripadvisor.com')) return Promise.resolve({ ok: true, json: async () => ({ data: [] }) })
-    if (url.includes('googleapis.com')) return Promise.resolve({ ok: true, json: async () => ({ results: googleResults }) })
+    if (url.includes('googleapis.com')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ status: googleStatus, results: googleResults, error_message: googleStatus === 'OK' ? undefined : 'denied' }),
+      })
+    }
     throw new Error(`unexpected fetch to ${url}`)
   })
 }
@@ -155,5 +160,42 @@ describe('GET /api/location', () => {
     expect(res.status).toBe(500)
     expect((await res.json()).error).toBeDefined()
     expect(errorSpy).toHaveBeenCalled()
+  })
+
+  it('does NOT write an empty location cache when Places returns REQUEST_DENIED (API failure, not genuine empty)', async () => {
+    // Real failure mode: missing/revoked key → HTTP 200 + REQUEST_DENIED + [].
+    // Caching that empty list wiped good rows during self-heal.
+    const fetchMock = externalFetch([], 'REQUEST_DENIED')
+    vi.stubGlobal('fetch', fetchMock)
+    const { env, calls } = fakeD1({
+      first: (sql) => {
+        if (sql.includes('FROM locations')) return null
+        if (sql.includes('COUNT(*)')) return { n: 1 }
+        return null
+      },
+      extraEnv: API_KEYS,
+    })
+    const res = await onRequestGet({ env, request: req('https://x/api/location?q=Tokyo') } as never)
+    expect(res.status).toBe(200)
+    expect((await res.json()).thingsToDo).toEqual([])
+    // No INSERT/UPSERT of the empty failure into locations.
+    expect(calls.some((c) => c.sql.includes('INSERT INTO locations'))).toBe(false)
+  })
+
+  it('DOES write the location cache when Places succeeds with ZERO_RESULTS (genuine empty)', async () => {
+    const fetchMock = externalFetch([], 'ZERO_RESULTS')
+    vi.stubGlobal('fetch', fetchMock)
+    const { env, calls } = fakeD1({
+      first: (sql) => {
+        if (sql.includes('FROM locations')) return null
+        if (sql.includes('COUNT(*)')) return { n: 1 }
+        return null
+      },
+      extraEnv: API_KEYS,
+    })
+    const res = await onRequestGet({ env, request: req('https://x/api/location?q=Nowhereville') } as never)
+    expect(res.status).toBe(200)
+    expect((await res.json()).thingsToDo).toEqual([])
+    expect(calls.some((c) => c.sql.includes('INSERT INTO locations'))).toBe(true)
   })
 })

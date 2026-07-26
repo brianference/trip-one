@@ -914,6 +914,165 @@ body {
   color: var(--accent-text);
 }
 
+/* ---------- Bookable experience card (Viator) ----------
+   Distinct from ordinary POI stops: paid, leaves the site, affiliate link.
+   Tokens only — no new colours. Mobile-first, 44px touch targets. */
+.chronicle-experience-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-sm);
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--chronicle-space-md);
+  border: 1px solid var(--chronicle-teal);
+  border-radius: var(--chronicle-radius-md);
+  background: var(--chronicle-bg-surface-2);
+  box-shadow: var(--chronicle-shadow-card);
+}
+
+.chronicle-experience-card--compact {
+  padding: var(--chronicle-space-sm) var(--chronicle-space-md);
+}
+
+.chronicle-entry--experience {
+  list-style: none;
+  padding: var(--chronicle-space-sm) 0;
+}
+
+.chronicle-experience-card__kicker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--chronicle-space-sm);
+}
+
+.chronicle-experience-card__badge {
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+
+.chronicle-experience-card__free-cancel {
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--chronicle-radius-pill);
+  border: 1px solid var(--chronicle-border-subtle);
+  background: var(--chronicle-bg-surface);
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-experience-card__title {
+  margin: 0;
+  font-family: var(--chronicle-font-display);
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1.3;
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-experience-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--chronicle-space-sm) var(--chronicle-space-md);
+  font-family: var(--chronicle-font-body);
+  font-size: 13px;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-experience-card__rating {
+  font-family: var(--chronicle-font-mono);
+  font-weight: 600;
+  color: var(--chronicle-gold);
+}
+
+.chronicle-experience-card__duration,
+.chronicle-experience-card__price {
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-experience-card__price {
+  font-weight: 600;
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-experience-card__book-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--chronicle-space-sm);
+  margin-top: var(--chronicle-space-xs);
+}
+
+.chronicle-experience-card__book {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 16px;
+  border-radius: var(--chronicle-radius-pill);
+  background: var(--chronicle-teal);
+  color: var(--color-on-primary);
+  font-family: var(--chronicle-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+}
+
+.chronicle-experience-card__book:hover,
+.chronicle-experience-card__book:focus-visible {
+  background: var(--chronicle-teal-hover);
+}
+
+.chronicle-experience-card__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 14px;
+  border-radius: var(--chronicle-radius-pill);
+  border: 1px solid var(--chronicle-border-hairline);
+  background: var(--chronicle-bg-surface);
+  color: var(--chronicle-text-secondary);
+  font-family: var(--chronicle-font-mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.chronicle-experience-card__remove:hover,
+.chronicle-experience-card__remove:focus-visible {
+  color: var(--chronicle-danger);
+  border-color: var(--chronicle-danger);
+}
+
+.chronicle-experience-card__disclosure {
+  margin: 0;
+  font-family: var(--chronicle-font-body);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--chronicle-text-tertiary);
+}
+
+.chronicle-ttd-card--experience {
+  gap: var(--chronicle-space-sm);
+}
+
+.chronicle-ttd-card--experience .chronicle-ttd-add {
+  margin-left: 0;
+  align-self: flex-start;
+}
+
 /* Place detail: add-to-day / on-plan CTA (first row of the pinned footer). */
 .chronicle-place-plan {
   display: flex;

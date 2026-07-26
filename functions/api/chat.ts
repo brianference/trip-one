@@ -31,6 +31,9 @@ const chatRequestSchema = z.object({
         // interests, so the planner can prioritise it and the food balancer
         // knows it isn't incidental filler.
         themed: z.boolean().optional(),
+        durationMinutes: z.number().positive().optional(),
+        isExperience: z.boolean().optional(),
+        source: z.enum(['tripadvisor', 'places', 'viator']).optional(),
       }),
     )
     .min(1)

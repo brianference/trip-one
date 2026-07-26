@@ -54,6 +54,7 @@ describe('TripShell', () => {
       displayName: 'Lisbon, Portugal',
       thingsToDo: [],
     })
+    vi.spyOn(client, 'fetchExperiences').mockResolvedValue([])
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) }))
 
     renderShell('/trip/t1')
@@ -77,6 +78,7 @@ describe('TripShell', () => {
       displayName: 'Lisbon, Portugal',
       thingsToDo: [],
     })
+    vi.spyOn(client, 'fetchExperiences').mockResolvedValue([])
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) }))
 
     renderShell('/trip/t1')

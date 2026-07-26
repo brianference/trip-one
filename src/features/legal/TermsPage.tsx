@@ -3,7 +3,7 @@ import { Seo } from '../../components/Seo'
 import { PageShell, Prose } from '../../components/layout/PageShell'
 
 /** Kept in one place so the page and the "last updated" line cannot disagree. */
-const LAST_UPDATED = '19 July 2026'
+const LAST_UPDATED = '25 July 2026'
 
 /**
  * Terms and Conditions.
@@ -32,6 +32,13 @@ export function TermsPage() {
           <p>
             Trip One is a free trip-planning service. By using it, you agree to these terms. If you do not agree,
             please do not use the service.
+          </p>
+
+          <h2>Affiliate links</h2>
+          <p>
+            Some trips may include bookable experiences from Viator. When you book through a Viator link on Trip One,
+            Trip One may earn a commission. That does not change the price you pay. We only list real products returned
+            by Viator; we do not invent tours, prices, or availability.
           </p>
 
           <h2>Who can use Trip One</h2>

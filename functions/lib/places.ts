@@ -28,6 +28,13 @@ const FOOD_SEARCH_TYPES: readonly string[] = ['restaurant', 'cafe']
 // promote any food type to the front so meals get scheduled.
 const FOOD_TYPES = ['restaurant', 'cafe', 'bakery', 'meal_takeaway', 'meal_delivery', 'food'] as const
 
+/**
+ * Body-level statuses Google treats as success for Nearby/Text Search.
+ * HTTP 200 alone is NOT success: REQUEST_DENIED, OVER_QUERY_LIMIT, and
+ * INVALID_REQUEST also return 200 with an empty `results` array.
+ */
+const PLACES_SUCCESS_STATUSES = new Set(['OK', 'ZERO_RESULTS'])
+
 interface PlacesResult {
   place_id?: string
   name: string
@@ -40,6 +47,34 @@ interface PlacesResult {
   formatted_address?: string
   geometry?: { location?: { lat?: number; lng?: number } }
 }
+
+interface PlacesApiBody {
+  status?: string
+  error_message?: string
+  results?: PlacesResult[]
+}
+
+/**
+ * Outcome of a Google Places search.
+ *
+ * WHY a result type (not bare `[]` on every miss): Google Places returns HTTP
+ * 200 with a body-level `status` for REQUEST_DENIED (bad/revoked/restricted
+ * key), OVER_QUERY_LIMIT, and INVALID_REQUEST — each with empty `results`.
+ * Returning `[]` for those made location self-heal cache a failure as a
+ * genuine empty destination (silent total data loss; same permanent-poison
+ * hazard as experiences.ts / interest-places). Callers that fail soft still
+ * map `ok: false` → empty list for the traveler; callers that write cache
+ * must only persist on `ok: true`.
+ *
+ * ZERO_RESULTS is `ok: true` with `places: []` — a real, empty answer.
+ */
+export type PlacesSearchOutcome = { ok: true; places: ThingToDo[] } | { ok: false }
+
+/**
+ * Outcome of grounding a single named venue via Text Search.
+ * `ok: true, place: null` is a genuine no-match; `ok: false` is an API failure.
+ */
+export type FindPlaceOutcome = { ok: true; place: ThingToDo | null } | { ok: false }
 
 // How many text-search results to keep (enough to fill a multi-day plan).
 const TEXT_SEARCH_LIMIT = 20
@@ -90,76 +125,126 @@ function pickCategory(types: string[], searchType: string): string {
   return types[0] ?? 'attraction'
 }
 
-async function searchPlacesByType(lat: number, lng: number, type: string, apiKey: string): Promise<ThingToDo[]> {
+/**
+ * Reads Google Places body status. Never logs the API key.
+ * @param body - Parsed JSON body from Nearby or Text Search
+ * @param context - Short label for logs (type / query name), never secrets
+ */
+function parsePlacesApiBody(
+  body: PlacesApiBody,
+  context: string,
+): { ok: true; results: PlacesResult[] } | { ok: false } {
+  const status = body.status
+  if (status != null && PLACES_SUCCESS_STATUSES.has(status)) {
+    return { ok: true, results: body.results ?? [] }
+  }
+  // Missing status is failure too — real Google responses always send it.
+  // Do not treat it as empty success: that is exactly how a bad key became
+  // a permanently empty destination in the location cache.
+  logger.warn('places API body-level failure', {
+    context,
+    status: status ?? 'missing',
+    error_message: body.error_message,
+  })
+  return { ok: false }
+}
+
+/**
+ * Maps a Nearby Search hit into the shared ThingToDo shape, applying food
+ * lodging/distance filters for restaurant/cafe searches.
+ */
+function mapNearbyResult(item: PlacesResult, type: string, lat: number, lng: number): ThingToDo | null {
+  // A hotel with a notable restaurant/cafe can surface in a food search.
+  // It's not somewhere a traveler plans a meal or coffee, so drop
+  // lodging-typed results from those searches.
+  if (FOOD_SEARCH_TYPES.includes(type) && (item.types ?? []).includes('lodging')) return null
+  // The nearby search spans SEARCH_RADIUS_M (50km) so a national park's
+  // spread-out attractions are reachable, but that radius applied to food
+  // put a Tim Hortons 47km from Whistler on the plan. Attractions justify
+  // the drive; a coffee stop does not.
+  // Only drop on a KNOWN excessive distance. A result without coordinates
+  // can't be measured, and dropping it would silently delete places whose
+  // source simply omits geometry.
+  if (FOOD_SEARCH_TYPES.includes(type)) {
+    const plat = item.geometry?.location?.lat
+    const plng = item.geometry?.location?.lng
+    if (plat != null && plng != null && distanceKm(lat, lng, plat, plng) > FOOD_MAX_KM) return null
+  }
+  return {
+    name: item.name,
+    category: pickCategory(item.types ?? [], type),
+    // Preserve the adult signal BEFORE food promotion buries it: a saloon's
+    // types are ['bar', 'restaurant', ...] and pickCategory returns
+    // 'restaurant', which made it invisible to the audience filter.
+    adultVenue: isAdultVenue({ name: item.name, category: '', types: item.types ?? [] }),
+    source: 'places' as const,
+    rating: item.rating,
+    numReviews: item.user_ratings_total,
+    address: item.vicinity,
+    lat: item.geometry?.location?.lat,
+    lng: item.geometry?.location?.lng,
+    placeId: item.place_id,
+  }
+}
+
+async function searchPlacesByType(
+  lat: number,
+  lng: number,
+  type: string,
+  apiKey: string,
+): Promise<PlacesSearchOutcome> {
   const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${SEARCH_RADIUS_M}&type=${type}&key=${apiKey}`
   const res = await fetch(url)
   if (!res.ok) {
     logger.warn('places search non-ok response', { status: res.status, type })
-    return []
+    return { ok: false }
   }
-  const body = (await res.json()) as { results?: PlacesResult[] }
-  return (body.results ?? [])
-    .filter((item) => {
-      // A hotel with a notable restaurant/cafe can surface in a food search.
-      // It's not somewhere a traveler plans a meal or coffee, so drop
-      // lodging-typed results from those searches.
-      if (FOOD_SEARCH_TYPES.includes(type) && (item.types ?? []).includes('lodging')) return false
-      // The nearby search spans SEARCH_RADIUS_M (50km) so a national park's
-      // spread-out attractions are reachable, but that radius applied to food
-      // put a Tim Hortons 47km from Whistler on the plan. Attractions justify
-      // the drive; a coffee stop does not.
-      // Only drop on a KNOWN excessive distance. A result without coordinates
-      // can't be measured, and dropping it would silently delete places whose
-      // source simply omits geometry.
-      if (FOOD_SEARCH_TYPES.includes(type)) {
-        const plat = item.geometry?.location?.lat
-        const plng = item.geometry?.location?.lng
-        if (plat != null && plng != null && distanceKm(lat, lng, plat, plng) > FOOD_MAX_KM) return false
-      }
-      return true
-    })
-    .map((item) => ({
-      name: item.name,
-      category: pickCategory(item.types ?? [], type),
-      // Preserve the adult signal BEFORE food promotion buries it: a saloon's
-      // types are ['bar', 'restaurant', ...] and pickCategory returns
-      // 'restaurant', which made it invisible to the audience filter.
-      adultVenue: isAdultVenue({ name: item.name, category: '', types: item.types ?? [] }),
-      source: 'places' as const,
-      rating: item.rating,
-      numReviews: item.user_ratings_total,
-      address: item.vicinity,
-      lat: item.geometry?.location?.lat,
-      lng: item.geometry?.location?.lng,
-      placeId: item.place_id,
-    }))
+  const body = (await res.json()) as PlacesApiBody
+  const parsed = parsePlacesApiBody(body, `nearby:${type}`)
+  if (!parsed.ok) return { ok: false }
+  const places = parsed.results
+    .map((item) => mapNearbyResult(item, type, lat, lng))
+    .filter((item): item is ThingToDo => item != null)
+  return { ok: true, places }
 }
 
 /**
  * Search Google Places near a coordinate for both attractions and
- * restaurants, deduped by name. Fails soft: any failure for a given type
- * yields no results for it rather than propagating, since Tripadvisor results
- * (and the other type) can stand in on their own.
+ * restaurants, deduped by name.
+ *
+ * Fails soft at the HTTP layer only in the sense that a total outage yields
+ * `{ ok: false }` rather than throwing — callers map that to an empty list
+ * for the traveler. Body-level Google failures (REQUEST_DENIED, etc.) are
+ * also `{ ok: false }`, never a silent empty success. Partial type success
+ * (one type OK, another denied) still returns `{ ok: true }` with what was
+ * found so Tripadvisor can fill gaps without poisoning the cache as empty.
+ *
  * @param lat - Latitude to search near
  * @param lng - Longitude to search near
  * @param apiKey - Google Places API key
- * @returns A combined, deduped list of things to do (may be empty)
+ * @returns Discriminated outcome — only `ok: true` may be cached as empty
  */
-export async function searchPlaces(lat: number, lng: number, apiKey: string): Promise<ThingToDo[]> {
+export async function searchPlaces(lat: number, lng: number, apiKey: string): Promise<PlacesSearchOutcome> {
   try {
     const perType = await Promise.all(SEARCH_TYPES.map((type) => searchPlacesByType(lat, lng, type, apiKey)))
+    // Every type failed → overall failure (distinguishable from ZERO_RESULTS).
+    if (perType.every((r) => !r.ok)) return { ok: false }
+
     const seen = new Set<string>()
     const merged: ThingToDo[] = []
-    for (const item of perType.flat()) {
-      const key = item.name.toLowerCase()
-      if (seen.has(key)) continue
-      seen.add(key)
-      merged.push(item)
+    for (const outcome of perType) {
+      if (!outcome.ok) continue
+      for (const item of outcome.places) {
+        const key = item.name.toLowerCase()
+        if (seen.has(key)) continue
+        seen.add(key)
+        merged.push(item)
+      }
     }
-    return merged
+    return { ok: true, places: merged }
   } catch (err) {
     logger.error('places search failed', err)
-    return []
+    return { ok: false }
   }
 }
 
@@ -170,44 +255,59 @@ export async function searchPlaces(lat: number, lng: number, apiKey: string): Pr
  * This is the grounding step for web-discovered venues: the model proposes a
  * name ("Mangy Moose Saloon"), and this confirms it's a real place, pins its
  * coordinates, and reads its rating/review count. A hallucinated or misremembered
- * name simply returns null and is dropped, so the pool never gains a fake place.
+ * name simply returns `{ ok: true, place: null }` and is dropped, so the pool
+ * never gains a fake place. API failures return `{ ok: false }` so callers
+ * can tell "not found" from "Places is down".
  *
  * @param name - The venue name the guide/model produced
  * @param lat - Trip centre latitude (search is biased here and far matches dropped)
  * @param lng - Trip centre longitude
  * @param apiKey - Google Places API key
  */
-export async function findPlaceByName(name: string, lat: number, lng: number, apiKey: string): Promise<ThingToDo | null> {
+export async function findPlaceByName(
+  name: string,
+  lat: number,
+  lng: number,
+  apiKey: string,
+): Promise<FindPlaceOutcome> {
   const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(name)}&location=${lat},${lng}&radius=${SEARCH_RADIUS_M}&key=${apiKey}`
   try {
     const res = await fetch(url)
-    if (!res.ok) return null
-    const body = (await res.json()) as { results?: PlacesResult[] }
-    const item = (body.results ?? [])[0]
-    if (!item) return null
+    if (!res.ok) {
+      logger.warn('findPlaceByName non-ok response', { status: res.status })
+      return { ok: false }
+    }
+    const body = (await res.json()) as PlacesApiBody
+    const parsed = parsePlacesApiBody(body, 'findPlaceByName')
+    if (!parsed.ok) return { ok: false }
+    const item = parsed.results[0]
+    if (!item) return { ok: true, place: null }
     const plat = item.geometry?.location?.lat
     const plng = item.geometry?.location?.lng
     // Must have real coordinates and be within the trip's vicinity — a text
     // search for a name with no local match happily returns a same-named place
     // on another continent.
-    if (plat == null || plng == null) return null
+    if (plat == null || plng == null) return { ok: true, place: null }
     const category = categorizeTextResult(item.types ?? [])
-    if (distanceKm(lat, lng, plat, plng) > maxKmFor(category)) return null
+    if (distanceKm(lat, lng, plat, plng) > maxKmFor(category)) return { ok: true, place: null }
     return {
-      name: item.name,
-      category,
-      adultVenue: isAdultVenue({ name: item.name, category: '', types: item.types ?? [] }),
-      source: 'places' as const,
-      rating: item.rating,
-      numReviews: item.user_ratings_total,
-      address: item.vicinity ?? item.formatted_address,
-      lat: plat,
-      lng: plng,
-      placeId: item.place_id,
+      ok: true,
+      place: {
+        name: item.name,
+        category,
+        adultVenue: isAdultVenue({ name: item.name, category: '', types: item.types ?? [] }),
+        source: 'places' as const,
+        rating: item.rating,
+        numReviews: item.user_ratings_total,
+        address: item.vicinity ?? item.formatted_address,
+        lat: plat,
+        lng: plng,
+        placeId: item.place_id,
+      },
     }
   } catch (err) {
     logger.error('findPlaceByName failed', err)
-    return null
+    return { ok: false }
   }
 }
 
@@ -225,22 +325,30 @@ function categorizeTextResult(types: string[]): string {
  * Free-text Google Places search near a coordinate — "sushi restaurant",
  * "rooftop bar", "vegan cafe", etc. — so the chat can add ANY kind of place the
  * fixed nearby pool doesn't already cover. Returns real, correctly-typed
- * results (never fabricated); fails soft to an empty list.
+ * results (never fabricated). Body-level failures are `{ ok: false }`, not a
+ * silent empty list, so callers that cache can refuse to poison their store.
  * @param query - The traveler's requested kind of place
  * @param lat - Latitude to bias the search toward
  * @param lng - Longitude to bias the search toward
  * @param apiKey - Google Places API key
  */
-export async function textSearchPlaces(query: string, lat: number, lng: number, apiKey: string): Promise<ThingToDo[]> {
+export async function textSearchPlaces(
+  query: string,
+  lat: number,
+  lng: number,
+  apiKey: string,
+): Promise<PlacesSearchOutcome> {
   const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${lat},${lng}&radius=${SEARCH_RADIUS_M}&key=${apiKey}`
   try {
     const res = await fetch(url)
     if (!res.ok) {
       logger.warn('places text search non-ok response', { status: res.status })
-      return []
+      return { ok: false }
     }
-    const body = (await res.json()) as { results?: PlacesResult[] }
-    return (body.results ?? [])
+    const body = (await res.json()) as PlacesApiBody
+    const parsed = parsePlacesApiBody(body, 'textSearch')
+    if (!parsed.ok) return { ok: false }
+    const places = parsed.results
       .filter((item) => !(item.types ?? []).includes('lodging'))
       // Hard-drop results outside the trip's vicinity — text search only biases
       // toward the coordinate, so far-flung matches slip in without this.
@@ -263,8 +371,9 @@ export async function textSearchPlaces(query: string, lat: number, lng: number, 
         lng: item.geometry?.location?.lng,
         placeId: item.place_id,
       }))
+    return { ok: true, places }
   } catch (err) {
     logger.error('places text search failed', err)
-    return []
+    return { ok: false }
   }
 }
