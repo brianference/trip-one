@@ -6,6 +6,10 @@ import {
   upsertPlaceDetailCache,
   getInterestPlacesCache,
   upsertInterestPlacesCache,
+  getViatorDestinationsCache,
+  upsertViatorDestinationsCache,
+  getViatorExperiencesCache,
+  upsertViatorExperiencesCache,
   countRecentRequests,
   insertRequestLog,
   createTrip,
@@ -139,6 +143,52 @@ describe('interest places cache', () => {
     await upsertInterestPlacesCache(env, { cache_key: 'k', places: [{ name: 'Guide' }], queries: ['fishing guide'] })
     expect(calls[0].args).toContain('[{"name":"Guide"}]')
     expect(calls[0].args).toContain('["fishing guide"]')
+  })
+})
+
+describe('viator caches', () => {
+  it('parses destinations on read', async () => {
+    const { env } = makeDB([
+      {
+        cache_key: 'v1:destinations',
+        destinations: '[{"destinationId":1,"name":"Ely"}]',
+        last_refreshed: 't',
+      },
+    ])
+    const row = await getViatorDestinationsCache(env, 'v1:destinations')
+    expect(row?.destinations).toEqual([{ destinationId: 1, name: 'Ely' }])
+  })
+
+  it('serializes destinations on write', async () => {
+    const { env, calls } = makeDB()
+    await upsertViatorDestinationsCache(env, {
+      cache_key: 'v1:destinations',
+      destinations: [{ destinationId: 1 }],
+    })
+    expect(calls[0].sql).toContain('viator_destinations_cache')
+    expect(calls[0].args).toContain('[{"destinationId":1}]')
+  })
+
+  it('parses experiences on read', async () => {
+    const { env } = makeDB([
+      {
+        cache_key: 'v1:334:USD',
+        experiences: '[{"name":"Sushi Class","source":"viator"}]',
+        last_refreshed: 't',
+      },
+    ])
+    const row = await getViatorExperiencesCache(env, 'v1:334:USD')
+    expect(row?.experiences).toEqual([{ name: 'Sushi Class', source: 'viator' }])
+  })
+
+  it('serializes experiences on write', async () => {
+    const { env, calls } = makeDB()
+    await upsertViatorExperiencesCache(env, {
+      cache_key: 'v1:334:USD',
+      experiences: [{ name: 'Sushi Class' }],
+    })
+    expect(calls[0].sql).toContain('viator_experiences_cache')
+    expect(calls[0].args).toContain('[{"name":"Sushi Class"}]')
   })
 })
 
