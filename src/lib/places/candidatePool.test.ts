@@ -103,6 +103,64 @@ describe('buildCandidatePool', () => {
     expect(buildCandidatePool([], [], 3)).toEqual([])
   })
 
+  /**
+   * CRITICAL: an empty experiences list must produce byte-identical pool
+   * output to today. If this breaks, every trip without Viator inventory
+   * silently changes.
+   */
+  it('empty experiences list produces byte-identical pool output to omitting experiences', () => {
+    const nearby = nearbyPool()
+    const themed: PoolPlace[] = [{ name: 'Walleye Guide Service', category: 'travel_agency', rating: 4.1 }]
+    const without = buildCandidatePool(nearby, themed, 3)
+    const withEmpty = buildCandidatePool(nearby, themed, 3, {}, [])
+    expect(JSON.stringify(withEmpty)).toBe(JSON.stringify(without))
+  })
+
+  it('adds at most EXPERIENCE_CANDIDATES_PER_DAY experiences per day', () => {
+    const experiences: PoolPlace[] = Array.from({ length: 20 }, (_, i) => ({
+      name: `Bookable Tour ${i}`,
+      category: 'tour',
+      source: 'viator' as const,
+      rating: 4.8,
+      durationMinutes: 180,
+      bookingUrl: `https://www.viator.com/tours/t${i}`,
+    }))
+    const pool = buildCandidatePool(nearbyPool(), [], 2, {}, experiences)
+    const exp = pool.filter((p) => p.source === 'viator')
+    // 2 days × 1 per day
+    expect(exp).toHaveLength(2)
+    // Real POIs still present — experiences did not crowd them out.
+    expect(pool.map((p) => p.name)).toEqual(expect.arrayContaining(['Local Museum', 'City Park']))
+  })
+
+  it('never counts an experience as food even when the product is a food tour', () => {
+    const experiences: PoolPlace[] = [
+      {
+        name: 'Tokyo Food Tour',
+        category: 'food_tour',
+        source: 'viator',
+        rating: 4.9,
+        durationMinutes: 180,
+      },
+    ]
+    // 1 day => food budget 3; experience must not consume a food slot.
+    const pool = buildCandidatePool(nearbyPool(), [], 1, {}, experiences)
+    const food = pool.filter((p) => ['cafe', 'restaurant', 'bakery', 'bar'].includes(p.category))
+    expect(food).toHaveLength(3)
+    expect(pool.some((p) => p.name === 'Tokyo Food Tour')).toBe(true)
+  })
+
+  it('respects audience filter on experiences', () => {
+    const experiences: PoolPlace[] = [
+      { name: 'Brewery Crawl', category: 'bar', source: 'viator', rating: 4.7 },
+      { name: 'Family Zoo Tour', category: 'zoo', source: 'viator', rating: 4.6 },
+    ]
+    const kids = buildCandidatePool(nearbyPool(), [], 3, { audience: 'kids' }, experiences)
+    expect(kids.map((p) => p.name)).not.toContain('Brewery Crawl')
+    const adults = buildCandidatePool(nearbyPool(), [], 3, { audience: 'adults' }, experiences)
+    expect(adults.map((p) => p.name)).not.toContain('Family Zoo Tour')
+  })
+
   describe('audience filtering of the generic pool', () => {
     it('keeps a zoo out of an adults trip (the day-filler can never reach it)', () => {
       const nearby: PoolPlace[] = [

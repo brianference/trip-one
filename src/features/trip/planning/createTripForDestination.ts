@@ -2,6 +2,7 @@ import {
   fetchLocation,
   fetchDiscoveredVenues,
   fetchInterestPlaces,
+  fetchExperiences,
   createTrip,
   updateTrip,
   generatePlan,
@@ -71,20 +72,28 @@ export async function createTripForDestination(req: TripRequest): Promise<BuiltT
     foodFocused: req.foodFocused,
   }
 
-  // Discovery (web-grounded, curated) and the interest search (cheap query
-  // expansion) both surface themed venues; running them together broadens
-  // coverage, and both are cached so a repeat trip pays nothing.
-  const [trip, discovered, interestPlaces] = await Promise.all([
+  // Discovery, interest search, and bookable experiences all fail soft and
+  // run in parallel so a Viator outage never blocks trip creation.
+  const [trip, discovered, interestPlaces, experiences] = await Promise.all([
     createTrip(location.slug, 'chronicle'),
     fetchDiscoveredVenues(intent, location.lat, location.lng),
     fetchInterestPlaces(interests, location.displayName, location.lat, location.lng),
+    fetchExperiences(location.lat, location.lng),
   ])
 
   const themed = dedupeByName([...discovered, ...interestPlaces])
-  const candidatePlaces: ThingToDo[] = buildCandidatePool(location.thingsToDo, themed, days, {
-    foodFocused: req.foodFocused,
-    audience: req.audience,
-  })
+  // Experiences are a fourth role (not themed interest matches). Empty list
+  // is byte-identical to the pre-Viator pool — see candidatePool tests.
+  const candidatePlaces: ThingToDo[] = buildCandidatePool(
+    location.thingsToDo,
+    themed,
+    days,
+    {
+      foodFocused: req.foodFocused,
+      audience: req.audience,
+    },
+    experiences,
+  )
 
   const plan = await generatePlan(interests, days, candidatePlaces.map(toPlanPlace), {
     party: req.party,
@@ -112,5 +121,16 @@ function dedupeByName(places: ThingToDo[]): ThingToDo[] {
 }
 
 function toPlanPlace(p: ThingToDo) {
-  return { name: p.name, category: p.category, rating: p.rating, numReviews: p.numReviews, lat: p.lat, lng: p.lng, themed: p.themed }
+  return {
+    name: p.name,
+    category: p.category,
+    rating: p.rating,
+    numReviews: p.numReviews,
+    lat: p.lat,
+    lng: p.lng,
+    themed: p.themed,
+    durationMinutes: p.durationMinutes,
+    isExperience: p.source === 'viator',
+    source: p.source,
+  }
 }

@@ -21,4 +21,15 @@ describe('DayTabs', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Day 2' }))
     expect(onSelect).toHaveBeenCalledWith(2)
   })
+
+  it('renders day buttons for an N-day trip and clicking day N selects day N', () => {
+    const dayCount = 8
+    const onSelect = vi.fn()
+    render(<DayTabs dayCount={dayCount} selectedDay={1} onSelect={onSelect} />)
+    for (let day = 1; day <= dayCount; day++) {
+      expect(screen.getByRole('tab', { name: `Day ${day}` })).toBeInTheDocument()
+    }
+    fireEvent.click(screen.getByRole('tab', { name: 'Day 8' }))
+    expect(onSelect).toHaveBeenCalledWith(8)
+  })
 })

@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "test": "vitest run",
     "test:watch": "vitest",
+    "regression": "node scripts/regression.mjs",
     "sim": "vite-node simulations/run.ts --"
   },
   "dependencies": {

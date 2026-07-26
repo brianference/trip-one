@@ -153,7 +153,11 @@ export async function onRequestPost({ env, request }: { env: InterestEnv; reques
 
     const perQuery = await Promise.all(
       queries.map(async (q) => {
-        const found = await textSearchPlaces(q, lat, lng, env.GOOGLE_PLACES_API_KEY as string)
+        // textSearchPlaces returns ok/not-ok so a REQUEST_DENIED is not a
+        // silent empty list; fail soft per query so one bad call does not
+        // abort the whole interest expansion.
+        const googleOutcome = await textSearchPlaces(q, lat, lng, env.GOOGLE_PLACES_API_KEY as string)
+        const found = googleOutcome.ok ? googleOutcome.places : []
         if (found.length >= GOOGLE_ENOUGH || !env.TRIPADVISOR_API_KEY) return found.slice(0, RESULTS_PER_QUERY)
         const fromTa = await textSearchThingsToDo(q, lat, lng, env.TRIPADVISOR_API_KEY)
         return mergeThingsToDo(fromTa, found).slice(0, RESULTS_PER_QUERY)

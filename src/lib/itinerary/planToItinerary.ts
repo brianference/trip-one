@@ -16,7 +16,7 @@ export function planToItinerary(plan: PlanDay[], places: ThingToDo[]): Itinerary
     for (const idx of dayPlan.placeIndexes) {
       const place = places[idx]
       if (!place) continue
-      items.push({
+      const item: ItineraryItem = {
         time: '',
         text: place.name,
         type: 'option',
@@ -25,7 +25,17 @@ export function planToItinerary(plan: PlanDay[], places: ThingToDo[]): Itinerary
         lng: place.lng,
         category: place.category,
         day: dayPlan.day,
-      })
+      }
+      // Carry real experience fields through so the itinerary can render a
+      // booking card. Never invent price/duration/currency client-side.
+      if (place.source) item.source = place.source
+      if (place.productCode) item.productCode = place.productCode
+      if (place.priceFrom != null) item.priceFrom = place.priceFrom
+      if (place.currency) item.currency = place.currency
+      if (place.durationMinutes != null) item.durationMinutes = place.durationMinutes
+      if (place.bookingUrl) item.bookingUrl = place.bookingUrl
+      if (place.freeCancellation === true) item.freeCancellation = true
+      items.push(item)
     }
   }
   return items

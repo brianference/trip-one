@@ -15,9 +15,15 @@ import { currencyForDisplayName } from '../localinfo/currencyByCountry'
 import { useCurrencyRate } from '../localinfo/useCurrencyRate'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
 
-/** Start with the dock open on desktop-width screens, collapsed on mobile. */
+/**
+ * Chat starts closed on every viewport. The dock is an overlay (no layout
+ * gutter): if it opened by default on desktop it covered day tabs and map
+ * chrome (Playwright could not click Day 3 — chat intercepts pointer events).
+ * The fixed "Plan by chat" FAB keeps the primary AI surface one tap away
+ * without shrinking main content below 90% of the viewport.
+ */
 function initialChatOpen(): boolean {
-  return typeof window !== 'undefined' && window.innerWidth >= 1024
+  return false
 }
 
 /**

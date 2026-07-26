@@ -105,25 +105,42 @@ export async function onRequestGet({
     const geo = await geocode(parsed.data)
     if (!geo) return json({ error: 'We couldn’t find that place. Try a nearby city or check the spelling.' }, 404)
 
-    const [tripadvisorResults, placesResults] = await Promise.all([
+    const [tripadvisorResults, placesOutcome] = await Promise.all([
       searchThingsToDo(slug, geo.lat, geo.lng, env.TRIPADVISOR_API_KEY),
       searchPlaces(geo.lat, geo.lng, env.GOOGLE_PLACES_API_KEY),
     ])
     // Drop any place whose name is mojibake before caching or returning it — a
     // place we can't name correctly is better omitted than shown garbled, and
     // this keeps a healed row from tripping the self-heal check on its next hit.
+    // Places body-level failures (REQUEST_DENIED, OVER_QUERY_LIMIT, …) are
+    // `{ ok: false }` — never a silent empty list (see places.ts).
+    const placesResults = placesOutcome.ok ? placesOutcome.places : []
     const thingsToDo = dropCorruptNames(mergeThingsToDo(tripadvisorResults, placesResults))
 
-    await upsertLocation(env, {
-      slug,
-      lat: geo.lat,
-      lng: geo.lng,
-      display_name: geo.displayName,
-      things_to_do: thingsToDo,
-      weather_baseline: geo.boundingBox ? { boundingBox: geo.boundingBox } : null,
-    })
-    logger.info('generated new location', { slug })
+    // Only cache when emptiness is a real answer, not an upstream failure.
+    // WHY: missing/revoked/restricted Places keys return HTTP 200 with
+    // REQUEST_DENIED and empty results. Caching that as things_to_do=[] once
+    // wiped a good location row during self-heal and served empty destinations
+    // with no error. Same rule as experiences.ts (ok/not-ok) and
+    // interest-places (never cache a transient empty). Partial TA results
+    // with a Places failure still cache — they are real, non-empty data.
+    const placesFailedEmpty = !placesOutcome.ok && thingsToDo.length === 0
+    if (placesFailedEmpty) {
+      logger.warn('skipping location cache write: places API failed with no things_to_do', { slug })
+    } else {
+      await upsertLocation(env, {
+        slug,
+        lat: geo.lat,
+        lng: geo.lng,
+        display_name: geo.displayName,
+        things_to_do: thingsToDo,
+        weather_baseline: geo.boundingBox ? { boundingBox: geo.boundingBox } : null,
+      })
+      logger.info('generated new location', { slug })
+    }
 
+    // Fail soft to the client either way — empty list, not a 500 — so a Places
+    // outage degrades the trip rather than blocking it.
     return json(
       { slug, lat: geo.lat, lng: geo.lng, displayName: geo.displayName, thingsToDo, boundingBox: geo.boundingBox },
       200,

@@ -18,14 +18,20 @@ import { fitsAudience } from './audience'
  * it.
  *
  * The pool is therefore built by ROLE, not by one global sort:
- *   1. themed  — real places found by searching the traveler's own interests
- *   2. general — everything else that isn't food (attractions, parks, museums)
- *   3. food    — capped, because a traveler needs a few meals, not thirty
+ *   1. themed      — real places found by searching the traveler's own interests
+ *   2. general     — everything else that isn't food (attractions, parks, museums)
+ *   3. food        — capped, because a traveler needs a few meals, not thirty
+ *   4. experiences — bookable Viator products, tightly capped so rich inventory
+ *                    cannot crowd out real POIs (see {@link EXPERIENCE_CANDIDATES_PER_DAY})
  *
  * Food the traveler explicitly asked for arrives as `themed` (a winery search
  * on a wine trip, a food-tour search on a food trip) and is exempt from the
  * cap. The cap only ever suppresses INCIDENTAL food — which is what made every
  * trip look like a restaurant tour.
+ *
+ * Experiences never count toward the food budget, even when the product is a
+ * food tour — they are attractions that happen to involve food. An empty
+ * experiences list produces byte-identical output to the three-role pool.
  */
 
 /** Baseline pool size; the real cap scales up with trip length (see {@link poolSizeForDays}). */
@@ -34,6 +40,16 @@ export const MAX_CANDIDATES = 40
 export const MAX_CANDIDATES_CAP = 110
 /** Generic food candidates offered per trip day — enough to pick real meals from. */
 export const FOOD_CANDIDATES_PER_DAY = 3
+/**
+ * Bookable experiences offered per trip day. Kept at 1 so a destination with
+ * dozens of Viator products cannot displace museums, parks, and meals.
+ */
+export const EXPERIENCE_CANDIDATES_PER_DAY = 1
+/**
+ * Experiences may claim at most this fraction of the pool (denominator).
+ * With MAX_CANDIDATES=40 this is 10 slots absolute — still a minority so POIs win.
+ */
+const EXPERIENCE_POOL_FRACTION_DENOM = 4
 
 /**
  * Pool size for a trip of `days` days. A long trip needs more real candidates
@@ -56,6 +72,15 @@ export interface PoolPlace {
   rating?: number
   numReviews?: number
   themed?: boolean
+  /** Upstream source; `viator` marks a bookable experience. */
+  source?: 'tripadvisor' | 'places' | 'viator'
+  /** Real duration in minutes when known (Viator). Never defaulted. */
+  durationMinutes?: number
+  productCode?: string
+  priceFrom?: number
+  currency?: string
+  bookingUrl?: string
+  freeCancellation?: boolean
 }
 
 export interface PoolOptions {
@@ -88,13 +113,15 @@ export interface PoolOptions {
 
 
 /**
- * Merges the fixed nearby pool with interest-driven results and selects a
- * balanced, deduped candidate list.
+ * Merges the fixed nearby pool with interest-driven results (and optional
+ * bookable experiences) and selects a balanced, deduped candidate list.
  *
  * @param nearby - The cached nearby pool (attractions, restaurants, cafes)
  * @param themed - Real places found by searching the traveler's interests
  * @param days - Trip length, which sets how many meals need covering
  * @param opts - See {@link PoolOptions}
+ * @param experiences - Bookable Viator experiences (fourth role). Empty list
+ *   MUST produce the same pool as omitting them entirely.
  * @returns Candidates ordered themed-first, each marked with `themed`
  */
 export function buildCandidatePool<T extends PoolPlace>(
@@ -102,15 +129,17 @@ export function buildCandidatePool<T extends PoolPlace>(
   themed: T[],
   days: number,
   opts: PoolOptions = {},
+  experiences: T[] = [],
 ): T[] {
   const { maxCandidates = poolSizeForDays(days), foodFocused = false, audience = 'general' } = opts
   // Drop audience-mismatched places up front so nothing downstream — including
   // the deterministic day-filler — can schedule them. Themed venues are
   // filtered too: the discovery prompt is told to respect the audience, but a
   // prompt is a request, not a guarantee, and a saloon reached day 4 of a
-  // family ski trip that way.
+  // family ski trip that way. Experiences respect the same filter.
   nearby = nearby.filter((p) => fitsAudience(p, audience))
   themed = themed.filter((p) => fitsAudience(p, audience))
+  experiences = experiences.filter((p) => fitsAudience(p, audience))
   const seen = new Set<string>()
   const take = (item: T, isThemed: boolean): T | null => {
     const key = item.name.trim().toLowerCase()
@@ -125,6 +154,21 @@ export function buildCandidatePool<T extends PoolPlace>(
   for (const item of [...themed].sort(byPopularity)) {
     const candidate = take(item, true)
     if (candidate) themedPicks.push(candidate)
+  }
+
+  // Experiences are a fourth role: tightly capped so rich Viator inventory
+  // cannot crowd out real POIs. Never counted as food (even food tours).
+  const experienceBudget = Math.min(
+    Math.max(1, days) * EXPERIENCE_CANDIDATES_PER_DAY,
+    Math.floor(maxCandidates / EXPERIENCE_POOL_FRACTION_DENOM),
+  )
+  const experiencePicks: T[] = []
+  for (const item of [...experiences].sort(byPopularity)) {
+    if (experiencePicks.length >= experienceBudget) break
+    // Experiences are not "themed" interest matches unless already marked;
+    // keep themed flag false so food-tour products stay outside the meal budget.
+    const candidate = take(item, item.themed === true)
+    if (candidate) experiencePicks.push(candidate)
   }
 
   const generalPicks: T[] = []
@@ -147,12 +191,18 @@ export function buildCandidatePool<T extends PoolPlace>(
     else generalPicks.push(candidate)
   }
 
-  // Food keeps a reserved allocation rather than simply sorting last: a
-  // truncating slice over "themed, general, food" would starve a popular
-  // destination's plan of every meal option the moment themed + general filled
-  // the cap. Reserve what food actually needs, let themed and general share the
-  // rest, and hand any unclaimed reservation back to them.
+  // Food and experiences each keep a reserved allocation rather than simply
+  // sorting last: a truncating slice would starve meals or bookable tours the
+  // moment themed + general filled the cap. Reserve what each role needs, let
+  // themed and general share the rest, and hand any unclaimed reservation back.
+  // When experiencePicks is empty, experienceSlots is 0 and the return is
+  // byte-identical to the pre-experiences three-role pool.
+  const experienceSlots = Math.min(experiencePicks.length, experienceBudget)
   const foodSlots = Math.min(foodPicks.length, foodBudget, Math.floor(maxCandidates / 2))
-  const primary = [...themedPicks, ...generalPicks].slice(0, maxCandidates - foodSlots)
-  return [...primary, ...foodPicks.slice(0, maxCandidates - primary.length)]
+  const reserved = foodSlots + experienceSlots
+  const primary = [...themedPicks, ...generalPicks].slice(0, maxCandidates - reserved)
+  const afterPrimary = maxCandidates - primary.length
+  const experiencesKept = experiencePicks.slice(0, Math.min(experienceSlots, afterPrimary))
+  const foodKept = foodPicks.slice(0, maxCandidates - primary.length - experiencesKept.length)
+  return [...primary, ...experiencesKept, ...foodKept]
 }

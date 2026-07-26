@@ -9,7 +9,7 @@ export interface ThingToDo {
   category: string
   /** True when the venue is a bar/pub/saloon, even if `category` says restaurant. */
   adultVenue?: boolean
-  source: 'tripadvisor' | 'places'
+  source: 'tripadvisor' | 'places' | 'viator'
   rating?: number
   /** Total ratings/reviews the place has (Google user_ratings_total / TA num_reviews). Used to rank by popularity. Absent when unknown. */
   numReviews?: number
@@ -19,6 +19,8 @@ export interface ThingToDo {
    * Places' Nearby Search response includes them per result). Tripadvisor's
    * `nearby_search` endpoint doesn't return per-item lat/long, so those
    * entries omit these fields rather than fabricating a value.
+   * Viator entries always carry coordinates (products without resolved
+   * logistics coords are dropped server-side).
    */
   lat?: number
   lng?: number
@@ -31,6 +33,27 @@ export interface ThingToDo {
    * incidental-food cap.
    */
   themed?: boolean
+  /** Viator product code, when source is `viator`. */
+  productCode?: string
+  /**
+   * Traveler-facing "from" price from Viator. Never fabricated — omit when
+   * the upstream response has no price. Render only with a confirmed currency.
+   */
+  priceFrom?: number
+  /** ISO currency of {@link priceFrom}. Absent when price is absent. */
+  currency?: string
+  /**
+   * Experience duration in minutes (fixed, or upper bound of a range).
+   * Absent when unknown — day capacity must not invent a default.
+   */
+  durationMinutes?: number
+  /** Affiliate-tagged Viator product URL. Absent for non-Viator sources. */
+  bookingUrl?: string
+  /**
+   * True when Viator listed free cancellation. Omitted (not false) when
+   * unknown, so a missing field never claims "no free cancellation".
+   */
+  freeCancellation?: boolean
 }
 
 export interface LocationResult {
@@ -123,6 +146,37 @@ export async function fetchInterestPlaces(
     return places.map((p) => ({ ...p, themed: true }))
   } catch (err) {
     logger.warn('interest place search failed; falling back to the nearby pool', {
+      reason: err instanceof Error ? err.message : String(err),
+    })
+    return []
+  }
+}
+
+/**
+ * Fetches real bookable Viator experiences near trip coordinates.
+ *
+ * Fails soft to an empty list: experiences improve a plan but must never
+ * block or fail trip creation. Matches interest-places error handling —
+ * network errors, non-ok responses, and missing keys all yield `[]`.
+ *
+ * @param lat - Trip centre latitude
+ * @param lng - Trip centre longitude
+ * @param currency - Optional ISO 4217 code for priced results (e.g. "USD")
+ */
+export async function fetchExperiences(lat: number, lng: number, currency?: string): Promise<ThingToDo[]> {
+  try {
+    const res = await fetch('/api/experiences', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lat, lng, ...(currency ? { currency } : {}) }),
+    })
+    if (!res.ok) return []
+    const body = (await res.json()) as { experiences?: ThingToDo[] }
+    const list = Array.isArray(body.experiences) ? body.experiences : []
+    // Only keep real Viator-shaped rows; never invent fields client-side.
+    return list.filter((e) => e != null && typeof e.name === 'string' && e.name.trim() !== '')
+  } catch (err) {
+    logger.warn('experience search failed; continuing without bookable tours', {
       reason: err instanceof Error ? err.message : String(err),
     })
     return []
@@ -371,7 +425,18 @@ export interface PlanProfile {
 export async function generatePlan(
   intent: string,
   days: number,
-  places: { name: string; category: string; rating?: number; numReviews?: number; lat?: number; lng?: number; themed?: boolean }[],
+  places: {
+    name: string
+    category: string
+    rating?: number
+    numReviews?: number
+    lat?: number
+    lng?: number
+    themed?: boolean
+    durationMinutes?: number
+    isExperience?: boolean
+    source?: 'tripadvisor' | 'places' | 'viator'
+  }[],
   opts?: { conversation?: PlanTurn[]; currentPlan?: CurrentPlanDay[] } & PlanProfile,
 ): Promise<PlanResult> {
   const res = await fetch('/api/plan', {
@@ -409,6 +474,15 @@ export interface PlaceDetail {
   photoRefs: string[]
   serves: string[]
   types: string[]
+  /**
+   * True when Google could not resolve full details and the server returned
+   * only what the pin already knew (name, category, coords, directions link).
+   * Not an error — the panel must still render.
+   */
+  partial?: boolean
+  category?: string | null
+  lat?: number | null
+  lng?: number | null
 }
 
 /** URL for a place photo, proxied through the backend so the API key stays server-side. */

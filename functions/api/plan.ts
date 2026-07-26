@@ -40,6 +40,11 @@ const planRequestSchema = z.object({
         // interests, so the planner can prioritise it and the food balancer
         // knows it isn't incidental filler.
         themed: z.boolean().optional(),
+        // Real Viator duration; absent when unknown — day capacity never defaults.
+        durationMinutes: z.number().positive().optional(),
+        // Bookable experience (Viator); drives full/half-day capacity rules.
+        isExperience: z.boolean().optional(),
+        source: z.enum(['tripadvisor', 'places', 'viator']).optional(),
       }),
     )
     .min(1)

@@ -114,7 +114,9 @@ export function HomeAiPlanner() {
       </button>
 
       <div className="mt-4" aria-label="Suggested trips">
-        <span className="text-xs font-medium uppercase tracking-wider opacity-60">Or try one of these</span>
+        {/* opacity-70 not -60: axe measured 4.35:1 for 12px uppercase at 0.6
+            (#7a7976 on #fff); AA needs 4.5. 0.7 keeps muted hierarchy and clears AA. */}
+        <span className="text-xs font-medium uppercase tracking-wider opacity-70">Or try one of these</span>
         <ul className="mt-2 flex flex-wrap gap-2">
           {SUGGESTED_PROMPTS.map((prompt) => (
             <li key={prompt}>

@@ -140,7 +140,9 @@ export function SearchScreen() {
 
           <div className="space-y-6">
             <div>
-              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider opacity-60">
+              {/* opacity-70 not -60: axe measured ~4.31:1 for 14px uppercase at
+                  0.6 on sand/surface; AA needs 4.5. 0.7 keeps muted hierarchy. */}
+              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider opacity-70">
                 Or just browse a place
               </h2>
               <SearchBox
@@ -156,7 +158,7 @@ export function SearchScreen() {
             </div>
 
             <div>
-              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider opacity-60">
+              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider opacity-70">
                 Or start from a ready trip
               </h2>
               <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">

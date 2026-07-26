@@ -154,8 +154,10 @@ export async function onRequestPost({ env, request }: { env: DiscoverEnv; reques
     const verified = await Promise.all(venues.map((v) => findPlaceByName(v.name, lat, lng, env.GOOGLE_PLACES_API_KEY as string)))
     const seen = new Set<string>()
     const places: ThingToDo[] = []
-    for (const p of verified) {
-      if (!p) continue
+    for (const outcome of verified) {
+      // ok:false = Places API failure (logged upstream); ok:true place:null = genuine miss.
+      if (!outcome.ok || !outcome.place) continue
+      const p = outcome.place
       if (!isRequestedExperienceCategory(p.category)) continue
       const key = p.name.trim().toLowerCase()
       if (key === '' || seen.has(key)) continue

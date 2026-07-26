@@ -46,6 +46,20 @@ create table if not exists interest_places (
   last_refreshed text not null default (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
+-- Viator: destination taxonomy (monthly refresh) + per-destination experiences.
+-- Destination-anchored — free-text search returned Alaska/Finland for Minnesota.
+create table if not exists viator_destinations_cache (
+  cache_key text primary key,
+  destinations text not null,
+  last_refreshed text not null default (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+
+create table if not exists viator_experiences_cache (
+  cache_key text primary key,
+  experiences text not null,
+  last_refreshed text not null default (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+
 create table if not exists request_log (
   id integer primary key autoincrement,
   ip_hash text not null,

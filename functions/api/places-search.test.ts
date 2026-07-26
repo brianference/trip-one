@@ -24,7 +24,10 @@ describe('GET /api/places-search', () => {
       if (String(url).includes('/textsearch/json')) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ results: [{ place_id: 's1', name: 'Sushi Saito', types: ['restaurant'], rating: 4.9, geometry: { location: { lat: 35.6, lng: 139.7 } } }] }),
+          json: async () => ({
+            status: 'OK',
+            results: [{ place_id: 's1', name: 'Sushi Saito', types: ['restaurant'], rating: 4.9, geometry: { location: { lat: 35.6, lng: 139.7 } } }],
+          }),
         })
       }
       throw new Error(`unexpected fetch to ${url}`)
@@ -37,7 +40,9 @@ describe('GET /api/places-search', () => {
   it('falls back to Tripadvisor when Google returns few results', async () => {
     vi.stubGlobal('fetch', (url: string) => {
       const u = String(url)
-      if (u.includes('/textsearch/json')) return Promise.resolve({ ok: true, json: async () => ({ results: [] }) })
+      if (u.includes('/textsearch/json')) {
+        return Promise.resolve({ ok: true, json: async () => ({ status: 'ZERO_RESULTS', results: [] }) })
+      }
       if (u.includes('tripadvisor.com') && u.includes('/location/search')) {
         return Promise.resolve({ ok: true, json: async () => ({ data: [{ location_id: '42', name: 'Space Expo' }] }) })
       }

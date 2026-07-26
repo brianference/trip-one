@@ -46,7 +46,9 @@ export async function onRequestGet({ env, request }: { env: PlacesSearchEnv; req
 
   try {
     const { q, lat, lng } = parsed.data
-    const places = await textSearchPlaces(q, lat, lng, env.GOOGLE_PLACES_API_KEY)
+    const googleOutcome = await textSearchPlaces(q, lat, lng, env.GOOGLE_PLACES_API_KEY)
+    // Fail soft: body-level Places failures are ok:false; serve [] or TA only.
+    const places = googleOutcome.ok ? [...googleOutcome.places] : []
 
     // Fall back to (or supplement with) Tripadvisor for thematic/niche queries
     // Google returns little for, deduping by name.

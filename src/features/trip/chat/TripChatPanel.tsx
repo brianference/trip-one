@@ -82,7 +82,7 @@ export function TripChatPanel({
         {onClose && (
           <button
             type="button"
-            className="absolute right-2 top-2 grid size-9 place-items-center rounded-lg text-xl leading-none hover:bg-[var(--surface-muted)]"
+            className="absolute right-2 top-2 grid min-h-[44px] min-w-[44px] place-items-center rounded-lg text-xl leading-none hover:bg-[var(--surface-muted)]"
             onClick={onClose}
             aria-label="Hide chat"
           >

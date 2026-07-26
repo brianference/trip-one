@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { normalizePlaceDetail, PLACE_DETAILS_FIELDS } from './placeDetails'
+import {
+  normalizePlaceDetail,
+  PLACE_DETAILS_FIELDS,
+  buildPartialPlaceDetail,
+  mapsDirectionsUrl,
+} from './placeDetails'
 
 const rawResult = {
   place_id: 'abc123',
@@ -70,5 +75,27 @@ describe('normalizePlaceDetail', () => {
     expect(PLACE_DETAILS_FIELDS).toContain('formatted_phone_number')
     expect(PLACE_DETAILS_FIELDS).toContain('reviews')
     expect(PLACE_DETAILS_FIELDS).toContain('serves_dinner')
+  })
+})
+
+describe('buildPartialPlaceDetail', () => {
+  it('marks unresolvable places as partial with a coords-based directions link', () => {
+    const d = buildPartialPlaceDetail('PadToGo', {
+      category: 'attraction',
+      lat: 41.15014,
+      lng: -8.61102,
+    })
+    expect(d.partial).toBe(true)
+    expect(d.name).toBe('PadToGo')
+    expect(d.category).toBe('attraction')
+    expect(d.mapsUrl).toBe('https://www.google.com/maps/dir/?api=1&destination=41.15014,-8.61102')
+    expect(d.rating).toBeNull()
+    expect(d.photoRefs).toEqual([])
+  })
+
+  it('falls back to a name-only directions URL when coords are missing', () => {
+    expect(mapsDirectionsUrl('Clerigos')).toContain('destination=Clerigos')
+    const d = buildPartialPlaceDetail('Clerigos')
+    expect(d.mapsUrl).toContain('destination=Clerigos')
   })
 })

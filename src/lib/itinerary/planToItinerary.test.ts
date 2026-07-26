@@ -37,4 +37,51 @@ describe('planToItinerary', () => {
     expect(items[0].type).toBe('option')
     expect(items[0].q).toBe('Balboa Park')
   })
+
+  it('carries real experience booking fields through without inventing any', () => {
+    const withExp: ThingToDo[] = [
+      {
+        name: 'Sushi Class',
+        category: 'tour',
+        source: 'viator',
+        lat: 35.68,
+        lng: 139.76,
+        rating: 4.8,
+        numReviews: 120,
+        priceFrom: 89,
+        currency: 'USD',
+        durationMinutes: 180,
+        bookingUrl: 'https://www.viator.com/tours/Tokyo/Sushi/d334-X?pid=P1',
+        freeCancellation: true,
+        productCode: 'SUSHI1',
+      },
+    ]
+    const items = planToItinerary([{ day: 1, placeIndexes: [0] }], withExp)
+    expect(items[0]).toMatchObject({
+      text: 'Sushi Class',
+      source: 'viator',
+      priceFrom: 89,
+      currency: 'USD',
+      durationMinutes: 180,
+      bookingUrl: 'https://www.viator.com/tours/Tokyo/Sushi/d334-X?pid=P1',
+      freeCancellation: true,
+      productCode: 'SUSHI1',
+    })
+  })
+
+  it('omits price fields when the experience has no confirmed currency', () => {
+    const noCurrency: ThingToDo[] = [
+      {
+        name: 'Day Tour',
+        category: 'tour',
+        source: 'viator',
+        priceFrom: 149,
+        durationMinutes: 360,
+        bookingUrl: 'https://www.viator.com/tours/x',
+      },
+    ]
+    const items = planToItinerary([{ day: 1, placeIndexes: [0] }], noCurrency)
+    expect(items[0].priceFrom).toBe(149)
+    expect(items[0].currency).toBeUndefined()
+  })
 })

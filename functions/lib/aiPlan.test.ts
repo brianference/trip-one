@@ -120,6 +120,8 @@ interface TestPlace {
   lng?: number
   rating?: number
   themed?: boolean
+  durationMinutes?: number
+  isExperience?: boolean
 }
 
 describe('maxIncidentalFood', () => {
@@ -193,6 +195,52 @@ describe('balanceDayFood', () => {
     ]
     const out = balanceDayFood([{ day: 1, placeIndexes: [0, 1] }], noFood)
     expect(out[0].placeIndexes).toEqual([0, 1])
+  })
+
+  it('full-day experience: no other attractions and at most one food stop', () => {
+    // WHY: a 720-min Yellowstone tour used to get three restaurants stacked on
+    // the same day by the old unconditional food floor.
+    const withTour: TestPlace[] = [
+      { name: 'Yellowstone Day Tour', category: 'tour', isExperience: true, durationMinutes: 720, lat: 44.6, lng: -110.5 },
+      { name: 'Town Museum', category: 'museum', lat: 43.48, lng: -110.76 },
+      { name: 'City Park', category: 'park', lat: 43.48, lng: -110.76 },
+      { name: 'Cafe Near', category: 'cafe', lat: 43.48, lng: -110.76, rating: 4.5 },
+      { name: 'Bistro Near', category: 'restaurant', lat: 43.48, lng: -110.76, rating: 4.6 },
+      { name: 'Bar Near', category: 'bar', lat: 43.48, lng: -110.76, rating: 4.2 },
+    ]
+    const out = balanceDayFood([{ day: 1, placeIndexes: [0, 1, 2, 3, 4, 5] }], withTour)
+    const idxs = out[0].placeIndexes
+    expect(idxs).toContain(0)
+    expect(idxs).not.toContain(1)
+    expect(idxs).not.toContain(2)
+    expect(idxs.filter((i) => ['cafe', 'restaurant', 'bar'].includes(withTour[i].category))).toHaveLength(1)
+  })
+
+  it('half-day experience allows at most one other attraction', () => {
+    const withHalf: TestPlace[] = [
+      { name: 'Half-Day Raft', category: 'tour', isExperience: true, durationMinutes: 300 },
+      { name: 'Museum A', category: 'museum' },
+      { name: 'Park B', category: 'park' },
+      { name: 'Cafe Near', category: 'cafe', rating: 4.5 },
+    ]
+    const out = balanceDayFood([{ day: 1, placeIndexes: [0, 1, 2, 3] }], withHalf)
+    const nonFoodNonExp = out[0].placeIndexes.filter(
+      (i) => !['cafe', 'restaurant', 'bar'].includes(withHalf[i].category) && i !== 0,
+    )
+    expect(nonFoodNonExp).toHaveLength(1)
+  })
+
+  it('unknown-duration experience keeps ordinary food balancing (today\'s behaviour)', () => {
+    const unknown: TestPlace[] = [
+      { name: 'Mystery Tour', category: 'tour', isExperience: true },
+      { name: 'Museum A', category: 'museum', lat: 0, lng: 0 },
+      { name: 'Cafe Near', category: 'cafe', lat: 0.02, lng: 0, rating: 4.5 },
+    ]
+    const out = balanceDayFood([{ day: 1, placeIndexes: [0, 1] }], unknown)
+    expect(out[0].placeIndexes).toContain(0)
+    expect(out[0].placeIndexes).toContain(1)
+    // Still gets a meal under the normal floor.
+    expect(out[0].placeIndexes.some((i) => unknown[i].category === 'cafe')).toBe(true)
   })
 })
 

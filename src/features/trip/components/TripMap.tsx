@@ -3,6 +3,7 @@ import type { LocationResult } from '../../../lib/api/client'
 import type { ItineraryItem } from '../../../lib/validation/schemas'
 import { MapView, type MapMarker } from '../../map/MapView'
 import { MapLegend } from '../../map/MapLegend'
+import { selectMapMarkers } from '../../map/selectMapMarkers'
 import { DayTabs } from './DayTabs'
 
 /**
@@ -47,15 +48,17 @@ export function TripMap({
   const dayCount = tripLengthDays && tripLengthDays > 1 ? tripLengthDays : 1
   const dayStops = itinerary.filter((item) => (item.day ?? 1) === selectedDay)
 
-  // Only Places-sourced entries carry real per-item coordinates today —
-  // Tripadvisor entries without lat/lng are left off the map rather than
-  // guessing a location for them.
+  // Quality-filtered pins (themed + high-rated attractions + near-day
+  // restaurants + always-on itinerary stops). Entries without coordinates
+  // never become pins. The full things-to-do list is unchanged.
   const markers = useMemo(
     () =>
-      location.thingsToDo
-        .filter((item) => item.lat != null && item.lng != null)
-        .map((item) => ({ lat: item.lat as number, lng: item.lng as number, label: item.name, category: item.category, placeId: item.placeId })),
-    [location.thingsToDo],
+      selectMapMarkers({
+        thingsToDo: location.thingsToDo,
+        itinerary,
+        selectedDay,
+      }),
+    [location.thingsToDo, itinerary, selectedDay],
   )
 
   const route = useMemo(

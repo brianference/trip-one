@@ -195,6 +195,95 @@ export async function upsertInterestPlacesCache(env: Env, row: InterestPlacesRow
     .run()
 }
 
+// --- viator destinations + experiences caches ---
+
+export interface ViatorDestinationsCacheRow {
+  cache_key: string
+  destinations: unknown
+  last_refreshed?: string
+}
+
+export interface ViatorExperiencesCacheRow {
+  cache_key: string
+  experiences: unknown
+  last_refreshed?: string
+}
+
+/**
+ * Reads the cached Viator destination taxonomy (null if not cached yet).
+ * Refreshed monthly — see DESTINATIONS_CACHE_TTL_MS at the call site.
+ */
+export async function getViatorDestinationsCache(
+  env: Env,
+  cacheKey: string,
+): Promise<ViatorDestinationsCacheRow | null> {
+  const row = await env.DB.prepare('SELECT * FROM viator_destinations_cache WHERE cache_key = ?')
+    .bind(cacheKey)
+    .first<Record<string, unknown>>()
+  if (!row) return null
+  return {
+    cache_key: row.cache_key as string,
+    destinations: parseJson(row.destinations, []),
+    last_refreshed: row.last_refreshed as string | undefined,
+  }
+}
+
+/**
+ * Upserts the destination taxonomy so `/destinations` is paid once per month
+ * (Viator's own location-caching guidance), not on every trip build.
+ */
+export async function upsertViatorDestinationsCache(
+  env: Env,
+  row: ViatorDestinationsCacheRow,
+): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO viator_destinations_cache (cache_key, destinations, last_refreshed)
+     VALUES (?, ?, ?)
+     ON CONFLICT(cache_key) DO UPDATE SET
+       destinations = excluded.destinations,
+       last_refreshed = excluded.last_refreshed`,
+  )
+    .bind(row.cache_key, JSON.stringify(row.destinations ?? []), nowIso())
+    .run()
+}
+
+/** Reads a cached per-destination experiences row (null if not cached yet). */
+export async function getViatorExperiencesCache(
+  env: Env,
+  cacheKey: string,
+): Promise<ViatorExperiencesCacheRow | null> {
+  const row = await env.DB.prepare('SELECT * FROM viator_experiences_cache WHERE cache_key = ?')
+    .bind(cacheKey)
+    .first<Record<string, unknown>>()
+  if (!row) return null
+  return {
+    cache_key: row.cache_key as string,
+    experiences: parseJson(row.experiences, []),
+    last_refreshed: row.last_refreshed as string | undefined,
+  }
+}
+
+/**
+ * Upserts per-destination experiences so products/search + product detail +
+ * locations/bulk are paid once per destination+currency, not per page view.
+ * Callers enforce EXPERIENCES_CACHE_TTL_MS (24h) and must only write after a
+ * successful search — never cache a transient failure as [] (permanent poison).
+ */
+export async function upsertViatorExperiencesCache(
+  env: Env,
+  row: ViatorExperiencesCacheRow,
+): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO viator_experiences_cache (cache_key, experiences, last_refreshed)
+     VALUES (?, ?, ?)
+     ON CONFLICT(cache_key) DO UPDATE SET
+       experiences = excluded.experiences,
+       last_refreshed = excluded.last_refreshed`,
+  )
+    .bind(row.cache_key, JSON.stringify(row.experiences ?? []), nowIso())
+    .run()
+}
+
 // --- rate limiting ---
 
 export async function countRecentRequests(

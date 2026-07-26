@@ -56,6 +56,13 @@ export function AboutPage() {
             account, and if you do make one it's so your trips follow you between devices — nothing more.
           </p>
 
+          <h2>Bookable experiences</h2>
+          <p>
+            When a trip includes a bookable experience from Viator, you will see a clear link to book on their site.
+            Trip One may earn a commission if you book through that link, at no extra cost to you. The price, duration,
+            and availability always come from Viator — we never invent them.
+          </p>
+
           <h2>Honest limitations</h2>
           <p>
             Automated planning gets things wrong. Opening hours change, places close, and a plan that looks great on

@@ -20,6 +20,26 @@ export const itineraryItemSchema = z.object({
    * when ordering a day (breakfast/lunch/dinner slots) rather than treating everything as a
    * generic activity. */
   category: z.string().max(100).optional(),
+  /**
+   * Upstream source when known. `viator` marks a bookable paid experience that
+   * should render distinctly (booking link, duration, price only with currency).
+   */
+  source: z.enum(['tripadvisor', 'places', 'viator']).optional(),
+  /** Viator product code, when source is viator. */
+  productCode: z.string().max(80).optional(),
+  /**
+   * Traveler-facing "from" price. Never invent — omit when unknown.
+   * UI must not render this without a confirmed {@link currency}.
+   */
+  priceFrom: z.number().optional(),
+  /** ISO 4217 currency of priceFrom. Required for any price display. */
+  currency: z.string().max(3).optional(),
+  /** Real duration in minutes; absent when unknown (never defaulted). */
+  durationMinutes: z.number().int().positive().optional(),
+  /** Affiliate-tagged booking URL (Viator). Opens with rel=sponsored. */
+  bookingUrl: z.string().max(2000).optional(),
+  /** True when free cancellation is confirmed; omit when unknown. */
+  freeCancellation: z.boolean().optional(),
 })
 
 export type ItineraryItem = z.infer<typeof itineraryItemSchema>

@@ -1,4 +1,13 @@
 import { isFoodCategory } from '../../src/lib/places/foodCategories'
+import {
+  enforceAttractionCapacity,
+  foodCeilingForDay,
+  foodFloorForDay,
+  isExperiencePlace,
+  maxAdditionalAttractions,
+  maxFoodForDay,
+  type CapacityStop,
+} from '../../src/lib/itinerary/dayCapacity'
 
 /**
  * Pure, network-free core of the grounded AI trip planner.
@@ -40,6 +49,20 @@ export interface PlanCandidate {
    * not filler.
    */
   themed?: boolean
+  /**
+   * Real experience duration in minutes (Viator). Absent when unknown —
+   * day capacity must never invent a default. Full-day (≥360) and half-day
+   * (≥240) experiences tighten how much else can share the day.
+   */
+  durationMinutes?: number
+  /**
+   * True for a bookable experience (Viator product), not a free POI. Used by
+   * day capacity so a food tour never counts against the meal budget and so
+   * full/half-day rules only apply to real experiences.
+   */
+  isExperience?: boolean
+  /** Upstream source, when known. `viator` is treated as an experience. */
+  source?: 'tripadvisor' | 'places' | 'viator'
 }
 
 export interface PlanDay {
@@ -102,7 +125,15 @@ export function formatCandidateList(candidates: PlanCandidate[]): string {
     .map((c, i) => {
       const coords = c.lat != null && c.lng != null ? ` @${c.lat.toFixed(4)},${c.lng.toFixed(4)}` : ''
       const star = c.themed ? ' ★MATCHES INTERESTS' : ''
-      return `${i}) ${c.name} [${c.category}${c.rating != null ? `, rated ${c.rating}` : ''}]${coords}${star}`
+      // Bookable experiences cost money and take real time — surface duration so
+      // the model does not stack three other attractions onto a 12-hour tour.
+      const experience =
+        isExperiencePlace(c) && c.durationMinutes != null
+          ? ` ★BOOKABLE EXPERIENCE (${c.durationMinutes} min)`
+          : isExperiencePlace(c)
+            ? ' ★BOOKABLE EXPERIENCE'
+            : ''
+      return `${i}) ${c.name} [${c.category}${c.rating != null ? `, rated ${c.rating}` : ''}]${coords}${star}${experience}`
     })
     .join('\n')
 }
@@ -212,6 +243,60 @@ function distSq(aLat: number, aLng: number, bLat: number, bLng: number): number 
 const TARGET_STOPS_PER_DAY = 3
 
 /**
+ * Capacity-aware view of a day's indices for the fill backstop.
+ * Unknown-duration experiences do not tighten capacity (today's behaviour).
+ */
+function capacityStopsFor(
+  placeIndexes: readonly number[],
+  candidates: readonly PlanCandidate[],
+): CapacityStop[] {
+  return placeIndexes.map((i) => {
+    const c = candidates[i]
+    return {
+      durationMinutes: c?.durationMinutes,
+      isExperience: c ? isExperiencePlace(c) : false,
+      isFood: isFoodCategory(c?.category),
+    }
+  })
+}
+
+/**
+ * Whether adding `candidateIndex` to a day would break attraction or
+ * experience capacity (full-day / half-day / one-experience rules).
+ * Food candidates always pass attraction checks; food floor/ceiling is
+ * enforced by {@link balanceDayFood}.
+ */
+function fitsDayCapacity(
+  placeIndexes: readonly number[],
+  candidateIndex: number,
+  candidates: readonly PlanCandidate[],
+): boolean {
+  const candidate = candidates[candidateIndex]
+  if (!candidate) return false
+  if (isFoodCategory(candidate.category)) return true
+
+  const wouldBe = [...placeIndexes, candidateIndex]
+  const stops = capacityStopsFor(wouldBe, candidates)
+  // At most one experience per day.
+  const experienceCount = wouldBe.filter((i) => {
+    const c = candidates[i]
+    return c != null && isExperiencePlace(c)
+  }).length
+  if (experienceCount > 1) return false
+
+  const maxExtra = maxAdditionalAttractions(stops)
+  if (maxExtra == null) return true
+  const extraAttractions = wouldBe.filter((i) => {
+    const c = candidates[i]
+    if (!c) return false
+    if (isExperiencePlace(c)) return false
+    if (isFoodCategory(c.category)) return false
+    return true
+  }).length
+  return extraAttractions <= maxExtra
+}
+
+/**
  * Guarantees the plan spans all `days` days, filling empty or thin later days
  * from the leftover candidate pool.
  *
@@ -222,6 +307,10 @@ const TARGET_STOPS_PER_DAY = 3
  * first, then food) until it's filled or the pool is exhausted. Every added
  * place is real and used at most once; if the pool genuinely runs out, the day
  * is left thin rather than padded with repeats.
+ *
+ * Respects day capacity: a full-day experience day is not padded with more
+ * attractions (the failure that stacked restaurants onto a 12-hour Yellowstone
+ * tour). Callers that run this after {@link balanceDayFood} stay capacity-safe.
  *
  * @param plan - The (already food-balanced) plan
  * @param candidates - The real candidates the indices refer to
@@ -248,8 +337,13 @@ export function ensureAllDays(plan: PlanDay[], candidates: PlanCandidate[], days
   for (let day = 1; day <= days; day += 1) {
     const placeIndexes = [...(byDay.get(day) ?? [])]
     while (placeIndexes.length < TARGET_STOPS_PER_DAY && next < leftover.length) {
-      placeIndexes.push(leftover[next])
+      const candidateIndex = leftover[next]
       next += 1
+      // Skip candidates that would break full/half-day capacity rather than
+      // forcing them in and undoing balanceDayFood's isolation.
+      if (!fitsDayCapacity(placeIndexes, candidateIndex, candidates)) continue
+      placeIndexes.push(candidateIndex)
+      used.add(candidateIndex)
     }
     // Keep the day even if still empty — the itinerary should span the whole
     // trip; the UI shows an empty day as free time rather than hiding it.
@@ -290,6 +384,12 @@ export function maxIncidentalFood(nonFoodCount: number): number {
  * from the ceiling and counts toward the floor. So a food trip stays a food
  * trip; only unrequested filler is trimmed.
  *
+ * Day capacity (bookable experiences with a known duration) overrides the
+ * default floor/ceiling: a full-day tour allows at most 1 food stop and no
+ * other attractions. Without this, balanceDayFood re-stacked three restaurants
+ * onto a 720-minute Yellowstone day. Signature unchanged — callers in plan.ts,
+ * chat.ts, and the simulation harness keep working.
+ *
  * Added meals are chosen from the REAL candidate pool near the day's existing
  * stops, so they're convenient rather than clustered across town. Every place
  * is still real and used at most once across the whole plan.
@@ -302,20 +402,34 @@ export function balanceDayFood(plan: PlanDay[], candidates: PlanCandidate[], min
   const isIncidentalFood = (i: number): boolean =>
     isFoodCategory(candidates[i]?.category) && candidates[i]?.themed !== true
 
-  // Trim first, so the slots freed by over-stuffed days are available to days
-  // that are short of a meal.
-  const trimmed = plan.map((d) => {
+  // Capacity first: drop extra attractions on full/half-day experience days
+  // and cap at one experience, so food math sees the day as it will ship.
+  const capacityTrimmed = plan.map((d) => ({
+    day: d.day,
+    placeIndexes: enforceAttractionCapacity(d.placeIndexes, candidates, isFoodCategory),
+  }))
+
+  // Trim food next, so the slots freed by over-stuffed days are available to
+  // days that are short of a meal — but never above the capacity food cap.
+  const trimmed = capacityTrimmed.map((d) => {
+    const stops = capacityStopsFor(d.placeIndexes, candidates)
     const nonFoodCount = d.placeIndexes.filter((i) => !isFoodCategory(candidates[i]?.category)).length
     const themedFoodCount = d.placeIndexes.filter(
       (i) => isFoodCategory(candidates[i]?.category) && candidates[i]?.themed === true,
     ).length
     // A day already carrying requested food needs less filler on top of it.
-    const ceiling = Math.max(0, maxIncidentalFood(nonFoodCount) - themedFoodCount)
-    let kept = 0
+    const incidentalCeiling = Math.max(0, maxIncidentalFood(nonFoodCount) - themedFoodCount)
+    // Full-day experience: hard cap total food at 1 (includes themed).
+    const totalFoodCap = maxFoodForDayStops(stops)
+    let incidentalKept = 0
+    let totalFoodKept = 0
     const placeIndexes = d.placeIndexes.filter((i) => {
+      if (!isFoodCategory(candidates[i]?.category)) return true
+      totalFoodKept += 1
+      if (totalFoodCap != null && totalFoodKept > totalFoodCap) return false
       if (!isIncidentalFood(i)) return true
-      kept += 1
-      return kept <= ceiling
+      incidentalKept += 1
+      return incidentalKept <= incidentalCeiling
     })
     return { day: d.day, placeIndexes }
   })
@@ -330,8 +444,14 @@ export function balanceDayFood(plan: PlanDay[], candidates: PlanCandidate[], min
     // a day the traveler just emptied would undo their instruction.
     if (day.placeIndexes.length === 0) continue
 
+    const stops = capacityStopsFor(day.placeIndexes, candidates)
+    // Capacity can lower the floor (full-day → at most 1) so we never force
+    // three restaurants onto a 12-hour tour.
+    const dayMinFood = foodFloorForDay(stops, minFood)
+    const dayMaxFood = foodCeilingForDay(stops, MAX_FOOD_PER_DAY)
+
     let foodCount = day.placeIndexes.filter((i) => isFoodCategory(candidates[i]?.category)).length
-    if (foodCount >= minFood) continue
+    if (foodCount >= dayMinFood) continue
 
     // Center of the day: average of its stops that have coordinates.
     const coords = day.placeIndexes.map((i) => candidates[i]).filter((c) => c?.lat != null && c?.lng != null)
@@ -352,13 +472,19 @@ export function balanceDayFood(plan: PlanDay[], candidates: PlanCandidate[], min
     })
 
     for (const i of available) {
-      if (foodCount >= minFood) break
+      if (foodCount >= dayMinFood) break
+      if (foodCount >= dayMaxFood) break
       day.placeIndexes.push(i)
       used.add(i)
       foodCount += 1
     }
   }
   return result
+}
+
+/** Total food cap from capacity stops, or null when unlimited. */
+function maxFoodForDayStops(stops: CapacityStop[]): number | null {
+  return maxFoodForDay(stops)
 }
 
 /**

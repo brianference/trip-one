@@ -281,6 +281,9 @@ body {
      scroll-containers (the forecast strip) actually scroll instead. */
   width: 100%;
   min-width: 0;
+  /* Mobile / narrow: keep the previous reading-card width so 375px layout
+     and full-bleed map media rules stay unchanged. Desktop (below) raises
+     the main content to fill the usable column (≥90% of that column). */
   max-width: 760px;
   margin: 0 auto;
   box-sizing: border-box;
@@ -296,6 +299,40 @@ body {
    the same width map-sized text would feel sparse at. */
 .chronicle-chapter--wide {
   max-width: 1040px;
+}
+
+/* Desktop: main content must fill ≥90% of the *viewport* (window.innerWidth).
+   Mobile (max-width: 720px) is left alone so the full-bleed map and 375px
+   layout keep working. Long-form prose inside chapters is re-measured below.
+
+   WHY overlay dock (not a permanent left gutter) — measured on the deployed
+   build at viewport 1780px, page fully loaded with map markers:
+     .chronicle-chapter--wide   width=1373  left=376  => 77.1% of viewport
+     .chronicle-page            padding: 24px 16px 64px 376px
+   The 376px padding-left was reserved for the open chat dock (360px + 16px
+   gutter). Content filled 100% of that padded column, so a column-relative
+   check could never fail — but the real product requirement is ≥90% of the
+   *desktop width*. Fix: the dock is a fixed overlay/drawer (see
+   .chronicle-chat-dock below); page content no longer shifts. Chapter size
+   is width/max-width: 100% of the book column (page side padding only:
+   --chronicle-space-md = 16px each side → ~97%+ of a 1440px viewport).
+
+   Still avoid 90vw: vw includes the scrollbar track and once produced
+   horizontal overflow (scrollWidth 1978 vs clientWidth 1765). Percentage of
+   the containing block cannot overflow the page. */
+@media (min-width: 721px) {
+  .chronicle-chapter,
+  .chronicle-chapter--wide {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Comfortable reading measure for dense prose blocks (legal, long copy).
+     Map / day grids / stop lists stay full chapter width. */
+  .chronicle-legal,
+  .chronicle-chapter .chronicle-prose {
+    max-width: 65ch;
+  }
 }
 
 .chronicle-chapter h1 {
@@ -914,6 +951,165 @@ body {
   color: var(--accent-text);
 }
 
+/* ---------- Bookable experience card (Viator) ----------
+   Distinct from ordinary POI stops: paid, leaves the site, affiliate link.
+   Tokens only — no new colours. Mobile-first, 44px touch targets. */
+.chronicle-experience-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-sm);
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--chronicle-space-md);
+  border: 1px solid var(--chronicle-teal);
+  border-radius: var(--chronicle-radius-md);
+  background: var(--chronicle-bg-surface-2);
+  box-shadow: var(--chronicle-shadow-card);
+}
+
+.chronicle-experience-card--compact {
+  padding: var(--chronicle-space-sm) var(--chronicle-space-md);
+}
+
+.chronicle-entry--experience {
+  list-style: none;
+  padding: var(--chronicle-space-sm) 0;
+}
+
+.chronicle-experience-card__kicker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--chronicle-space-sm);
+}
+
+.chronicle-experience-card__badge {
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+
+.chronicle-experience-card__free-cancel {
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--chronicle-radius-pill);
+  border: 1px solid var(--chronicle-border-subtle);
+  background: var(--chronicle-bg-surface);
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-experience-card__title {
+  margin: 0;
+  font-family: var(--chronicle-font-display);
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1.3;
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-experience-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--chronicle-space-sm) var(--chronicle-space-md);
+  font-family: var(--chronicle-font-body);
+  font-size: 13px;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-experience-card__rating {
+  font-family: var(--chronicle-font-mono);
+  font-weight: 600;
+  color: var(--chronicle-gold);
+}
+
+.chronicle-experience-card__duration,
+.chronicle-experience-card__price {
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-experience-card__price {
+  font-weight: 600;
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-experience-card__book-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--chronicle-space-sm);
+  margin-top: var(--chronicle-space-xs);
+}
+
+.chronicle-experience-card__book {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 16px;
+  border-radius: var(--chronicle-radius-pill);
+  background: var(--chronicle-teal);
+  color: var(--color-on-primary);
+  font-family: var(--chronicle-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+}
+
+.chronicle-experience-card__book:hover,
+.chronicle-experience-card__book:focus-visible {
+  background: var(--chronicle-teal-hover);
+}
+
+.chronicle-experience-card__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 14px;
+  border-radius: var(--chronicle-radius-pill);
+  border: 1px solid var(--chronicle-border-hairline);
+  background: var(--chronicle-bg-surface);
+  color: var(--chronicle-text-secondary);
+  font-family: var(--chronicle-font-mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.chronicle-experience-card__remove:hover,
+.chronicle-experience-card__remove:focus-visible {
+  color: var(--chronicle-danger);
+  border-color: var(--chronicle-danger);
+}
+
+.chronicle-experience-card__disclosure {
+  margin: 0;
+  font-family: var(--chronicle-font-body);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--chronicle-text-tertiary);
+}
+
+.chronicle-ttd-card--experience {
+  gap: var(--chronicle-space-sm);
+}
+
+.chronicle-ttd-card--experience .chronicle-ttd-add {
+  margin-left: 0;
+  align-self: flex-start;
+}
+
 /* Place detail: add-to-day / on-plan CTA (first row of the pinned footer). */
 .chronicle-place-plan {
   display: flex;
@@ -1120,12 +1316,16 @@ body:has(.chronicle-page) label {
 
 .chronicle-day-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--chronicle-space-xs);
   margin-bottom: var(--chronicle-space-sm);
+  /* Stay visible at all widths: wrap rather than clip multi-day (1–14) tabs. */
+  max-width: 100%;
 }
 
 .chronicle-day-tab {
   min-height: 44px;
+  min-width: 44px;
   padding: 0 var(--chronicle-space-md);
   border-radius: var(--chronicle-radius-sm);
   border: 1px solid var(--chronicle-border-hairline);
@@ -2570,9 +2770,22 @@ body:has(.chronicle-page) label {
 }
 
 /* ---------- Trip assistant dock (every page) ---------- */
-/* A persistent chat panel that slides in from the left on every trip page.
-   Open by default on desktop (content is offset so it isn't covered); a FAB
-   opens it when collapsed and on mobile, where it slides over the page. */
+/* Overlay/drawer chat on every trip page — fixed, slides from the left,
+   does NOT reserve layout width.
+
+   WHY overlay (not a permanent gutter / slim rail) — measured on the
+   deployed build at viewport 1780px with markers loaded:
+     .chronicle-chapter--wide  width=1373  left=376  => 77.1% of viewport
+     .chronicle-page           padding-left: 376px while chat open
+   That gutter made main content permanently ~77% wide. A column-share check
+   still reported "100% usable" because content filled the padded column.
+   Product requirement: main content ≥90% of desktop *viewport* width.
+
+   Overlay (vs slim rail): full chat panel on demand without any permanent
+   width tax. Starts closed so day tabs / map stay clickable; the "Plan by
+   chat" FAB is the open toggle (primary AI surface, one tap). Close is the
+   dock header control. Mobile (≤720px / ≤860px rules below) is unchanged:
+   full-width sheet, same FAB above the tab bar. */
 .chronicle-chat-dock {
   position: fixed;
   top: 0;
@@ -2591,11 +2804,14 @@ body:has(.chronicle-page) label {
   transform: translateX(0);
 }
 
-/* When the dock is open on wide screens, push page content right so the dock
-   sits beside it rather than over it. */
+/* Desktop used to push content with padding-left: 376px on
+   .chronicle-trip-page--chat-open (360px dock + 16px gutter). That is gone
+   on purpose — see the measured 77.1% / 1373px note above. The class may
+   still be toggled from TripShell for semantics / future hooks; it must
+   not reintroduce a layout gutter. */
 @media (min-width: 1024px) {
   .chronicle-trip-page--chat-open {
-    padding-left: 376px;
+    padding-left: 0;
   }
 }
 
