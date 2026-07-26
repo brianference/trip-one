@@ -1,9 +1,18 @@
 import type { Env } from '../../lib/db'
 import { getTrip, updateTrip, deleteTripOwnedBy } from '../../lib/db'
+import { isRateLimited } from '../../lib/rateLimitGuard'
 import { getAuthedUser, type AuthEnv } from '../../lib/auth/session'
 import { itineraryItemSchema } from '../../../src/lib/validation/schemas'
 import { logger } from '../../../src/lib/logger'
 import { z } from 'zod'
+
+/** Per-IP hourly cap on itinerary/style patches (anyone with the trip URL can write). */
+const PATCH_TRIPS_PER_HOUR = 300
+/** Per-IP hourly cap on owned-trip deletes. */
+const DELETE_TRIPS_PER_HOUR = 60
+
+const RATE_LIMIT_MESSAGE =
+  'You’ve made a lot of requests in a short time. Please wait a few minutes and try again.'
 
 const patchSchema = z.object({
   itinerary: z.array(itineraryItemSchema).optional(),
@@ -53,6 +62,12 @@ export async function onRequestPatch({
   const parsed = patchSchema.safeParse(await request.json().catch(() => ({})))
   if (!parsed.success) return json({ error: 'We couldn’t save that change. Please try again.' }, 400)
 
+  // Unauthenticated write (URL is the capability) — cap patches per IP so a
+  // scripted loop can't hammer itinerary updates or fill request_log.
+  if (await isRateLimited(env, request, 'trips-patch', PATCH_TRIPS_PER_HOUR)) {
+    return json({ error: RATE_LIMIT_MESSAGE }, 429)
+  }
+
   try {
     const updated = await updateTrip(env, params.id, parsed.data)
     return json(updated, 200)
@@ -89,6 +104,10 @@ export async function onRequestDelete({
 
   const id = typeof params.id === 'string' ? params.id.trim() : ''
   if (id === '') return json({ error: 'Something in that request didn’t look right. Please try again.' }, 400)
+
+  if (await isRateLimited(env as Env, request, 'trips-delete', DELETE_TRIPS_PER_HOUR)) {
+    return json({ error: RATE_LIMIT_MESSAGE }, 429)
+  }
 
   try {
     const deleted = await deleteTripOwnedBy(env, id, user.id)

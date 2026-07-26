@@ -15,6 +15,9 @@ tsconfig.tsbuildinfo
 # Cloudflare local dev state (local D1, logs)
 .wrangler/
 
+# D1 backup dumps from CI/local export — never commit (public repo + PII in users)
+backup-out/
+
 # Simulation run artifacts (paid API output, machine-specific)
 sim-*.log
 sim-*.json
