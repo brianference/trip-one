@@ -123,4 +123,89 @@ describe('useTripData', () => {
     expect(result.current.location?.thingsToDo).toEqual([experience])
     expect(result.current.location?.thingsToDo.some((t) => t.source === 'viator')).toBe(true)
   })
+
+  it('cleans legacy duplicate stops once on load and persists the healed row', async () => {
+    // Same three pairs that drifted into the live Tokyo demo itinerary.
+    const legacyItinerary = [
+      { time: '10:00', text: 'Odaiba Beach', type: 'option' as const, day: 2 },
+      { time: '11:00', text: 'Odaiba Marine Park', type: 'option' as const, day: 2 },
+      { time: '14:00', text: 'Isshiki Beach', type: 'option' as const, day: 3 },
+      { time: '09:00', text: 'Odaiba Beach', type: 'option' as const, day: 5 },
+      { time: '15:00', text: 'Odaiba Marine Park', type: 'option' as const, day: 5 },
+      { time: '16:00', text: 'Isshiki Beach', type: 'option' as const, day: 6 },
+    ]
+    vi.spyOn(client, 'getTrip').mockResolvedValue({
+      id: 'tokyo-legacy',
+      locationSlug: 'tokyo-japan',
+      itinerary: legacyItinerary,
+      designStyle: 'chronicle',
+      tripLengthDays: 7,
+    })
+    vi.spyOn(client, 'fetchLocation').mockResolvedValue({
+      slug: 'tokyo-japan',
+      lat: 35.68,
+      lng: 139.76,
+      displayName: 'Tokyo, Japan',
+      thingsToDo: [],
+    })
+    vi.spyOn(client, 'fetchExperiences').mockResolvedValue([])
+    const updateSpy = vi.spyOn(client, 'updateTrip').mockResolvedValue({
+      id: 'tokyo-legacy',
+      locationSlug: 'tokyo-japan',
+      itinerary: [],
+      designStyle: 'chronicle',
+      tripLengthDays: 7,
+    })
+
+    const { result } = renderHook(() => useTripData('tokyo-legacy'))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    const storeItinerary = useTripStore.getState().itinerary
+    expect(storeItinerary).toHaveLength(3)
+    expect(storeItinerary.map((i) => i.text)).toEqual([
+      'Odaiba Beach',
+      'Odaiba Marine Park',
+      'Isshiki Beach',
+    ])
+    expect(storeItinerary[0]).toMatchObject({ time: '10:00', day: 2 })
+    expect(result.current.trip?.itinerary).toHaveLength(3)
+
+    await waitFor(() => expect(updateSpy).toHaveBeenCalled())
+    const persisted = updateSpy.mock.calls[0][1].itinerary as Array<{ text: string }>
+    expect(persisted.map((i) => i.text)).toEqual([
+      'Odaiba Beach',
+      'Odaiba Marine Park',
+      'Isshiki Beach',
+    ])
+  })
+
+  it('does not persist when the loaded itinerary already has unique stop names', async () => {
+    vi.spyOn(client, 'getTrip').mockResolvedValue({
+      id: 'clean-trip',
+      locationSlug: 'lisbon-portugal',
+      itinerary: [{ time: '09:00', text: 'Belem Tower', type: 'option' }],
+      designStyle: 'chronicle',
+      tripLengthDays: 2,
+    })
+    vi.spyOn(client, 'fetchLocation').mockResolvedValue({
+      slug: 'lisbon-portugal',
+      lat: 38.7,
+      lng: -9.1,
+      displayName: 'Lisbon, Portugal',
+      thingsToDo: [],
+    })
+    vi.spyOn(client, 'fetchExperiences').mockResolvedValue([])
+    const updateSpy = vi.spyOn(client, 'updateTrip').mockResolvedValue({
+      id: 'clean-trip',
+      locationSlug: 'lisbon-portugal',
+      itinerary: [],
+      designStyle: 'chronicle',
+    })
+
+    const { result } = renderHook(() => useTripData('clean-trip'))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(useTripStore.getState().itinerary).toHaveLength(1)
+    // Self-heal only writes when dups were dropped — clean rows must not PATCH.
+    expect(updateSpy).not.toHaveBeenCalled()
+  })
 })

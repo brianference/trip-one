@@ -3,6 +3,98 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v16.0.0 — Bookable experiences, and a map you can actually use
+
+### Added — Viator experiences
+
+Bookable, time-boxed, priced experiences are a category Google Places and
+Tripadvisor cannot return. Trip One now surfaces them alongside real places.
+
+Search is anchored on Viator's destination taxonomy rather than free text.
+Free-text search returned Juneau, Alaska and Finnish Lapland for an Ely,
+Minnesota trip, and a Percy Jackson tour in Rome for Jackson, Wyoming; anchoring
+on the nearest destination centre makes that impossible. Live coverage: Tokyo
+8/8, Jackson Hole 8/8, and Ely correctly reports no coverage rather than
+inventing some.
+
+Two things the documentation got wrong, found only by calling the real API:
+location references resolve to coordinates solely under
+`itinerary.itineraryItems[].pointOfInterestLocation`, and the destinations
+taxonomy is 1.2MB raw — over D1's 1MB value limit — fitting only because the
+schema strips undeclared fields down to 470KB.
+
+An experience with no resolvable coordinates is dropped rather than pinned to a
+destination centre, and a price with no confirmed currency is not shown at all.
+
+### Added — duration-aware days
+
+A 720-minute day tour used to be scheduled as one ordinary stop, after which the
+planner stacked three restaurants onto the same day. Days now budget time: a
+full-day experience takes the day, a half-day allows one more stop, and a stop
+with unknown duration behaves exactly as before.
+
+### Fixed — map pins showed no details
+
+Roughly one pin in five opened an empty panel and logged a console error.
+Tripadvisor-sourced places carry no Google place id, and Find Place returns no
+match for many of their names, so the details endpoint returned 404. It now
+returns a usable partial detail instead, so every pin opens something.
+
+### Changed — the map is no longer crowded
+
+Porto plotted 50 pins including a random office building. Pins are now ranked by
+stated interests, then by real rating and review count, with highly-rated
+restaurants kept only near that day's stops. Thresholds come from the real
+cached data (1478 pin-eligible entries; rating p10 3.8, p25 4.2, p50 4.5): a 4.0
+floor drops 14.1% of rated pins plus all unrated ones, retaining 77.6%.
+Itinerary stops always plot regardless of score. Porto now shows 25.
+
+### Fixed — desktop used half the screen
+
+The layout reserved 96% of the width and painted at roughly 50%, leaving a large
+empty gutter: a narrow centred header pill, a narrow map, and preview cards
+stacked beside dead space. The header now spans 92%, the map 90%, and the three
+preview cards sit in a row. Mobile is unchanged.
+
+### Fixed — duplicate itinerary stops
+
+The demo trip had drifted to 25 stops containing three duplicate pairs. Every
+write path now runs a shared dedupe, the candidate list is deduped before
+selection, and a trip loaded with legacy duplicates is cleaned once on open. New
+trips were already clean — a fresh 8-day trip of 32 stops had none — so this is
+a guard against recurrence rather than a fix for a live defect.
+
+### Added — an end-to-end regression suite
+
+`npm run regression <url>` runs 35 checks against a deployed build. It exists
+because every serious defect in this release passed the unit tests: it asserts
+real API field names, that a pin click opens the detail dialog, that day tabs
+switch days, that the per-day route stays dashed, that pin counts stay bounded
+in both directions, and that the console is clean.
+
+It measures painted components rather than their containers. An earlier version
+asserted a wrapper element and reported 97.8% on a page that painted at 50% — a
+block-level container is full width by default, so that check could never fail.
+
+### Changed — backups are local only
+
+The previous backup script still pointed at a database retired in July and no
+workflow was running it, so nothing had been backed up since the D1 migration.
+`npm run backup` now writes a dump to a gitignored local directory using
+credentials from .env. It is deliberately not a GitHub Action: this repository
+is public, Actions artifacts on a public repository are downloadable by anyone
+signed into GitHub, and the users table holds email addresses and password
+hashes. D1 Time Travel still covers 30-day point-in-time recovery.
+
+### Security
+
+Rate limiting added to the trip PATCH and DELETE endpoints, the only write paths
+that lacked it. Google Places failures are no longer silent: the API returns
+HTTP 200 with a body-level status for a denied key or exhausted quota, which was
+previously treated as "no results" and cached, turning a transient outage into a
+permanently empty destination. Remaining Supabase credentials were removed from
+the repository and from local configuration.
+
 ## v15.0.0 — A footer that carries its weight
 
 ### Changed — the site footer

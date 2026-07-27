@@ -58,11 +58,36 @@ const MIN_PAINTED_WIDTH_PCT = 80
 const MAX_PINS = 30
 /** A destination this rich must yield at least this many pins, or filtering is too aggressive. */
 const MIN_PINS = 5
+/**
+ * Trip length used when growing the fixture via the Plan page control.
+ * Larger than TRIP_DAYS so adjustItineraryForTripLength pulls more candidates.
+ */
+const GROWN_TRIP_DAYS = 8
 
 const results = []
 const record = (name, pass, detail) => {
   results.push({ name, pass, detail })
   console.log(`${pass ? 'PASS' : 'FAIL'}  ${name}${detail ? `  — ${detail}` : ''}`)
+}
+
+/**
+ * Counts stops whose normalized name (trim + lowercase) already appeared
+ * earlier in the list. Used to catch the Tokyo-demo drift class of bug
+ * (Odaiba Beach / Odaiba Marine Park / Isshiki Beach exact pairs).
+ * @param {Array<{ text?: string }>} stops
+ * @returns {number} number of later duplicates (0 means all unique)
+ */
+function countDuplicateNormalizedStopNames(stops) {
+  if (!Array.isArray(stops)) return -1
+  const seen = new Set()
+  let dups = 0
+  for (const s of stops) {
+    const key = String(s?.text ?? '').trim().toLowerCase()
+    if (key === '') continue
+    if (seen.has(key)) dups += 1
+    else seen.add(key)
+  }
+  return dups
 }
 
 /** Fetch JSON and fail loudly on a non-JSON body (an HTML 404 must not read as {}). */
@@ -278,6 +303,19 @@ async function main() {
   })
   record('trip: itinerary + trip_length_days saved', patched.status === 200 && patched.body.trip_length_days === TRIP_DAYS)
 
+  // Duplicate-stop guard (Tokyo demo drift: Odaiba Beach / Odaiba Marine Park /
+  // Isshiki Beach exact pairs in a stored row). Assert after building the
+  // fixture — always print the count so a silent 0-of-0 can't hide a miss.
+  {
+    const fixtureStops = patched.body.itinerary ?? stops
+    const dupCount = countDuplicateNormalizedStopNames(fixtureStops)
+    record(
+      'itinerary: zero duplicate normalized stop names after fixture build',
+      dupCount === 0,
+      `${dupCount} duplicate(s) in ${Array.isArray(fixtureStops) ? fixtureStops.length : 0} stops`,
+    )
+  }
+
   // ------------------------------------------------------------------- UI
   const browser = await chromium.launch()
   const ctx = await browser.newContext({ viewport: DESKTOP })
@@ -329,6 +367,32 @@ async function main() {
     document.querySelector('.chronicle-chat-dock--open [aria-label="Hide chat"]')?.click()
   })
   await page.waitForTimeout(300)
+
+  // Grow the trip via the real trip-length control so adjustItineraryForTripLength
+  // runs against live thingsToDo. Then re-fetch the row and assert zero dups.
+  // WHY: growth once could select the same candidate twice when the source
+  // list contained duplicates (Tokyo demo Odaiba/Isshiki pairs).
+  {
+    const lengthSelect = page.locator('label:has-text("Trip length") select')
+    await lengthSelect.waitFor({ state: 'visible', timeout: 15000 })
+    const patchPromise = page.waitForResponse(
+      (res) =>
+        res.url().includes(`/api/trips/${tripId}`) &&
+        res.request().method() === 'PATCH' &&
+        res.status() === 200,
+      { timeout: 30000 },
+    )
+    await lengthSelect.selectOption(String(GROWN_TRIP_DAYS))
+    await patchPromise
+    const grown = await getJson(`/api/trips/${tripId}`)
+    const grownStops = grown.body.itinerary ?? []
+    const dupAfterGrow = countDuplicateNormalizedStopNames(grownStops)
+    record(
+      'itinerary: zero duplicate normalized stop names after growing trip length',
+      grown.status === 200 && dupAfterGrow === 0,
+      `${dupAfterGrow} duplicate(s) in ${Array.isArray(grownStops) ? grownStops.length : 0} stops (trip_length_days=${grown.body.trip_length_days})`,
+    )
+  }
 
   // Switching day must re-draw the route for that day.
   await page.locator('.chronicle-day-tab').nth(2).click()

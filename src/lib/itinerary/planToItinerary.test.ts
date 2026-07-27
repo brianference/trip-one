@@ -84,4 +84,17 @@ describe('planToItinerary', () => {
     expect(items[0].priceFrom).toBe(149)
     expect(items[0].currency).toBeUndefined()
   })
+
+  it('dedupes the same place indexed on two days, keeping the first day', () => {
+    // Plan can reference index 0 on day 1 and again on day 2; first wins.
+    const items = planToItinerary(
+      [
+        { day: 1, placeIndexes: [0] },
+        { day: 2, placeIndexes: [0, 1] },
+      ],
+      places,
+    )
+    expect(items.map((i) => i.text)).toEqual(['Balboa Park', 'Birch Aquarium'])
+    expect(items[0].day).toBe(1)
+  })
 })
