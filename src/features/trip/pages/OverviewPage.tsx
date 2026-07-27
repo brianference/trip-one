@@ -51,6 +51,12 @@ export function OverviewPage() {
       </div>
       <p className="chronicle-save-hint">This link is your trip — bookmark or share it to come back. No account needed.</p>
 
+      {/*
+        Content order matches the previous mobile stack (map → weather → stats →
+        previews). Desktop widens map/header and lays the three preview cards
+        in a row (see .chronicle-overview-previews). Measured production bug
+        @1280px: chapter 96% but map/cards ~50% centred with empty gutters.
+      */}
       {location && (
         <PreviewCard title="Map & days" to={`/trip/${trip.id}/plan`} linkLabel="Open trip plan" bleed>
           <TripMap
@@ -79,7 +85,8 @@ export function OverviewPage() {
           <strong>{itinerary.length}</strong> stop{itinerary.length === 1 ? '' : 's'} planned
         </li>
         <li>
-          <strong>{location?.thingsToDo.length ?? 0}</strong> nearby suggestion{(location?.thingsToDo.length ?? 0) === 1 ? '' : 's'}
+          <strong>{location?.thingsToDo.length ?? 0}</strong> nearby suggestion
+          {(location?.thingsToDo.length ?? 0) === 1 ? '' : 's'}
         </li>
         {tripLengthDays && (
           <li>
@@ -88,47 +95,62 @@ export function OverviewPage() {
         )}
       </ul>
 
-      {nextStops.length > 0 && (
-        <PreviewCard title="Up next" to={`/trip/${trip.id}/itinerary`} linkLabel="See full itinerary">
-          <ul className="chronicle-preview-list">
-            {nextStops.map((item, i) => (
-              <li key={`${item.text}-${i}`}>
-                {item.time && <span className="chronicle-preview-time">{item.time}</span>}{' '}
-                <button
-                  type="button"
-                  className="chronicle-preview-link"
-                  onClick={() => setSelected(placeQueryFor({ name: item.text, lat: item.lat, lng: item.lng, category: item.category }))}
-                >
-                  {item.text}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </PreviewCard>
-      )}
-      {nextStops.length === 0 && (
-        <PreviewCard title="Up next" to={`/trip/${trip.id}/itinerary`} linkLabel="Plan your itinerary">
-          <p className="chronicle-rate-line">No stops yet.</p>
-        </PreviewCard>
-      )}
+      <div className="chronicle-overview-previews">
+        {nextStops.length > 0 && (
+          <PreviewCard title="Up next" to={`/trip/${trip.id}/itinerary`} linkLabel="See full itinerary">
+            <ul className="chronicle-preview-list">
+              {nextStops.map((item, i) => (
+                <li key={`${item.text}-${i}`}>
+                  {item.time && <span className="chronicle-preview-time">{item.time}</span>}{' '}
+                  <button
+                    type="button"
+                    className="chronicle-preview-link"
+                    onClick={() =>
+                      setSelected(
+                        placeQueryFor({
+                          name: item.text,
+                          lat: item.lat,
+                          lng: item.lng,
+                          category: item.category,
+                        }),
+                      )
+                    }
+                  >
+                    {item.text}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </PreviewCard>
+        )}
+        {nextStops.length === 0 && (
+          <PreviewCard title="Up next" to={`/trip/${trip.id}/itinerary`} linkLabel="Plan your itinerary">
+            <p className="chronicle-rate-line">No stops yet.</p>
+          </PreviewCard>
+        )}
 
-      {nearby.length > 0 && (
-        <PreviewCard title="Nearby" to={`/trip/${trip.id}/things-to-do`} linkLabel="Browse all things to do">
-          <ul className="chronicle-preview-list">
-            {nearby.map((item) => (
-              <li key={item.name}>
-                <button type="button" className="chronicle-preview-link" onClick={() => setSelected(placeQueryFor(item))}>
-                  {item.name}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </PreviewCard>
-      )}
+        {nearby.length > 0 && (
+          <PreviewCard title="Nearby" to={`/trip/${trip.id}/things-to-do`} linkLabel="Browse all things to do">
+            <ul className="chronicle-preview-list">
+              {nearby.map((item) => (
+                <li key={item.name}>
+                  <button
+                    type="button"
+                    className="chronicle-preview-link"
+                    onClick={() => setSelected(placeQueryFor(item))}
+                  >
+                    {item.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </PreviewCard>
+        )}
 
-      <PreviewCard title="Local info" to={`/trip/${trip.id}/weather`} linkLabel="Weather & info">
-        <LocalInfoCard displayName={displayName} />
-      </PreviewCard>
+        <PreviewCard title="Local info" to={`/trip/${trip.id}/weather`} linkLabel="Weather & info">
+          <LocalInfoCard displayName={displayName} />
+        </PreviewCard>
+      </div>
 
       {selected && (
         <PlaceDetailPanel query={selected} detail={detail} loading={loading} error={error} onClose={() => setSelected(null)} />

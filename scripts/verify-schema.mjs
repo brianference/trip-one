@@ -1,8 +1,7 @@
 /**
  * Verifies expected D1 tables are reachable via the Cloudflare REST API.
  *
- * Replaces the retired Supabase verify script. Uses the same secrets as the
- * daily backup workflow — never hardcode tokens.
+ * Uses the same Cloudflare credentials as `npm run backup` — never hardcode tokens.
  *
  * Required env:
  *   CLOUDFLARE_ACCOUNT_ID

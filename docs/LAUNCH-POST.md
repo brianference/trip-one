@@ -36,7 +36,7 @@ That combination — a genuinely conversational planner, with hard guardrails so
 
 - Frontend: React + TypeScript + Vite, Zustand for state, React Router, Leaflet for maps, Zod for validation
 - Backend: Cloudflare Pages Functions (serverless, edge), which proxy and cache every third-party API so keys stay server-side and CORS/rate-limit concerns live in one place
-- Data: Supabase (Postgres) as a cache and trip store, with per-IP rate limiting on the write and paid endpoints
+- Data: Cloudflare D1 as a cache and trip store, with per-IP rate limiting on the write and paid endpoints
 - AI: OpenAI for the grounded planner and chat, with schema-validated, index-only output and a normalization layer that drops anything ungrounded
 - CI/CD: GitHub Actions (typecheck + tests + build on every push) and direct deploys to Cloudflare Pages
 
@@ -51,7 +51,7 @@ That combination — a genuinely conversational planner, with hard guardrails so
 - 🗣️ Microsoft Edge neural TTS — the 32-language phrasebook pronunciation audio
 - 🧭 CARTO / OpenStreetMap tiles — the base map
 
-Every one of these is called through the backend, never the browser, behind a Supabase cache and rate limits, so the app is fast, keys are never exposed, and third-party costs stay bounded.
+Every one of these is called through the backend, never the browser, behind a D1 cache and rate limits, so the app is fast, keys are never exposed, and third-party costs stay bounded.
 
 ---
 

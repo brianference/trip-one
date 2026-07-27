@@ -29,11 +29,31 @@ const TRIP_DAYS = 4
 const DESKTOP = { width: 1440, height: 900 }
 /** Mobile viewport — must never introduce horizontal overflow. */
 const MOBILE = { width: 375, height: 812 }
-/** Main content must occupy at least this share of the desktop *viewport*
- *  (window.innerWidth). Measuring against a padded inner column is
+/** Main content wrapper must occupy at least this share of the desktop
+ *  *viewport* (window.innerWidth). Measuring against a padded inner column is
  *  unfalsifiable — content at width:100% of a 376px-guttered column always
  *  reads ~100% while only ~77% of the real desktop width (measured 1373/1780). */
 const MIN_MAIN_WIDTH_PCT = 90
+/**
+ * Floor for *painted* structural chrome (trip header / map frame), as a share
+ * of the viewport — NOT the chapter wrapper.
+ *
+ * WHY this number (and why it is separate from MIN_MAIN_WIDTH_PCT):
+ * The 2026-07 production bug measured on Home/overview @1280px:
+ *   .chronicle-chapter        1233px  96.3%  ← wrapper check PASSED
+ *   .chronicle-trip-header     595px  46.5%  ← narrow centred pill
+ *   .chronicle-map-frame       646px  50.5%  ← narrow map card
+ *   .chronicle-preview-card    680px  53.1%  ← narrow stacked cards
+ * A block-level box is full-width by default, so asserting only
+ * `.chronicle-chapter` proved nothing about visible content. Layout after the
+ * fix (desktop @1440, page padding 16px each side):
+ *   chapter / header / map span the book column ≈ 97% of viewport;
+ *   at ≥1100px overview previews sit in a 3-column row spanning that column.
+ * 80% is a meaningful floor: it fails the old ~50% centred layout while
+ * tolerating chapter padding and borders. Preview *span* (union of all cards)
+ * uses the same floor so a single 680px centred column cannot pass.
+ */
+const MIN_PAINTED_WIDTH_PCT = 80
 /** Map must not be overcrowded. */
 const MAX_PINS = 30
 /** A destination this rich must yield at least this many pins, or filtering is too aggressive. */
@@ -56,6 +76,122 @@ async function getJson(path, init) {
     throw new Error(`${path} returned non-JSON (HTTP ${res.status}): ${text.slice(0, 80)}`)
   }
   return { status: res.status, body }
+}
+
+/**
+ * Measures wrapper + painted content widths as % of viewport.
+ * Always returns measured percentages so a regression is visible in the log
+ * even when the assertion passes.
+ *
+ * @param {import('playwright').Page} page
+ * @param {{ expectPreviewCards: boolean }} opts
+ */
+async function measureLayout(page, opts) {
+  return page.evaluate((options) => {
+    const viewportW = window.innerWidth
+    const pct = (px) => (viewportW > 0 ? (px / viewportW) * 100 : 0)
+
+    /**
+     * Bounding-box width of one element.
+     * @param {Element | null} el
+     */
+    const widthOf = (el) => (el ? el.getBoundingClientRect().width : 0)
+
+    /**
+     * Horizontal span of every match (max right − min left). Catches a row of
+     * cards that each look "narrow" but together fill the column — and fails
+     * when a single centred 680px card is the only painted content.
+     * @param {string} selector
+     */
+    const spanOf = (selector) => {
+      const els = [...document.querySelectorAll(selector)]
+      if (els.length === 0) return { spanPx: 0, count: 0, widths: [] }
+      let minL = Infinity
+      let maxR = -Infinity
+      /** @type {number[]} */
+      const widths = []
+      for (const el of els) {
+        const r = el.getBoundingClientRect()
+        if (r.width <= 0 && r.height <= 0) continue
+        minL = Math.min(minL, r.left)
+        maxR = Math.max(maxR, r.right)
+        widths.push(r.width)
+      }
+      if (!Number.isFinite(minL) || !Number.isFinite(maxR)) {
+        return { spanPx: 0, count: 0, widths: [] }
+      }
+      return { spanPx: Math.max(0, maxR - minL), count: widths.length, widths }
+    }
+
+    const chapter = document.querySelector('.chronicle-chapter') || document.querySelector('main')
+    const header = document.querySelector('.chronicle-trip-header')
+    const mapFrame = document.querySelector('.chronicle-map-frame')
+    // Only the Up next / Nearby / Local info row — not the Map preview card.
+    // Measuring all .chronicle-preview-card would include a full-width map card
+    // and hide a still-narrow centred stack of the three content cards.
+    const previews = spanOf('.chronicle-overview-previews .chronicle-preview-card')
+
+    return {
+      viewportW,
+      overflowPx: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      chapterW: widthOf(chapter),
+      chapterPct: pct(widthOf(chapter)),
+      headerW: widthOf(header),
+      headerPct: pct(widthOf(header)),
+      mapW: widthOf(mapFrame),
+      mapPct: pct(widthOf(mapFrame)),
+      previewSpanW: previews.spanPx,
+      previewSpanPct: pct(previews.spanPx),
+      previewCount: previews.count,
+      previewWidths: previews.widths.map((w) => Math.round(w)),
+      expectPreviewCards: options.expectPreviewCards,
+    }
+  }, opts)
+}
+
+/**
+ * Records container + painted-content layout assertions for the current page.
+ * @param {string} pageLabel  short path label for check names (e.g. "overview", "plan")
+ * @param {Awaited<ReturnType<typeof measureLayout>>} layout
+ */
+function recordDesktopLayout(pageLabel, layout) {
+  const fmt = (pct, px) => `${pct.toFixed(1)}% (${Math.round(px)}px / ${layout.viewportW}px)`
+
+  record(
+    `layout/${pageLabel}: chapter (wrapper) >= ${MIN_MAIN_WIDTH_PCT}% of viewport`,
+    layout.chapterPct >= MIN_MAIN_WIDTH_PCT,
+    fmt(layout.chapterPct, layout.chapterW),
+  )
+  record(
+    `layout/${pageLabel}: trip header (painted) >= ${MIN_PAINTED_WIDTH_PCT}% of viewport`,
+    layout.headerW > 0 && layout.headerPct >= MIN_PAINTED_WIDTH_PCT,
+    layout.headerW > 0
+      ? fmt(layout.headerPct, layout.headerW)
+      : 'header not found',
+  )
+  record(
+    `layout/${pageLabel}: map frame (painted) >= ${MIN_PAINTED_WIDTH_PCT}% of viewport`,
+    layout.mapW > 0 && layout.mapPct >= MIN_PAINTED_WIDTH_PCT,
+    layout.mapW > 0 ? fmt(layout.mapPct, layout.mapW) : 'map frame not found',
+  )
+
+  if (layout.expectPreviewCards) {
+    // Union span of Up next / Nearby / Local info (and Map card if present).
+    // Detail string always prints measured % so a silent shrink is visible.
+    record(
+      `layout/${pageLabel}: preview cards span (painted) >= ${MIN_PAINTED_WIDTH_PCT}% of viewport`,
+      layout.previewCount > 0 && layout.previewSpanPct >= MIN_PAINTED_WIDTH_PCT,
+      layout.previewCount > 0
+        ? `${fmt(layout.previewSpanPct, layout.previewSpanW)}; n=${layout.previewCount}; widths=[${layout.previewWidths.join(',')}]`
+        : 'no .chronicle-preview-card elements',
+    )
+  }
+
+  record(
+    `layout/${pageLabel}: no horizontal overflow`,
+    layout.overflowPx <= 0,
+    `${layout.overflowPx}px`,
+  )
 }
 
 async function main() {
@@ -150,35 +286,28 @@ async function main() {
   page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text()) })
   page.on('pageerror', (e) => consoleErrors.push(String(e)))
 
+  // --- Overview / home (the page that regressed: narrow centred cards) -----
+  // The old suite only visited /plan, so a half-empty Home dashboard passed.
+  await page.goto(`${BASE}/trip/${tripId}`, { waitUntil: 'networkidle' })
+  await page.waitForSelector('.chronicle-chapter', { timeout: 20000 })
+  // Map may sit inside the overview dash; wait for markers when present.
+  try {
+    await page.waitForSelector('.leaflet-marker-icon', { timeout: 20000 })
+  } catch {
+    /* overview still has chapter + preview cards without pins in edge cases */
+  }
+  const overviewLayout = await measureLayout(page, { expectPreviewCards: true })
+  recordDesktopLayout('overview', overviewLayout)
+
+  // --- Plan page (existing map / day-tab checks) ---------------------------
   await page.goto(`${BASE}/trip/${tripId}/plan`, { waitUntil: 'networkidle' })
   // Wait for real trip chrome (map markers), not just networkidle — a failed
   // trip load once measured main content at 38.2% of the viewport and would
   // have been a false layout failure (or worse, a vacuous pass if no main).
   await page.waitForSelector('.leaflet-marker-icon', { timeout: 20000 })
 
-  const layout = await page.evaluate((minPct) => {
-    const main = document.querySelector('.chronicle-chapter') || document.querySelector('main')
-    // Product requirement: main content ≥90% of the *desktop width*
-    // (window.innerWidth). Do NOT measure against the padded content column —
-    // after padding-left:376px for the chat dock, chapter width/column was
-    // ~100% while chapter/viewport was only 77.1% (1373px at 1780px viewport).
-    // That made the old check unfalsifiable. Always report the real share.
-    const viewportW = window.innerWidth
-    const mainW = main ? main.getBoundingClientRect().width : 0
-    return {
-      widthPct: viewportW > 0 ? (mainW / viewportW) * 100 : 0,
-      mainW,
-      viewportW,
-      overflowPx: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      minPct,
-    }
-  }, MIN_MAIN_WIDTH_PCT)
-  record(
-    `layout: desktop main content >= ${MIN_MAIN_WIDTH_PCT}% of viewport`,
-    layout.widthPct >= MIN_MAIN_WIDTH_PCT,
-    `${layout.widthPct.toFixed(1)}% (${Math.round(layout.mainW)}px / ${layout.viewportW}px)`,
-  )
-  record('layout: no horizontal overflow', layout.overflowPx <= 0, `${layout.overflowPx}px`)
+  const planLayout = await measureLayout(page, { expectPreviewCards: false })
+  recordDesktopLayout('plan', planLayout)
 
   const map = await page.evaluate(() => {
     const paths = [...document.querySelectorAll('.leaflet-overlay-pane path')]
@@ -239,12 +368,23 @@ async function main() {
   // Mobile must keep zero horizontal overflow (the 375px layout is full-bleed
   // map + flattened chapter chrome — a desktop width change must not leak in).
   await page.setViewportSize(MOBILE)
-  await page.goto(`${BASE}/trip/${tripId}/plan`, { waitUntil: 'networkidle' })
-  await page.waitForSelector('.leaflet-marker-icon', { timeout: 20000 })
-  const mobileOverflow = await page.evaluate(
+  await page.goto(`${BASE}/trip/${tripId}`, { waitUntil: 'networkidle' })
+  await page.waitForSelector('.chronicle-chapter', { timeout: 20000 })
+  const mobileOverviewOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   )
-  record('layout: no horizontal overflow at 375px', mobileOverflow <= 0, `${mobileOverflow}px`)
+  record(
+    'layout/overview: no horizontal overflow at 375px',
+    mobileOverviewOverflow <= 0,
+    `${mobileOverviewOverflow}px`,
+  )
+
+  await page.goto(`${BASE}/trip/${tripId}/plan`, { waitUntil: 'networkidle' })
+  await page.waitForSelector('.leaflet-marker-icon', { timeout: 20000 })
+  const mobilePlanOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  )
+  record('layout/plan: no horizontal overflow at 375px', mobilePlanOverflow <= 0, `${mobilePlanOverflow}px`)
 
   // Required pages must stay reachable.
   for (const p of ['/', '/about', '/terms', '/privacy']) {

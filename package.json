@@ -9,6 +9,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "regression": "node scripts/regression.mjs",
+    "backup": "node scripts/backup-d1.mjs",
     "sim": "vite-node simulations/run.ts --"
   },
   "dependencies": {

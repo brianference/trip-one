@@ -1,8 +1,8 @@
 /**
  * Seeds the demo trips (Yellowstone, Tokyo) into Cloudflare D1.
  *
- * Replaces the retired Supabase seed script. Uses the D1 REST query API with
- * the same account secrets as the daily backup — never hardcode tokens.
+ * Uses the D1 REST query API with the same account secrets as `npm run backup`
+ * — never hardcode tokens.
  *
  * Required env:
  *   CLOUDFLARE_ACCOUNT_ID

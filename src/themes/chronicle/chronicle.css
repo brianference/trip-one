@@ -399,14 +399,21 @@ body {
 }
 
 .chronicle-map-frame {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
   border-radius: var(--chronicle-radius-md);
   overflow: hidden;
   border: 1px solid var(--chronicle-border-hairline);
 }
 
+/* Things-to-do map variant: still full width of its parent (no 680px centre
+   cap). Measured production: map frame was 646px / 50.5% at 1280px while the
+   chapter was 96% — the cap caused the empty gutter. */
 .chronicle-map-frame--things {
-  max-width: 680px;
-  margin: 0 auto var(--chronicle-space-lg);
+  width: 100%;
+  max-width: none;
+  margin: 0 0 var(--chronicle-space-lg);
 }
 
 .chronicle-rate-line {
@@ -1430,7 +1437,15 @@ body:has(.chronicle-page) label {
 /* ---------- Sticky section nav ---------- */
 /* Sticky trip header: ONE card holding the nav links and the currency
    converter, so they read as a single unit (not two cards of different
-   heights). The currency sits to the right behind a hairline divider. */
+   heights). The currency sits to the right behind a hairline divider.
+
+   Desktop width: must span the content column (width:100%), not shrink-wrap
+   to the nav links. Measured production bug @1280px viewport:
+     .chronicle-chapter     1233px  96.3%  (wrapper fine)
+     .chronicle-trip-header  ~595px 46.5%  (narrow centred pill — this rule)
+   Cause: max-width:820px + no width:100% → box shrank to content (~595px)
+   and margin:auto left a large empty gutter. Mobile (≤720px) overrides this
+   block entirely (fixed bottom tab bar). */
 .chronicle-trip-header {
   position: sticky;
   top: 0;
@@ -1438,8 +1453,10 @@ body:has(.chronicle-page) label {
   display: flex;
   align-items: center;
   gap: var(--chronicle-space-md);
-  max-width: 820px;
-  margin: 0 auto var(--chronicle-space-lg);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 var(--chronicle-space-lg);
   padding: var(--chronicle-space-sm);
   background: var(--chronicle-bg-surface);
   border: 1px solid var(--chronicle-border-hairline);
@@ -1717,15 +1734,59 @@ body:has(.chronicle-page) label {
 }
 
 /* ---------- Preview cards (Overview) ---------- */
+/* Base (mobile-first): single column, natural width of the chapter. Do NOT
+   centre-cap at 680px — that was the production bug @1280px:
+     .chronicle-preview-card  680px  53.1% left=293  (narrow stack, empty gutter)
+     forecast strip spanned wide, so the page looked inconsistent.
+   Desktop multi-column rules live on .chronicle-overview-previews below.
+   Mobile ≤720 keeps this single-column stack and spacing. */
 .chronicle-preview-card {
-  max-width: 680px;
-  margin: var(--chronicle-space-lg) auto 0;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  margin: var(--chronicle-space-lg) 0 0;
   background: var(--chronicle-bg-surface);
   border: 1px solid var(--chronicle-border-hairline);
   border-radius: var(--chronicle-radius-lg);
   padding: var(--chronicle-space-md);
   box-shadow: var(--chronicle-shadow-card);
   text-align: left;
+}
+
+/* Wrapper for Up next / Nearby / Local info. Mobile: plain block (cards keep
+   their own top margin). Desktop: CSS grid row so the three cards use the
+   chapter width instead of stacking as a narrow centred column. */
+.chronicle-overview-previews {
+  display: block;
+  min-width: 0;
+}
+
+/*
+  Desktop multi-column (≥900px): three preview cards in one row.
+  Measured layout intent @1440px (page padding 16px each side):
+    chapter ≈ 1408px ≈ 97.8% of viewport
+    each card ≈ (chapter − 2×gap) / 3 ≈ 450px ≈ 31% of viewport
+    span of all three ≈ chapter width ≈ 97% of viewport
+  Regression asserts painted span ≥ MIN_PAINTED_WIDTH_PCT (80%), which fails
+  the old single 680px centred column (53% @1280) while allowing a real
+  three-column row. Mid widths 721–899 stay single-column so cards are not
+  squeezed; mobile ≤720 is unchanged. */
+@media (min-width: 900px) {
+  .chronicle-overview-previews {
+    display: grid;
+    /* auto-fit: 2 cards (no Nearby) still share the full row; 3 cards = thirds.
+       minmax(0,1fr) allows shrink without overflow; min track ~220px prefers
+       wrapping only when the chapter is too narrow for three honest columns. */
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    gap: var(--chronicle-space-md);
+    margin-top: var(--chronicle-space-lg);
+  }
+
+  .chronicle-overview-previews > .chronicle-preview-card {
+    margin-top: 0;
+    min-width: 0;
+    height: 100%;
+  }
 }
 
 .chronicle-preview-card h2 {
@@ -1768,9 +1829,14 @@ body:has(.chronicle-page) label {
 }
 
 /* ---------- Page footer (quick-jump nav) ---------- */
+/* Match chapter / header width on desktop — was max-width:680px + margin:auto,
+   same narrow centred strip as the preview cards. Mobile ≤720 hides footer
+   links via .chronicle-footer-links { display:none }. */
 .chronicle-page-footer {
-  max-width: 680px;
-  margin: var(--chronicle-space-xl) auto 0;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  margin: var(--chronicle-space-xl) 0 0;
   padding-top: var(--chronicle-space-lg);
   border-top: 1px solid var(--chronicle-border-hairline);
   text-align: center;

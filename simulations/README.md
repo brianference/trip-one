@@ -47,5 +47,5 @@ score.
   shift as noise; the food shares are deterministic and don't move.
 - Bars count as food, so a Nashville honky-tonk trip reads ~50% "food" even
   though the bars *are* the live-music venues it asked for.
-- Scenarios hit the live Supabase location cache, so the nearby pool for a
+- Scenarios hit the live D1 location cache, so the nearby pool for a
   destination is whatever was cached for it.
