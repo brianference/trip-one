@@ -188,6 +188,64 @@ describe('useItineraryActions', () => {
     // old itinerary was fully replaced, not appended
     expect(persisted.map((i) => i.text)).not.toContain('Old plan')
   })
+
+  it('applyPlan with merge:true cannot duplicate an existing stop', async () => {
+    // Day 1 keeps Belem Tower; the revision for day 2 also tries to add it.
+    // First occurrence (day 1) wins — merge must not plant a second copy.
+    resetStore(
+      [
+        { time: '09:00', text: 'Belem Tower', type: 'option', day: 1 },
+        { time: '11:00', text: 'Alfama Walk', type: 'option', day: 1 },
+        { time: '10:00', text: 'Old day-2 stop', type: 'option', day: 2 },
+      ],
+      2,
+    )
+    const updateSpy = vi.spyOn(client, 'updateTrip').mockResolvedValue({
+      id: 't1',
+      locationSlug: 'lisbon-portugal',
+      itinerary: [],
+      designStyle: 'chronicle',
+    })
+    const places = [
+      { name: 'Belem Tower', category: 'tourist_attraction', source: 'places' as const, lat: 38.69, lng: -9.21 },
+      { name: 'Time Out Market', category: 'restaurant', source: 'places' as const, lat: 38.71, lng: -9.14 },
+    ]
+    const { result } = renderHook(() => useItineraryActions('t1'))
+    act(() => {
+      result.current.applyPlan([{ day: 2, placeIndexes: [0, 1] }], places, 2, { merge: true })
+    })
+    await waitFor(() => expect(updateSpy).toHaveBeenCalled())
+    const persisted = updateSpy.mock.calls[0][1].itinerary as Array<{ text: string; day?: number }>
+    expect(persisted.filter((i) => i.text === 'Belem Tower')).toHaveLength(1)
+    expect(persisted.find((i) => i.text === 'Belem Tower')?.day).toBe(1)
+    expect(persisted.map((i) => i.text)).toContain('Time Out Market')
+    expect(persisted.map((i) => i.text)).toContain('Alfama Walk')
+    expect(persisted.map((i) => i.text)).not.toContain('Old day-2 stop')
+  })
+
+  it('growing the trip cannot introduce a duplicate when candidates list a name twice', async () => {
+    resetStore([{ time: '', text: 'Stop A', type: 'option' }])
+    const updateSpy = vi.spyOn(client, 'updateTrip').mockResolvedValue({
+      id: 't1',
+      locationSlug: 'lisbon-portugal',
+      itinerary: [],
+      designStyle: 'chronicle',
+    })
+    const { result } = renderHook(() => useItineraryActions('t1'))
+    await act(async () => {
+      await result.current.setTripLength(1, [
+        { name: 'Odaiba Beach', category: 'beach', source: 'places', rating: 4.9 },
+        { name: 'Odaiba Beach', category: 'beach', source: 'places', rating: 4.9 },
+        { name: 'Meiji Jingu', category: 'shrine', source: 'places', rating: 4.7 },
+        { name: 'Shibuya Crossing', category: 'attraction', source: 'places', rating: 4.6 },
+      ])
+    })
+    await waitFor(() => expect(updateSpy).toHaveBeenCalled())
+    const persisted = updateSpy.mock.calls[0][1].itinerary as Array<{ text: string }>
+    const names = persisted.map((i) => i.text)
+    expect(names.filter((n) => n === 'Odaiba Beach')).toHaveLength(1)
+    expect(new Set(names.map((n) => n.trim().toLowerCase())).size).toBe(names.length)
+  })
 })
 
 // A chat edit is scoped to the days it mentions. Applying the model's reply

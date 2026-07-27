@@ -7,6 +7,7 @@ import { organizeItinerary } from '../../../lib/itinerary/organizeItinerary'
 import { reorderItinerary } from '../../../lib/itinerary/reorderItinerary'
 import { adjustItineraryForTripLength } from '../../../lib/itinerary/adjustItineraryForTripLength'
 import { planToItinerary } from '../../../lib/itinerary/planToItinerary'
+import { dedupeItinerary } from '../../../lib/itinerary/dedupeItinerary'
 import { logger } from '../../../lib/logger'
 
 /**
@@ -24,9 +25,12 @@ function persist(tripId: string, patch: { itinerary?: ItineraryItem[]; tripLengt
  * persists the result, both to the shared store and the backend. Every
  * itinerary mutation (add, remove, change trip length, add-from-suggestion)
  * goes through this single path rather than several subtly different ones.
+ *
+ * Dedupes before organize so addStop / addFromThingToDo cannot reintroduce
+ * the exact-name pairs that drifted into the Tokyo demo row.
  */
 function organizeAndPersist(items: ItineraryItem[], tripLengthDays: number | null, tripId: string) {
-  const organized = organizeItinerary(items, tripLengthDays)
+  const organized = organizeItinerary(dedupeItinerary(items), tripLengthDays)
   useTripStore.getState().setItinerary(organized)
   persist(tripId, { itinerary: organized })
 }
@@ -96,10 +100,10 @@ export function useItineraryActions(tripId: string) {
    * re-clustering, so the traveler's explicit placement is honored.
    */
   function addToDay(input: { name: string; lat?: number; lng?: number; category?: string }, day: number) {
-    const next: ItineraryItem[] = [
+    const next = dedupeItinerary([
       ...itinerary,
       { time: '', text: input.name, type: 'option', q: input.name, lat: input.lat, lng: input.lng, category: input.category, day },
-    ]
+    ])
     useTripStore.getState().setItinerary(next)
     persist(tripId, { itinerary: next })
   }
@@ -109,9 +113,14 @@ export function useItineraryActions(tripId: string) {
    * trip (round-robin), without re-clustering. Used by the chat's nearby search
    * ("add a beach", "add sushi") so the results reliably land on real days and
    * the chat can report exactly what went where. Returns each addition's day.
+   *
+   * Drops additions that duplicate an existing stop (or each other) by
+   * normalized name so a multi-result nearby search cannot plant the same
+   * beach twice.
    */
   function addStops(newPlaces: { name: string; lat?: number; lng?: number; category?: string }[], dayCount: number): { name: string; day: number }[] {
     const days = Math.max(dayCount, 1)
+    const priorCount = itinerary.length
     const additions: ItineraryItem[] = newPlaces.map((p, i) => ({
       time: '',
       text: p.name,
@@ -122,10 +131,12 @@ export function useItineraryActions(tripId: string) {
       category: p.category,
       day: (i % days) + 1,
     }))
-    const next = [...itinerary, ...additions]
+    const next = dedupeItinerary([...itinerary, ...additions])
     useTripStore.getState().setItinerary(next)
     persist(tripId, { itinerary: next })
-    return additions.map((a) => ({ name: a.text, day: a.day ?? 1 }))
+    // Only report stops that survived dedupe (were actually appended).
+    const kept = next.slice(priorCount)
+    return kept.map((a) => ({ name: a.text, day: a.day ?? 1 }))
   }
 
   function removeStop(index: number) {
@@ -188,6 +199,7 @@ export function useItineraryActions(tripId: string) {
    */
   function setTripLength(newLength: number | null, availableThingsToDo: ThingToDo[] = []) {
     const stripped = itinerary.map((item) => ({ ...item, day: undefined }))
+    // adjustItineraryForTripLength dedupes existing + candidates; organize after.
     const adjusted = adjustItineraryForTripLength(stripped, newLength, availableThingsToDo)
     const organized = organizeItinerary(adjusted, newLength)
     useTripStore.getState().setItinerary(organized)
@@ -201,13 +213,21 @@ export function useItineraryActions(tripId: string) {
    * in the itinerary (their coordinates/category are carried through for the
    * map and clustering). The AI already assigned days and ordering, so this
    * does NOT re-run organizeItinerary — that would undo the model's sequencing.
+   *
+   * Always dedupes the final list (including the merge:true branch) so a
+   * chat revision cannot reintroduce a stop already kept from an unmentioned
+   * day, or land the same place twice within the plan itself.
+   *
    * @param plan - Day-grouped indices from the planner
    * @param places - The real candidate places the indices refer to
    * @param days - Trip length the plan was built for
    */
   function applyPlan(plan: PlanDay[], places: ThingToDo[], days: number, opts: { merge?: boolean } = {}) {
     const planned = planToItinerary(plan, places)
-    const items = opts.merge ? mergePreservingUnmentionedDays(itinerary, planned, plan) : planned
+    const merged = opts.merge ? mergePreservingUnmentionedDays(itinerary, planned, plan) : planned
+    // First occurrence wins — carried-over stops keep their day when the plan
+    // also mentions the same place on a revised day.
+    const items = dedupeItinerary(merged)
     useTripStore.getState().setItinerary(items)
     useTripStore.getState().setTripLengthDays(days)
     persist(tripId, { itinerary: items, tripLengthDays: days })

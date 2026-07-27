@@ -49,6 +49,27 @@ describe('adjustItineraryForTripLength', () => {
   it('leaves the itinerary unchanged when already at the target pace', () => {
     const items = ['A', 'B', 'C', 'D'].map(item)
     const result = adjustItineraryForTripLength(items, 1, [thing('Would not be added')])
-    expect(result).toBe(items)
+    expect(result.map((i) => i.text)).toEqual(['A', 'B', 'C', 'D'])
+  })
+
+  it('cannot introduce a duplicate even when the candidate list contains one twice', () => {
+    // Growth once selected both copies of a repeated candidate (Tokyo demo
+    // drift: Odaiba Beach / Odaiba Marine Park / Isshiki Beach pairs).
+    const items = [item('Already unique')]
+    const result = adjustItineraryForTripLength(items, 1, [
+      thing('Odaiba Beach', 4.9),
+      thing('Odaiba Beach', 4.9),
+      thing('Meiji Jingu', 4.7),
+      thing('Shibuya Crossing', 4.6),
+    ])
+    const names = result.map((i) => i.text)
+    expect(names.filter((n) => n === 'Odaiba Beach')).toHaveLength(1)
+    expect(new Set(names.map((n) => n.trim().toLowerCase())).size).toBe(names.length)
+  })
+
+  it('dedupes existing items before growing so a legacy pair is not kept', () => {
+    const items = [item('Odaiba Beach'), item('Odaiba Beach'), item('Other')]
+    const result = adjustItineraryForTripLength(items, 1, [thing('Fresh stop', 5)])
+    expect(result.filter((i) => i.text === 'Odaiba Beach')).toHaveLength(1)
   })
 })

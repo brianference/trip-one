@@ -8,6 +8,8 @@ import {
   type ThingToDo,
 } from '../../../lib/api/client'
 import { useTripStore } from '../../../store/tripStore'
+import { queueTripWrite } from '../../../lib/api/tripWriteQueue'
+import { dedupeItinerary } from '../../../lib/itinerary/dedupeItinerary'
 import { logger } from '../../../lib/logger'
 
 /**
@@ -65,14 +67,31 @@ export function useTripData(tripId: string) {
       .then((loadedTrip) => {
         if (cancelled) return
         tripLoaded = true
-        setTrip(loadedTrip)
+        // Self-heal legacy rows that drifted before write-path dedupe existed.
+        // WHY: the live Tokyo demo (00000000-0000-4000-8000-000000000002)
+        // stored 25 stops with three exact pairs (Odaiba Beach, Odaiba Marine
+        // Park, Isshiki Beach) while its seed file has 6 unique stops. Drop
+        // dups once on load and persist through the write queue so the row
+        // is cleaned without a migration. Only writes when something was
+        // actually removed — does not re-fire on every visit after the row
+        // is clean, and does not fight a traveler who later re-adds a place
+        // through the (now-guarded) write paths.
+        const cleanedItinerary = dedupeItinerary(loadedTrip.itinerary)
+        const healed: Trip = { ...loadedTrip, itinerary: cleanedItinerary }
+        setTrip(healed)
         useTripStore.setState({
-          tripId: loadedTrip.id,
-          locationSlug: loadedTrip.locationSlug,
-          itinerary: loadedTrip.itinerary,
-          tripLengthDays: loadedTrip.tripLengthDays,
-          startDate: loadedTrip.startDate ?? null,
+          tripId: healed.id,
+          locationSlug: healed.locationSlug,
+          itinerary: cleanedItinerary,
+          tripLengthDays: healed.tripLengthDays,
+          startDate: healed.startDate ?? null,
         })
+        if (cleanedItinerary.length !== loadedTrip.itinerary.length) {
+          queueTripWrite(healed.id, { itinerary: cleanedItinerary }, (err) => {
+            logger.error('failed to persist legacy duplicate-stop cleanup', err)
+            useTripStore.getState().setSaveError(true)
+          })
+        }
         return fetchLocation(loadedTrip.locationSlug).then(async (loc) => {
           if (cancelled) return
           // Experiences do not depend on Places. Always fetch on load so a
