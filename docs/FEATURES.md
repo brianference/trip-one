@@ -73,4 +73,4 @@ off so the conversation continues seamlessly on the itinerary page.
   weather page reuses the existing weather hooks/components; the detail panel
   reuses `directionsUrl`.
 - Cost control: grounded prompts, capped tokens, rate limits per endpoint, and
-  Supabase caching for both locations and place details.
+  D1 caching for both locations and place details.

@@ -44,7 +44,7 @@ Recommended next improvements, in order:
 1. **Lift chat state to `TripShell`** so the assistant persists across page
    navigation and can render on every page (enables the "chat everywhere"
    request without duplicating state). Pairs with a shared `TripChatDrawer`.
-2. **Persist the conversation per trip** (Supabase or localStorage keyed by
+2. **Persist the conversation per trip** (D1 or localStorage keyed by
    trip id) so a reload doesn't reset the chat — the Daisy Dog checkpoint
    pattern.
 3. **Share frontend/backend planner types** via a single source to remove the

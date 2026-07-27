@@ -1,37 +1,40 @@
 /**
- * Daily D1 backup for trip-one.
+ * Local D1 backup for trip-one.
  *
  * Pulls every user table from the production Cloudflare D1 database via the
- * REST query API, encrypts the dump with AES-256-GCM, and writes a single
- * ciphertext file. The workflow uploads that file as a GitHub Actions artifact.
+ * REST query API and writes a plain JSON dump to a gitignored local directory.
  *
- * Security note (public repo): GitHub Actions artifacts on a public repository
- * are downloadable by anyone signed into GitHub (and the REST artifacts endpoint
- * serves them without auth). A plaintext dump of `users.email` /
- * `users.password_hash` would therefore be public. Dumps are encrypted before
- * they ever touch the upload directory. Losing BACKUP_ENCRYPTION_KEY makes
- * every dump unrecoverable — store it in repo secrets AND offline.
+ * WHY local-only (no GitHub Actions, no artifacts, no encryption):
+ * This repository is PUBLIC. On a public repo, workflow artifacts are
+ * downloadable by anyone signed into GitHub (and the REST artifacts endpoint
+ * needs no auth). The `users` table holds email + password_hash. An
+ * unencrypted dump uploaded as a CI artifact would publish credential
+ * material on a schedule. Encryption was dropped by request; therefore dumps
+ * MUST never leave the machine — do NOT re-add `.github/workflows/backup.yml`
+ * or any Actions artifact upload of this dump.
  *
- * Required env (repo secrets — never hardcoded, never logged):
+ * Credentials come from `.env` (gitignored) or the process environment:
  *   CLOUDFLARE_ACCOUNT_ID
  *   CLOUDFLARE_API_TOKEN   (Account.D1:Read is enough for SELECT)
  *   CLOUDFLARE_D1_DATABASE_ID
- *   BACKUP_ENCRYPTION_KEY  64 hex chars (32 bytes). Generate once with:
- *     node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
- *     Missing or malformed key FAILS the backup — never writes plaintext.
  *
  * Optional:
- *   BACKUP_OUT_DIR              default: backup-out
- *   BACKUP_MIN_ROWS             default: 100  (total-row floor; not trivially 1)
- *   BACKUP_MIN_ROWS_BY_TABLE    JSON object of per-table minimums, e.g.
- *                               {"locations":10,"trips":10}
- *                               merges over built-in defaults for known tables
+ *   BACKUP_OUT_DIR              default: backups/local
+ *   BACKUP_MIN_ROWS             default: 100  (total-row floor)
+ *   BACKUP_MIN_ROWS_BY_TABLE    JSON object of per-table minimums
  *
- * Restore: see .github/scripts/restore-d1.mjs
+ * Usage:
+ *   npm run backup
+ *   node scripts/backup-d1.mjs
+ *
+ * Never logs the API token or dump contents.
  */
-import { createCipheriv, randomBytes } from 'node:crypto'
-import { mkdirSync, writeFileSync, statSync, readdirSync, unlinkSync } from 'node:fs'
-import { join } from 'node:path'
+import { mkdirSync, writeFileSync, statSync, readFileSync, existsSync } from 'node:fs'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+/** Repo root (parent of scripts/). */
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 /** Total-row floor. Catches empty/partial exports; not satisfiable by a single row. */
 const DEFAULT_MIN_ROWS = 100
@@ -49,29 +52,14 @@ const DEFAULT_MIN_ROWS_BY_TABLE = Object.freeze({
 /** Page size for SELECT pagination (D1 REST responses have size limits). */
 const PAGE_SIZE = 1000
 
-/** AES-256-GCM IV length in bytes (NIST recommended 96-bit IV). */
-const GCM_IV_BYTES = 12
-
-/** AES-256-GCM auth tag length in bytes. */
-const GCM_TAG_BYTES = 16
-
-/** Expected encryption key length: 32 bytes as 64 hex characters. */
-const ENCRYPTION_KEY_HEX_LENGTH = 64
-
-/** Magic header for encrypted dump format v1: "D1E1". */
-const ENC_MAGIC = Buffer.from('D1E1', 'ascii')
-
-/** File extension written to the upload directory (ciphertext only). */
-const ENC_FILE_SUFFIX = '.json.enc'
+/** Default output directory — gitignored; never committed. */
+const DEFAULT_OUT_DIR = 'backups/local'
 
 /** SQLite/D1 system tables we never dump. */
 const SYSTEM_TABLE_PREFIXES = ['sqlite_', '_cf_']
 
 /** Safe SQL identifier: letters, digits, underscore; must start with letter/underscore. */
 const IDENTIFIER_RE = /^[A-Za-z_][A-Za-z0-9_]*$/
-
-/** Exactly 64 hex characters (AES-256 key material). */
-const ENCRYPTION_KEY_HEX_RE = /^[0-9a-fA-F]{64}$/
 
 /**
  * @typedef {object} BackupConfig
@@ -81,29 +69,68 @@ const ENCRYPTION_KEY_HEX_RE = /^[0-9a-fA-F]{64}$/
  * @property {string} outDir
  * @property {number} minRows
  * @property {Record<string, number>} minRowsByTable
- * @property {Buffer} encryptionKey
  */
 
 /**
- * Reads and validates configuration from the environment.
- * Fails closed on missing Cloudflare credentials or a missing/malformed
- * encryption key — never falls back to plaintext.
+ * Loads KEY=VALUE pairs from a local env file into process.env without
+ * overwriting variables already set. Never logs file contents or values.
+ * Supports optional surrounding single/double quotes on values.
+ *
+ * @param {string} filePath
+ */
+function loadEnvFile(filePath) {
+  if (!existsSync(filePath)) return
+  let text
+  try {
+    text = readFileSync(filePath, 'utf8')
+  } catch {
+    // Unreadable .env is not fatal — credentials may already be in the environment.
+    return
+  }
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim()
+    if (!line || line.startsWith('#')) continue
+    const eq = line.indexOf('=')
+    if (eq <= 0) continue
+    const key = line.slice(0, eq).trim()
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue
+    if (process.env[key] !== undefined) continue
+    let value = line.slice(eq + 1).trim()
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1)
+    }
+    process.env[key] = value
+  }
+}
+
+/**
+ * Reads and validates configuration from the environment (after optional .env).
+ * Fails closed on missing Cloudflare credentials.
  *
  * @returns {BackupConfig}
  */
 function readConfig() {
+  // Prefer project .env, then .dev.vars (Cloudflare local). Never print them.
+  loadEnvFile(join(ROOT, '.env'))
+  loadEnvFile(join(ROOT, '.dev.vars'))
+
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID?.trim()
   const apiToken = process.env.CLOUDFLARE_API_TOKEN?.trim()
   const databaseId = process.env.CLOUDFLARE_D1_DATABASE_ID?.trim()
   if (!accountId || !apiToken || !databaseId) {
     throw new Error(
-      'Missing required env: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, CLOUDFLARE_D1_DATABASE_ID',
+      'Missing required env: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, CLOUDFLARE_D1_DATABASE_ID ' +
+        '(set in .env or the environment). Never commit these values.',
     )
   }
 
-  const encryptionKey = parseEncryptionKey(process.env.BACKUP_ENCRYPTION_KEY)
+  const outDirRaw = process.env.BACKUP_OUT_DIR?.trim() || DEFAULT_OUT_DIR
+  // Resolve relative paths from repo root so `npm run backup` is cwd-independent.
+  const outDir = join(ROOT, outDirRaw)
 
-  const outDir = process.env.BACKUP_OUT_DIR?.trim() || 'backup-out'
   const minRowsRaw = process.env.BACKUP_MIN_ROWS?.trim()
   const minRows = minRowsRaw ? Number.parseInt(minRowsRaw, 10) : DEFAULT_MIN_ROWS
   if (!Number.isFinite(minRows) || minRows < 1) {
@@ -119,33 +146,7 @@ function readConfig() {
     outDir,
     minRows,
     minRowsByTable,
-    encryptionKey,
   }
-}
-
-/**
- * Parses BACKUP_ENCRYPTION_KEY: exactly 64 hex chars (32 bytes).
- * Absent or malformed keys fail loudly — no plaintext fallback.
- *
- * @param {string | undefined} raw
- * @returns {Buffer}
- */
-function parseEncryptionKey(raw) {
-  const hex = typeof raw === 'string' ? raw.trim() : ''
-  if (!hex) {
-    throw new Error(
-      'BACKUP_ENCRYPTION_KEY is required (64 hex chars). ' +
-        'Generate once: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))" ' +
-        'and store in repo secrets AND offline. Refusing to write an unencrypted dump.',
-    )
-  }
-  if (!ENCRYPTION_KEY_HEX_RE.test(hex) || hex.length !== ENCRYPTION_KEY_HEX_LENGTH) {
-    throw new Error(
-      `BACKUP_ENCRYPTION_KEY must be exactly ${ENCRYPTION_KEY_HEX_LENGTH} hex characters (32 bytes). ` +
-        'Refusing to write an unencrypted dump.',
-    )
-  }
-  return Buffer.from(hex, 'hex')
 }
 
 /**
@@ -186,6 +187,7 @@ function parseMinRowsByTable(raw) {
 /**
  * Runs a single SQL statement against D1 via the Cloudflare REST API.
  * Fails loudly on HTTP errors, API success:false, or empty result envelope.
+ * Never logs the Authorization header or token.
  *
  * @param {{ accountId: string, apiToken: string, databaseId: string }} cfg
  * @param {string} sql
@@ -347,53 +349,6 @@ async function selectAllRows(cfg, table) {
 }
 
 /**
- * Encrypts plaintext bytes with AES-256-GCM.
- * Output layout (single binary blob):
- *   magic(4) "D1E1" | iv(12) | authTag(16) | ciphertext(N)
- *
- * @param {Buffer} plaintext
- * @param {Buffer} key 32-byte AES-256 key
- * @returns {Buffer}
- */
-function encryptDump(plaintext, key) {
-  if (!Buffer.isBuffer(key) || key.length !== 32) {
-    throw new Error('encryptDump requires a 32-byte key buffer')
-  }
-  const iv = randomBytes(GCM_IV_BYTES)
-  const cipher = createCipheriv('aes-256-gcm', key, iv)
-  const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()])
-  const tag = cipher.getAuthTag()
-  if (tag.length !== GCM_TAG_BYTES) {
-    throw new Error(`Unexpected GCM auth tag length: ${tag.length}`)
-  }
-  return Buffer.concat([ENC_MAGIC, iv, tag, ciphertext])
-}
-
-/**
- * Removes any leftover plaintext .json files from the upload directory so a
- * previous failed run cannot be uploaded alongside the encrypted dump.
- *
- * @param {string} outDir
- */
-function scrubPlaintextFromOutDir(outDir) {
-  let entries
-  try {
-    entries = readdirSync(outDir)
-  } catch (err) {
-    if (err && typeof err === 'object' && 'code' in err && err.code === 'ENOENT') {
-      return
-    }
-    throw err
-  }
-  for (const name of entries) {
-    if (name.endsWith('.json') && !name.endsWith(ENC_FILE_SUFFIX)) {
-      unlinkSync(join(outDir, name))
-      console.log(`Removed leftover plaintext from upload dir: ${name}`)
-    }
-  }
-}
-
-/**
  * @returns {string} UTC timestamp like 20260725T061700Z
  */
 function utcTimestamp() {
@@ -412,7 +367,7 @@ function assertRowSanity(counts, totalRows, minRows, minRowsByTable) {
   if (totalRows < minRows) {
     throw new Error(
       `D1 export is empty or below threshold: totalRows=${totalRows}, minRows=${minRows}. ` +
-        `Per-table counts: ${JSON.stringify(counts)}. Refusing to upload a silent empty backup.`,
+        `Per-table counts: ${JSON.stringify(counts)}. Refusing to write a silent empty backup.`,
     )
   }
 
@@ -422,7 +377,6 @@ function assertRowSanity(counts, totalRows, minRows, minRowsByTable) {
     if (minimum <= 0) continue
     const actual = counts[table]
     if (actual === undefined) {
-      // Table is expected (has a floor) but was not present in this export.
       failures.push(`${table}: missing (required >= ${minimum})`)
       continue
     }
@@ -441,7 +395,7 @@ function assertRowSanity(counts, totalRows, minRows, minRowsByTable) {
 
 async function main() {
   const cfg = readConfig()
-  const { outDir, minRows, minRowsByTable, encryptionKey, ...apiCfg } = cfg
+  const { outDir, minRows, minRowsByTable, ...apiCfg } = cfg
 
   console.log('Listing D1 tables…')
   const tables = await listTables(apiCfg)
@@ -472,27 +426,28 @@ async function main() {
     tables: dump,
   }
 
-  // Plaintext exists only in memory. Never write .json into the upload directory.
-  const plaintext = Buffer.from(JSON.stringify(payload), 'utf8')
+  const plaintext = JSON.stringify(payload, null, 0)
   if (plaintext.length < 32) {
     throw new Error(
-      `Dump payload is trivially small (${plaintext.length} bytes) — refusing upload`,
+      `Dump payload is trivially small (${plaintext.length} bytes) — refusing write`,
     )
   }
 
-  const encrypted = encryptDump(plaintext, encryptionKey)
-
   mkdirSync(outDir, { recursive: true })
-  scrubPlaintextFromOutDir(outDir)
-
-  const filename = `d1-${utcTimestamp()}${ENC_FILE_SUFFIX}`
+  const filename = `d1-${utcTimestamp()}.json`
   const outPath = join(outDir, filename)
-  writeFileSync(outPath, encrypted)
+  writeFileSync(outPath, plaintext, 'utf8')
   const size = statSync(outPath).size
+
+  console.log('Per-table row counts:')
+  for (const [table, n] of Object.entries(counts)) {
+    console.log(`  ${table}: ${n}`)
+  }
+  console.log(`Total rows: ${totalRows}`)
+  console.log(`Wrote ${outPath} (${size} bytes, plain JSON)`)
   console.log(
-    `Wrote ${outPath} (${size} bytes encrypted, ${totalRows} total rows, AES-256-GCM)`,
+    'OK: local dump only — do not upload to GitHub Actions artifacts (public repo + users credentials).',
   )
-  console.log('OK: encrypted backup dump ready for artifact upload')
 }
 
 main().catch((err) => {

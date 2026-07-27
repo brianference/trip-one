@@ -15,8 +15,11 @@ tsconfig.tsbuildinfo
 # Cloudflare local dev state (local D1, logs)
 .wrangler/
 
-# D1 backup dumps from CI/local export — never commit (public repo + PII in users)
+# D1 backup dumps — local-only plain JSON (public repo + users.email/password_hash).
+# Never commit dumps. Do NOT re-add a GitHub Actions backup workflow/artifact:
+# on a public repo, artifacts are downloadable by anyone signed into GitHub.
 backup-out/
+backups/local/
 
 # Simulation run artifacts (paid API output, machine-specific)
 sim-*.log
