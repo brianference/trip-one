@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from './AuthContext'
+import { useAuth, type AuthUser } from './AuthContext'
 import { Button, ButtonLink } from '../../components/ui/Button'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { Seo } from '../../components/Seo'
@@ -88,6 +88,8 @@ export function MyTripsPage() {
         crumbs={[{ label: 'Home', to: '/' }, { label: 'My trips' }]}
         wide
       >
+        {user && <EmailStatus user={user} />}
+
         {error && (
           <div role="alert" className="mb-6 rounded-xl border border-danger-500/30 bg-danger-50 px-4 py-3 text-sm text-danger-600 dark:bg-danger-500/10">
             {error}{' '}
@@ -178,5 +180,68 @@ export function MyTripsPage() {
         onCancel={() => setPendingDelete(null)}
       />
     </>
+  )
+}
+
+/**
+ * Whether the signed-in address is confirmed, plus a way to request a new
+ * confirmation link. Until it is confirmed we cannot be sure mail we send
+ * will arrive — including a password reset.
+ */
+function EmailStatus({ user }: { user: AuthUser }) {
+  const [status, setStatus] = useState<string | null>(null)
+  const [sending, setSending] = useState(false)
+
+  async function resend() {
+    setStatus(null)
+    setSending(true)
+    try {
+      const res = await fetch('/api/auth/confirm-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({}),
+      })
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string }
+        setStatus(typeof body.error === 'string' ? body.error : 'Could not send a confirmation link.')
+        return
+      }
+      setStatus('If that address can receive mail, a new confirmation link is on its way. Check your inbox, and your spam folder.')
+    } catch {
+      setStatus('Could not reach the server. Check your connection and try again.')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  if (user.emailVerified) {
+    return (
+      <div className="mb-6 rounded-[var(--radius-card)] border border-[var(--hairline)] bg-[var(--surface)] px-4 py-3 text-sm">
+        <p>
+          <span className="font-medium">Email confirmed.</span>{' '}
+          <span className="opacity-80">{user.email}</span>
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mb-6 rounded-[var(--radius-card)] border border-[var(--hairline)] bg-[var(--surface)] px-4 py-3">
+      <p className="text-sm">
+        <span className="font-medium">{user.email}</span> isn't confirmed yet. Confirm it so you can reset your
+        password if you ever need to.
+      </p>
+      <div className="mt-3">
+        <Button type="button" size="sm" loading={sending} onClick={() => void resend()}>
+          {sending ? 'Sending…' : 'Send confirmation link'}
+        </Button>
+      </div>
+      {status && (
+        <p aria-live="polite" className="mt-3 text-sm opacity-80">
+          {status}
+        </p>
+      )}
+    </div>
   )
 }

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { Seo } from '../../components/Seo'
 import { PageShell, Prose } from '../../components/layout/PageShell'
 
-const LAST_UPDATED = '19 July 2026'
+const LAST_UPDATED = '29 August 2026'
 
 /**
  * Privacy policy.
@@ -66,9 +66,19 @@ export function PrivacyPage() {
             <li>
               <strong>The trips you save</strong>, linked to your account so they appear on any device you sign in from.
             </li>
+            <li>
+              <strong>Whether that email is confirmed</strong>, and hashed one-time tokens for confirmation and
+              password-reset links. We never store the link itself.
+            </li>
           </ul>
           <p>
             You can delete any saved trip at any time, and deleting means deleting — we don't keep a shadow copy.
+          </p>
+
+          <h2>If you write to us</h2>
+          <p>
+            The contact form stores your name, email, subject, and message so we can reply even if the mail service is
+            down. We email a copy to ourselves through Brevo, from <code>no-reply@txeas.com</code>.
           </p>
 
           <h2>Cookies</h2>
@@ -114,10 +124,16 @@ export function PrivacyPage() {
             <li>
               <strong>OpenStreetMap / Nominatim / CARTO</strong> — the destination, for geocoding and map tiles.
             </li>
+            <li>
+              <strong>Brevo</strong> — your email address, to send confirmation, password-reset, and contact
+              notifications. The sender is <code>no-reply@txeas.com</code>, a domain authenticated with Brevo. We never
+              send as a protonmail.com address.
+            </li>
           </ul>
           <p>
-            These receive search terms, not your identity. We never send them your email address, your name, or your
-            account details. Each handles that data under its own privacy policy.
+            Place and search services receive search terms, not your identity. We never send them your email address,
+            your name, or your account details. Each handles that data under its own privacy policy. Brevo receives
+            the address we are mailing, because that is how email works.
           </p>
 
           <h2>How long we keep things</h2>

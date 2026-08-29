@@ -16,6 +16,7 @@ export interface AuthedUser {
   id: string
   email: string
   displayName: string | null
+  emailVerified: boolean
 }
 
 export type AuthEnv = Env & {
@@ -26,6 +27,12 @@ export type AuthEnv = Env & {
    * the test suite use.
    */
   PASSWORD_PEPPER?: string
+  BREVO_API_KEY?: string
+  /** Sender address. MUST be on a Brevo-authenticated domain: no-reply@txeas.com. */
+  MAIL_FROM?: string
+  SITE_URL?: string
+  /** Destination for Contact Us submissions. */
+  CONTACT_TO?: string
 }
 
 /** The cookie the browser app authenticates with. */
@@ -85,5 +92,10 @@ export async function getAuthedUser(env: AuthEnv, request: Request): Promise<Aut
   // its signature is still valid and it hasn't expired.
   if (user.token_version !== payload.ver) return null
 
-  return { id: user.id, email: user.email, displayName: user.display_name }
+  return {
+    id: user.id,
+    email: user.email,
+    displayName: user.display_name,
+    emailVerified: user.email_verified === 1,
+  }
 }

@@ -120,6 +120,12 @@ describe('App', () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: /privacy policy/i })).toBeInTheDocument())
   })
 
+  it('renders the forgot-password page at /forgot', async () => {
+    navigateTo('/forgot')
+    render(<App />)
+    await waitFor(() => expect(screen.getByRole('heading', { name: /forgot your password/i })).toBeInTheDocument())
+  })
+
   it('keeps the old /local-info link working as a weather alias', async () => {
     mockTripAndLocation()
     navigateTo('/trip/t1/local-info')

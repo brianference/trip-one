@@ -65,9 +65,18 @@ export async function onRequestPost({ env, request }: { env: AuthEnv; request: R
     if (claimTripId) await claimTripForUser(env as Env, claimTripId, user.id)
 
     const token = await signToken(user.id, user.token_version, env.JWT_SECRET)
-    return json({ user: { id: user.id, email: user.email, displayName: user.display_name } }, 200, {
-      'Set-Cookie': sessionCookie(token),
-    })
+    return json(
+      {
+        user: {
+          id: user.id,
+          email: user.email,
+          displayName: user.display_name,
+          emailVerified: user.email_verified === 1,
+        },
+      },
+      200,
+      { 'Set-Cookie': sessionCookie(token) },
+    )
   } catch (err) {
     logger.error('login failed', err)
     return json({ error: 'Could not sign you in. Please try again.' }, 500)

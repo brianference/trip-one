@@ -10,3 +10,11 @@ compatibility_date = "2024-11-01"
 binding = "DB"
 database_name = "trip-one-db"
 database_id = "e419a900-cfb3-47f2-a49a-f505dd80e4e8"
+
+# Plain-text configuration. NOTE: [vars] is replace-not-merge: any var missing
+# from this block is dropped from the deployment. BREVO_API_KEY is a secret
+# set via `wrangler pages secret put` and must NOT appear in this file.
+[vars]
+SITE_URL   = "https://trip-one.pages.dev"
+MAIL_FROM  = "no-reply@txeas.com"
+CONTACT_TO = "brianference@protonmail.com"

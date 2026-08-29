@@ -6,11 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "regression": "node scripts/regression.mjs",
     "backup": "node scripts/backup-d1.mjs",
-    "sim": "vite-node simulations/run.ts --"
+    "sim": "vite-node simulations/run.ts --",
+    "//lint": "No linter is configured in this project. A `lint` script aliased to tsc would report success without ever linting; leaving it absent is honest. Add eslint properly if linting is wanted."
   },
   "dependencies": {
     "leaflet": "^1.9.4",

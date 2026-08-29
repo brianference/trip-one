@@ -4,6 +4,7 @@ export interface AuthUser {
   id: string
   email: string
   displayName: string | null
+  emailVerified: boolean
 }
 
 interface AuthState {
@@ -13,9 +14,19 @@ interface AuthState {
   register: (input: { email: string; password: string; displayName?: string; claimTripId?: string }) => Promise<void>
   login: (input: { email: string; password: string; claimTripId?: string }) => Promise<void>
   logout: () => Promise<void>
+  /** Re-reads `/api/auth/me` so a just-confirmed address shows as confirmed. */
+  refresh: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
+
+/**
+ * Normalizes a user payload so a missing `emailVerified` (older handlers)
+ * is treated as unconfirmed rather than crashing the UI.
+ */
+function asUser(raw: AuthUser): AuthUser {
+  return { ...raw, emailVerified: Boolean(raw.emailVerified) }
+}
 
 /**
  * Reads the API's error message, falling back to something a person can act on.
@@ -68,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetch('/api/auth/me', { credentials: 'same-origin' })
       .then((res) => (res.ok ? res.json() : { user: null }))
       .then((body: { user?: AuthUser | null }) => {
-        if (!cancelled) setUser(body.user ?? null)
+        if (!cancelled) setUser(body.user ? asUser(body.user) : null)
       })
       .catch(() => {
         // A failed identity check means "treat as signed out", never an error
@@ -86,13 +97,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback<AuthState['register']>(async (input) => {
     const res = await postJson('/api/auth/register', input, 'Could not create your account.')
     const body = (await res.json()) as { user: AuthUser }
-    setUser(body.user)
+    setUser(asUser(body.user))
   }, [])
 
   const login = useCallback<AuthState['login']>(async (input) => {
     const res = await postJson('/api/auth/login', input, 'Could not sign you in.')
     const body = (await res.json()) as { user: AuthUser }
-    setUser(body.user)
+    setUser(asUser(body.user))
   }, [])
 
   const logout = useCallback(async () => {
@@ -105,9 +116,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch('/api/auth/me', { credentials: 'same-origin' })
+      if (!res.ok) return
+      const body = (await res.json()) as { user?: AuthUser | null }
+      setUser(body.user ? asUser(body.user) : null)
+    } catch {
+      // A failed refresh leaves the current user in place; the next page load
+      // will re-read identity.
+    }
+  }, [])
+
   const value = useMemo(
-    () => ({ user, loading, register, login, logout }),
-    [user, loading, register, login, logout],
+    () => ({ user, loading, register, login, logout, refresh }),
+    [user, loading, register, login, logout, refresh],
   )
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

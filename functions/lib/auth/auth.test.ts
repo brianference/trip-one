@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest'
 import { hashPassword, verifyPassword, needsRehash, PBKDF2_ITERATIONS } from './password'
 import { signToken, verifyToken, TOKEN_TTL_SECONDS } from './jwt'
-import { registerSchema, loginSchema, MIN_PASSWORD_LENGTH } from './validation'
+import { registerSchema, loginSchema, resetRequestSchema, resetSchema, contactSchema, MIN_PASSWORD_LENGTH } from './validation'
 
 // PBKDF2 at 600k iterations is intentionally slow; these are the real thing,
 // not a mock, so give them room.
@@ -118,6 +118,24 @@ describe('credential validation', () => {
     const parsed = registerSchema.safeParse({ email: '  Person@Example.com  ', password: 'x'.repeat(12) })
     expect(parsed.success).toBe(true)
     if (parsed.success) expect(parsed.data.email).toBe('Person@Example.com')
+  })
+
+  it('accepts a reset-request email and rejects a missing one', () => {
+    expect(resetRequestSchema.safeParse({ email: 'a@b.com' }).success).toBe(true)
+    expect(resetRequestSchema.safeParse({ email: 'not-an-email' }).success).toBe(false)
+  })
+
+  it('requires a token and a long-enough password to reset', () => {
+    expect(resetSchema.safeParse({ token: 'a'.repeat(32), password: 'x'.repeat(MIN_PASSWORD_LENGTH) }).success).toBe(true)
+    expect(resetSchema.safeParse({ token: 'short', password: 'x'.repeat(MIN_PASSWORD_LENGTH) }).success).toBe(false)
+    expect(resetSchema.safeParse({ token: 'a'.repeat(32), password: 'short' }).success).toBe(false)
+  })
+
+  it('accepts a contact message and does not reject a filled honeypot at the schema layer', () => {
+    const base = { name: 'Alex', email: 'a@b.com', subject: 'Hello', message: 'This is long enough.' }
+    expect(contactSchema.safeParse(base).success).toBe(true)
+    expect(contactSchema.safeParse({ ...base, website: 'https://spam.example' }).success).toBe(true)
+    expect(contactSchema.safeParse({ ...base, message: 'short' }).success).toBe(false)
   })
 })
 

@@ -68,6 +68,11 @@ export function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+          <p className="-mt-2 text-sm">
+            <Link to="/forgot" className="text-[var(--accent-text)] underline underline-offset-4">
+              Forgot your password?
+            </Link>
+          </p>
           <Button type="submit" size="lg" block loading={submitting}>
             {submitting ? 'Signing in…' : 'Sign in'}
           </Button>

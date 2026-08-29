@@ -3,6 +3,7 @@ import { hashPassword } from '../../lib/auth/password'
 import { signToken } from '../../lib/auth/jwt'
 import { sessionCookie, type AuthEnv } from '../../lib/auth/session'
 import { registerSchema, firstIssueMessage } from '../../lib/auth/validation'
+import { trySendConfirmationEmail } from '../../lib/auth/verification'
 import { isRateLimited } from '../../lib/rateLimitGuard'
 import { logger } from '../../../src/lib/logger'
 
@@ -60,9 +61,15 @@ export async function onRequestPost({ env, request }: { env: AuthEnv; request: R
     const claimTripId = typeof raw.claimTripId === 'string' && raw.claimTripId !== '' ? raw.claimTripId : null
     if (claimTripId) await claimTripForUser(env as Env, claimTripId, user.id)
 
+    // Confirmation is sent but never gates the account: a mail outage must not
+    // stop someone using a product that otherwise works. Failure is logged
+    // inside trySendConfirmationEmail and deliberately not surfaced, because
+    // "we could not email you" is a slower way of confirming the address exists.
+    await trySendConfirmationEmail(env, user.id, user.email)
+
     const token = await signToken(user.id, user.token_version, env.JWT_SECRET)
     return json(
-      { user: { id: user.id, email: user.email, displayName: user.display_name } },
+      { user: { id: user.id, email: user.email, displayName: user.display_name, emailVerified: false } },
       201,
       { 'Set-Cookie': sessionCookie(token) },
     )

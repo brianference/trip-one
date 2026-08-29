@@ -60,6 +60,19 @@ export interface UserRow {
   display_name: string | null
   created_at: string
   token_version: number
+  /**
+   * 0 or 1. Confirmation is not a login gate — it is proof the address can
+   * receive mail, which is what makes a later password reset actually arrive.
+   */
+  email_verified: number
+}
+
+/** A confirmation or reset token row. Only the hash is stored. */
+export interface TokenRow {
+  token_hash: string
+  user_id: string
+  expires_at: number
+  used_at: number | null
 }
 
 export interface PlaceDetailRow {
@@ -426,24 +439,149 @@ export async function createUser(
   )
     .bind(id, email, row.password_hash, row.display_name ?? null, created_at)
     .run()
-  return { id, email, password_hash: row.password_hash, display_name: row.display_name ?? null, created_at, token_version: 0 }
+  return {
+    id,
+    email,
+    password_hash: row.password_hash,
+    display_name: row.display_name ?? null,
+    created_at,
+    token_version: 0,
+    email_verified: 0,
+  }
 }
 
 /** Looks up a user by email (normalized), or null. */
 export async function getUserByEmail(env: Env, email: string): Promise<UserRow | null> {
   const row = await env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(normalizeEmail(email)).first<UserRow>()
-  return row ?? null
+  return row ? normalizeUserRow(row) : null
 }
 
 /** Looks up a user by id, or null. */
 export async function getUserById(env: Env, id: string): Promise<UserRow | null> {
   const row = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<UserRow>()
-  return row ?? null
+  return row ? normalizeUserRow(row) : null
+}
+
+/**
+ * Coerce D1's loose types so `email_verified` is always 0 or 1 even on a row
+ * that predates the column in a test fake.
+ * @param row - A users row as D1 returned it
+ */
+function normalizeUserRow(row: UserRow): UserRow {
+  return { ...row, email_verified: row.email_verified === 1 ? 1 : 0 }
 }
 
 /** Replaces a user's password hash (used by the transparent rehash on login). */
 export async function updateUserPasswordHash(env: Env, id: string, passwordHash: string): Promise<void> {
   await env.DB.prepare('UPDATE users SET password_hash = ? WHERE id = ?').bind(passwordHash, id).run()
+}
+
+/**
+ * Sets a new password hash and bumps `token_version` in one statement.
+ *
+ * A password reset is the standard response to a suspected compromise; leaving
+ * old JWTs valid would defeat it. Bumping the version is Trip One's equivalent
+ * of dropping every session.
+ *
+ * @param env - D1 env
+ * @param id - The user id
+ * @param passwordHash - Already hashed
+ */
+export async function resetUserPassword(env: Env, id: string, passwordHash: string): Promise<void> {
+  await env.DB.prepare('UPDATE users SET password_hash = ?, token_version = token_version + 1 WHERE id = ?')
+    .bind(passwordHash, id)
+    .run()
+}
+
+/** Marks the address confirmed. Idempotent. */
+export async function markEmailVerified(env: Env, userId: string): Promise<void> {
+  await env.DB.prepare('UPDATE users SET email_verified = 1 WHERE id = ?').bind(userId).run()
+}
+
+/**
+ * Drops every outstanding confirmation token for a user so only the latest
+ * link in their inbox works.
+ */
+export async function deleteEmailVerificationsForUser(env: Env, userId: string): Promise<void> {
+  await env.DB.prepare('DELETE FROM email_verifications WHERE user_id = ?').bind(userId).run()
+}
+
+/** Inserts a hashed confirmation token. */
+export async function insertEmailVerification(
+  env: Env,
+  row: { token_hash: string; user_id: string; expires_at: number },
+): Promise<void> {
+  await env.DB.prepare('INSERT INTO email_verifications (token_hash, user_id, expires_at) VALUES (?, ?, ?)')
+    .bind(row.token_hash, row.user_id, row.expires_at)
+    .run()
+}
+
+/** Looks up a confirmation token by its hash, or null. */
+export async function getEmailVerification(env: Env, tokenHash: string): Promise<TokenRow | null> {
+  const row = await env.DB.prepare(
+    'SELECT token_hash, user_id, expires_at, used_at FROM email_verifications WHERE token_hash = ?',
+  )
+    .bind(tokenHash)
+    .first<TokenRow>()
+  return row ?? null
+}
+
+/** Marks a confirmation token used. One-time by construction. */
+export async function markEmailVerificationUsed(env: Env, tokenHash: string, usedAt: number): Promise<void> {
+  await env.DB.prepare('UPDATE email_verifications SET used_at = ? WHERE token_hash = ?')
+    .bind(usedAt, tokenHash)
+    .run()
+}
+
+/** Drops outstanding reset tokens for a user so only the latest link works. */
+export async function deletePasswordResetsForUser(env: Env, userId: string): Promise<void> {
+  await env.DB.prepare('DELETE FROM password_resets WHERE user_id = ?').bind(userId).run()
+}
+
+/** Inserts a hashed password-reset token. */
+export async function insertPasswordReset(
+  env: Env,
+  row: { token_hash: string; user_id: string; expires_at: number },
+): Promise<void> {
+  await env.DB.prepare('INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, ?)')
+    .bind(row.token_hash, row.user_id, row.expires_at)
+    .run()
+}
+
+/** Looks up a reset token by its hash, or null. */
+export async function getPasswordReset(env: Env, tokenHash: string): Promise<TokenRow | null> {
+  const row = await env.DB.prepare(
+    'SELECT token_hash, user_id, expires_at, used_at FROM password_resets WHERE token_hash = ?',
+  )
+    .bind(tokenHash)
+    .first<TokenRow>()
+  return row ?? null
+}
+
+/** Marks a reset token used. One-time by construction. */
+export async function markPasswordResetUsed(env: Env, tokenHash: string, usedAt: number): Promise<void> {
+  await env.DB.prepare('UPDATE password_resets SET used_at = ? WHERE token_hash = ?').bind(usedAt, tokenHash).run()
+}
+
+/**
+ * Persists a contact message BEFORE the send is attempted, so a mail outage
+ * cannot lose it. `delivered` starts at 0.
+ */
+export async function insertContactMessage(
+  env: Env,
+  row: { id: string; name: string; email: string; subject: string; message: string; user_id: string | null; created_at: number },
+): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO contact_messages (id, name, email, subject, message, user_id, created_at, delivered)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
+  )
+    .bind(row.id, row.name, row.email, row.subject, row.message, row.user_id, row.created_at)
+    .run()
+}
+
+/** Sets delivered = 1 after a successful send. */
+export async function markContactDelivered(env: Env, id: string): Promise<void> {
+  await env.DB.prepare('UPDATE contact_messages SET delivered = 1 WHERE id = ?').bind(id).run()
 }
 
 /** Trips owned by a user, newest first. */

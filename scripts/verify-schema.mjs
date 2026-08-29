@@ -15,6 +15,9 @@ const EXPECTED_TABLES = [
   'interest_places',
   'request_log',
   'users',
+  'email_verifications',
+  'password_resets',
+  'contact_messages',
 ]
 
 /**

@@ -14,6 +14,9 @@ import { NotFoundPage } from './features/marketing/NotFoundPage'
 import { LoginPage } from './features/auth/LoginPage'
 import { RegisterPage } from './features/auth/RegisterPage'
 import { MyTripsPage } from './features/auth/MyTripsPage'
+import { ConfirmPage } from './features/auth/ConfirmPage'
+import { ForgotPage } from './features/auth/ForgotPage'
+import { ResetPage } from './features/auth/ResetPage'
 import { SearchScreen } from './themes/chronicle/SearchScreen'
 import { TripShell } from './features/trip/TripShell'
 import { OverviewPage } from './features/trip/pages/OverviewPage'
@@ -110,6 +113,9 @@ export default function App() {
             { path: '/terms', element: <TermsPage /> },
             { path: '/login', element: <LoginPage /> },
             { path: '/register', element: <RegisterPage /> },
+            { path: '/confirm', element: <ConfirmPage /> },
+            { path: '/forgot', element: <ForgotPage /> },
+            { path: '/reset', element: <ResetPage /> },
             { path: '/my-trips', element: <MyTripsPage /> },
             { path: '*', element: <NotFoundPage /> },
           ].map(({ path, element }) => (
