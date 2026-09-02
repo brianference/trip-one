@@ -3,6 +3,54 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v17.0.0 — Email that actually sends, and unwatermarked maps
+
+### Added — transactional email
+
+The app had working auth and no email: no address confirmation, no password
+reset, no contact delivery. An account whose password cannot be reset is a
+trap, so this closes it. New D1 tables back email verification, password resets
+and contact messages; sending runs through Brevo.
+
+The security properties were read out of the diff rather than assumed. A reset
+bumps `token_version` in the same UPDATE as the new hash, which invalidates
+every JWT already issued for that user — the stateless equivalent of dropping
+all sessions. Confirmation and reset tokens live in separate tables, so a
+confirm link sitting in an inbox overnight can never be replayed as a password
+change. Only SHA-256 hashes of tokens are stored, so a database dump contains
+no live links, and `reset-request` returns 200 whether or not the account
+exists. The mailer refuses to send from protonmail.com or proton.me even if
+MAIL_FROM is misconfigured.
+
+Frontend gets `/confirm`, `/forgot` and `/reset`, a confirmation banner on My
+Trips, and a contact form wired to a real endpoint.
+
+### Fixed — every map tile carried an "API key required" watermark
+
+CARTO now requires a key on its raster basemaps. Trip One built the Voyager
+tile URL as a string literal, so there was nowhere to put one, and every map in
+the app rendered with the watermark stamped diagonally across it.
+
+The URL is now built by `buildCartoTileUrl()`, which appends the key from
+`VITE_CARTO_BASEMAP_KEY` when it is set and returns the bare URL when it is
+not — a contributor without a key gets watermarked tiles rather than a broken
+map. The key is a build-time variable read from a gitignored `.env.local`; it
+travels in the tile URL and is visible to any browser that loads a map, so it
+is rate-limited per account rather than treated as a server credential. CARTO
+and OpenStreetMap attribution stays on the map, which is the condition the free
+tier comes with.
+
+Confirmed against the live tile service before shipping: the same tile fetched
+without a key comes back watermarked, and with the key comes back clean.
+
+### Fixed — the pre-commit secret guard blocked a legitimate file
+
+The guard grepped each staged path for an unanchored `.env`, in which `.` is a
+regex wildcard, so `src/vite-env.d.ts` matched and the commit was refused. It
+now globs the file's basename, allows `.env.example`, and covers `.env.*` and
+`.dev.vars.*`, which the old check missed. Both directions were tested: a
+staged `.env` and a staged `.dev.vars.decoy` are still blocked.
+
 ## v16.0.0 — Bookable experiences, and a map you can actually use
 
 ### Added — Viator experiences
