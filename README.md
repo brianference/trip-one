@@ -158,6 +158,22 @@ Backend functions and secrets (OpenAI, Google, Tripadvisor) run on Cloudflare
 Pages; local API calls need those bindings. Secrets live in environment
 variables / `.dev.vars`, never in the repo.
 
+### Map basemap key
+
+CARTO's raster basemaps require an API key (https://carto.com/basemaps/apikey);
+without one the tiles render with an "API key required" watermark. Put the key
+in a gitignored `.env.local` at the repo root:
+
+```
+VITE_CARTO_BASEMAP_KEY=your-key-here
+```
+
+Vite inlines it at build time, so a build has to run after the value changes.
+The key travels in the tile URL and is therefore visible to any browser that
+loads a map — it is rate-limited per account, not a server credential. Leave
+the CARTO and OpenStreetMap attribution on the map; that is the condition the
+free tier comes with.
+
 ## Deploy
 
 Cloudflare Pages, direct upload:

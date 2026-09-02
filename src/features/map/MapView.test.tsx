@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { MapView } from './MapView'
+import { MapView, buildCartoTileUrl } from './MapView'
 import L from 'leaflet'
 
 vi.mock('leaflet', () => {
@@ -218,5 +218,28 @@ describe('MapView', () => {
     expect(container.querySelector('div[aria-label]')).toHaveStyle({ height: '300px' })
     rerender(<MapView lat={35.68} lng={139.76} label="Tokyo, Japan" height={520} />)
     expect(container.querySelector('div[aria-label]')).toHaveStyle({ height: '520px' })
+  })
+})
+
+describe('buildCartoTileUrl', () => {
+  const base = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+
+  it('returns the bare Voyager URL when no key is configured', () => {
+    expect(buildCartoTileUrl(undefined)).toBe(base)
+    expect(buildCartoTileUrl('')).toBe(base)
+  })
+
+  it('appends the CARTO key as a query parameter when one is configured', () => {
+    expect(buildCartoTileUrl('abc123')).toBe(`${base}?key=abc123`)
+  })
+
+  it('url-encodes the key so a stray character cannot break the URL', () => {
+    expect(buildCartoTileUrl('a b&c')).toBe(`${base}?key=a%20b%26c`)
+  })
+
+  it('passes the built URL to Leaflet, not a hardcoded one', () => {
+    render(<MapView lat={1} lng={2} label="Somewhere" />)
+    const url = vi.mocked(L.tileLayer).mock.calls[0][0]
+    expect(url).toBe(buildCartoTileUrl(import.meta.env.VITE_CARTO_BASEMAP_KEY))
   })
 })

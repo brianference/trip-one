@@ -3,6 +3,29 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { CATEGORY_COLORS, DEFAULT_MARKER_COLOR, DEFAULT_MARKER_ICON, iconForCategory } from './categoryLegend'
 
+/**
+ * CARTO's raster basemaps now require an API key (carto.com/basemaps/apikey);
+ * without one the tiles come back watermarked. The key is supplied
+ * at build time via `VITE_CARTO_BASEMAP_KEY` (see `.env.example`) and appended
+ * as a query parameter. When it is absent the URL stays exactly as it was, so
+ * a keyless local build still renders (watermarked) rather than breaking.
+ */
+const CARTO_TILE_BASE_URL =
+  'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+
+/**
+ * Builds the Voyager tile URL, appending the CARTO key when one is configured.
+ *
+ * @param key - Value of `VITE_CARTO_BASEMAP_KEY`, or undefined/empty when unset.
+ * @returns The tile URL template Leaflet expands per tile.
+ */
+export function buildCartoTileUrl(key: string | undefined): string {
+  if (!key) return CARTO_TILE_BASE_URL
+  return `${CARTO_TILE_BASE_URL}?key=${encodeURIComponent(key)}`
+}
+
+const CARTO_TILE_URL = buildCartoTileUrl(import.meta.env.VITE_CARTO_BASEMAP_KEY)
+
 export interface MapMarker {
   lat: number
   lng: number
@@ -118,10 +141,11 @@ export function MapView({ lat, lng, label, markers, boundingBox, route, height =
     const map = L.map(containerRef.current, { zoomAnimation: false }).setView([lat, lng], 12)
     mapRef.current = map
     markersRef.current = new Map()
-    // CartoDB's free Voyager tiles (no API key required) render cleaner
-    // typography and a lighter, less visually noisy basemap than raw OSM
-    // tiles, while still crediting OpenStreetMap as the underlying data.
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    // CartoDB's Voyager tiles render cleaner typography and a lighter, less
+    // visually noisy basemap than raw OSM tiles, while still crediting
+    // OpenStreetMap as the underlying data. Attribution stays visible: it is
+    // the condition CARTO and OSM place on using these tiles.
+    L.tileLayer(CARTO_TILE_URL, {
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       subdomains: 'abcd',
       maxZoom: 20,

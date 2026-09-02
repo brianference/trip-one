@@ -14,7 +14,7 @@ PATTERNS=(
   'BEGIN.*PRIVATE KEY' # Private key material
 )
 
-BLOCKED_FILES=('.env' 'credentials.json' 'id_rsa' '*.pem' '*.key' '.dev.vars')
+BLOCKED_FILES=('.env' '.env.*' 'credentials.json' 'id_rsa' '*.pem' '*.key' '.dev.vars' '.dev.vars.*')
 
 for pattern in "${PATTERNS[@]}"; do
   # Exclude this hook's own source files so the pattern strings don't self-match.
@@ -25,12 +25,24 @@ for pattern in "${PATTERNS[@]}"; do
   fi
 done
 
-for file in "${BLOCKED_FILES[@]}"; do
-  if git diff --cached --name-only | grep -q "$file"; then
-    echo "BLOCKED: Attempted to commit sensitive file: $file"
-    exit 1
-  fi
-done
+# Match the file's BASENAME against each pattern as a glob. The previous
+# version grepped the whole path for the unanchored pattern, so "." matched any
+# character and a legitimate file like src/vite-env.d.ts was blocked as ".env".
+while IFS= read -r path; do
+  [ -n "$path" ] || continue
+  base=$(basename "$path")
+  case "$base" in
+    .env.example|.env.sample) continue ;;
+  esac
+  for pattern in "${BLOCKED_FILES[@]}"; do
+    case "$base" in
+      $pattern)
+        echo "BLOCKED: Attempted to commit sensitive file: $path"
+        exit 1
+        ;;
+    esac
+  done
+done < <(git diff --cached --name-only)
 
 echo "Pre-commit security check passed."
 exit 0
