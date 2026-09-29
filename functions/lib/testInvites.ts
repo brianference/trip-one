@@ -62,8 +62,12 @@ function activeLinksFor(links: RecapLinkRow[], tripId: unknown): RecapLinkRow[] 
  * Builds the in-memory store: TRIP_ID (with an active and a revoked recap
  * link) and OTHER_TRIP_ID (with its own active link), no users, no invites.
  * @param extraEnv - Extra env fields (mail config); JWT_SECRET is always set
+ * @param failWhen - Statements for which this returns true throw, to simulate a D1 failure on just those
  */
-export function inviteStore(extraEnv: Record<string, unknown> = {}): InviteStore {
+export function inviteStore(
+  extraEnv: Record<string, unknown> = {},
+  failWhen: (sql: string) => boolean = () => false,
+): InviteStore {
   const trips: Record<string, Record<string, unknown>> = {
     [TRIP_ID]: tripRow(TRIP_ID, []),
     [OTHER_TRIP_ID]: tripRow(OTHER_TRIP_ID, [], { title: 'Other trip' }),
@@ -81,9 +85,10 @@ export function inviteStore(extraEnv: Record<string, unknown> = {}): InviteStore
   const members: TripMemberRow[] = []
   const requestLog: { ipHash: string; endpoint: string; createdAt: string }[] = []
 
-  const inviteCols = 'id, trip_id, email, created_at, accepted_user_id, accepted_at, revoked_at'
+  const inviteCols = 'id, trip_id, email, created_at, accepted_user_id, accepted_at, revoked_at, last_sent_at'
 
   const first = (sql: string, args: unknown[]): unknown => {
+    if (failWhen(sql)) throw new Error('D1 unavailable')
     if (sql.includes('FROM request_log WHERE ip_hash = ? AND endpoint = ?')) {
       const [ipHash, endpoint, since] = args as [string, string, string]
       return { n: requestLog.filter((r) => r.ipHash === ipHash && r.endpoint === endpoint && r.createdAt >= since).length }
@@ -105,10 +110,28 @@ export function inviteStore(extraEnv: Record<string, unknown> = {}): InviteStore
       const found = invites.find((i) => i.trip_id === args[0] && i.email === args[1] && i.revoked_at === null)
       return found ? { ...found } : null
     }
+    if (sql === `SELECT ${inviteCols} FROM trip_invites WHERE id = ? AND trip_id = ?`) {
+      const found = invites.find((i) => i.id === args[0] && i.trip_id === args[1])
+      return found ? { ...found } : null
+    }
+    if (sql === 'SELECT COUNT(*) AS n FROM trip_invites WHERE trip_id = ? AND revoked_at IS NULL') {
+      return { n: invites.filter((i) => i.trip_id === args[0] && i.revoked_at === null).length }
+    }
+    const sentSince = (i: TripInviteRow, since: unknown) => i.last_sent_at !== null && i.last_sent_at >= (since as number)
+    if (sql === 'SELECT COUNT(*) AS n FROM trip_invites WHERE trip_id = ? AND last_sent_at >= ?') {
+      return { n: invites.filter((i) => i.trip_id === args[0] && sentSince(i, args[1])).length }
+    }
+    if (sql === 'SELECT COUNT(*) AS n FROM trip_invites WHERE email = ? AND last_sent_at >= ?') {
+      return { n: invites.filter((i) => i.email === args[0] && sentSince(i, args[1])).length }
+    }
+    if (sql === 'SELECT COUNT(*) AS n FROM trip_invites WHERE last_sent_at >= ?') {
+      return { n: invites.filter((i) => sentSince(i, args[0])).length }
+    }
     throw new Error(`inviteStore: unexpected first() SQL: ${sql}`)
   }
 
   const all = (sql: string, args: unknown[]): unknown[] => {
+    if (failWhen(sql)) throw new Error('D1 unavailable')
     if (
       sql ===
       `SELECT ${inviteCols} FROM trip_invites WHERE trip_id = ? AND revoked_at IS NULL ORDER BY created_at ASC, id ASC`
@@ -122,6 +145,7 @@ export function inviteStore(extraEnv: Record<string, unknown> = {}): InviteStore
   }
 
   const run = (sql: string, args: unknown[]): number => {
+    if (failWhen(sql)) throw new Error('D1 unavailable')
     if (sql.startsWith('INSERT INTO request_log')) {
       const [ipHash, endpoint, createdAt] = args as [string, string, string]
       requestLog.push({ ipHash, endpoint, createdAt })
@@ -141,12 +165,24 @@ export function inviteStore(extraEnv: Record<string, unknown> = {}): InviteStore
         return 1
       }
       if (invites.some((i) => i.id === id)) throw new Error('UNIQUE constraint failed: trip_invites.id')
-      invites.push({ id, trip_id: tripId, email, created_at: createdAt, accepted_user_id: null, accepted_at: null, revoked_at: null })
+      invites.push({
+        id,
+        trip_id: tripId,
+        email,
+        created_at: createdAt,
+        accepted_user_id: null,
+        accepted_at: null,
+        revoked_at: null,
+        last_sent_at: null,
+      })
       return 1
     }
-    if (sql === 'UPDATE trip_invites SET revoked_at = COALESCE(revoked_at, ?) WHERE id = ? AND trip_id = ?') {
+    if (
+      sql ===
+      'UPDATE trip_invites SET revoked_at = COALESCE(revoked_at, ?) WHERE id = ? AND trip_id = ? AND accepted_at IS NULL'
+    ) {
       const [revokedAt, id, tripId] = args as [number, string, string]
-      const row = invites.find((i) => i.id === id && i.trip_id === tripId)
+      const row = invites.find((i) => i.id === id && i.trip_id === tripId && i.accepted_at === null)
       if (!row) return 0
       row.revoked_at = row.revoked_at ?? revokedAt
       return 1
@@ -157,6 +193,13 @@ export function inviteStore(extraEnv: Record<string, unknown> = {}): InviteStore
       if (!row) return 0
       row.accepted_user_id = userId
       row.accepted_at = acceptedAt
+      return 1
+    }
+    if (sql === 'UPDATE trip_invites SET last_sent_at = ? WHERE id = ? AND (last_sent_at IS NULL OR last_sent_at <= ?)') {
+      const [nowMs, id, cutoff] = args as [number, string, number]
+      const row = invites.find((i) => i.id === id && (i.last_sent_at === null || i.last_sent_at <= cutoff))
+      if (!row) return 0
+      row.last_sent_at = nowMs
       return 1
     }
     if (sql.includes('INSERT INTO trip_members') && sql.includes('ON CONFLICT (trip_id, user_id) DO NOTHING')) {

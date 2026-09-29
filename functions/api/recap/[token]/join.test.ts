@@ -29,6 +29,7 @@ function invite(s: InviteStore, overrides: Partial<TripInviteRow> = {}): TripInv
     accepted_user_id: null,
     accepted_at: null,
     revoked_at: null,
+    last_sent_at: null,
     ...overrides,
   }
   s.invites.push(row)

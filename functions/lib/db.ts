@@ -898,9 +898,11 @@ export interface TripInviteRow {
   accepted_user_id: string | null
   accepted_at: number | null
   revoked_at: number | null
+  /** When the invite email last went out, or null if it never did. */
+  last_sent_at: number | null
 }
 
-const TRIP_INVITE_COLUMNS = 'id, trip_id, email, created_at, accepted_user_id, accepted_at, revoked_at'
+const TRIP_INVITE_COLUMNS = 'id, trip_id, email, created_at, accepted_user_id, accepted_at, revoked_at, last_sent_at'
 
 /**
  * Creates the invite for (trip, email), or un-revokes the existing one. The
@@ -913,8 +915,8 @@ export async function upsertTripInvite(
   row: { id: string; trip_id: string; email: string; created_at: number },
 ): Promise<void> {
   await env.DB.prepare(
-    `INSERT INTO trip_invites (id, trip_id, email, created_at, accepted_user_id, accepted_at, revoked_at)
-     VALUES (?, ?, ?, ?, NULL, NULL, NULL)
+    `INSERT INTO trip_invites (id, trip_id, email, created_at, accepted_user_id, accepted_at, revoked_at, last_sent_at)
+     VALUES (?, ?, ?, ?, NULL, NULL, NULL, NULL)
      ON CONFLICT (trip_id, email) DO UPDATE SET revoked_at = NULL`,
   )
     .bind(row.id, row.trip_id, normalizeEmail(row.email), row.created_at)
@@ -942,6 +944,62 @@ export async function getActiveTripInvite(env: Env, tripId: string, email: strin
   return row ?? null
 }
 
+/** One invite by id, scoped to its trip (revoked or not), or null. */
+export async function getTripInviteById(env: Env, tripId: string, inviteId: string): Promise<TripInviteRow | null> {
+  const row = await env.DB.prepare(`SELECT ${TRIP_INVITE_COLUMNS} FROM trip_invites WHERE id = ? AND trip_id = ?`)
+    .bind(inviteId, tripId)
+    .first<TripInviteRow>()
+  return row ?? null
+}
+
+/** How many live (unrevoked) invites a trip has, accepted or not. */
+export async function countLiveTripInvites(env: Env, tripId: string): Promise<number> {
+  const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM trip_invites WHERE trip_id = ? AND revoked_at IS NULL')
+    .bind(tripId)
+    .first<{ n: number }>()
+  return row?.n ?? 0
+}
+
+/** How many of a trip's invites were emailed since `sinceMs` (revoked ones included). */
+export async function countTripInviteSendsSince(env: Env, tripId: string, sinceMs: number): Promise<number> {
+  const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM trip_invites WHERE trip_id = ? AND last_sent_at >= ?')
+    .bind(tripId, sinceMs)
+    .first<{ n: number }>()
+  return row?.n ?? 0
+}
+
+/** How many invites to this address, across every trip, were emailed since `sinceMs`. */
+export async function countInviteSendsToEmailSince(env: Env, email: string, sinceMs: number): Promise<number> {
+  const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM trip_invites WHERE email = ? AND last_sent_at >= ?')
+    .bind(normalizeEmail(email), sinceMs)
+    .first<{ n: number }>()
+  return row?.n ?? 0
+}
+
+/** How many invites, app-wide, were emailed since `sinceMs`. */
+export async function countInviteSendsSince(env: Env, sinceMs: number): Promise<number> {
+  const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM trip_invites WHERE last_sent_at >= ?')
+    .bind(sinceMs)
+    .first<{ n: number }>()
+  return row?.n ?? 0
+}
+
+/**
+ * Claims the right to email an invite now: stamps `last_sent_at`, but only if
+ * the invite was never sent or its last send is at or before `resendCutoffMs`.
+ * The check and the stamp are one statement, so two concurrent requests
+ * cannot both send.
+ * @returns True when this caller may send
+ */
+export async function claimTripInviteSend(env: Env, inviteId: string, nowMs: number, resendCutoffMs: number): Promise<boolean> {
+  const res = await env.DB.prepare(
+    'UPDATE trip_invites SET last_sent_at = ? WHERE id = ? AND (last_sent_at IS NULL OR last_sent_at <= ?)',
+  )
+    .bind(nowMs, inviteId, resendCutoffMs)
+    .run()
+  return (res.meta?.changes ?? 0) > 0
+}
+
 /** A trip's live invites, oldest first. */
 export async function listActiveTripInvites(env: Env, tripId: string): Promise<TripInviteRow[]> {
   const res = await env.DB.prepare(
@@ -953,13 +1011,16 @@ export async function listActiveTripInvites(env: Env, tripId: string): Promise<T
 }
 
 /**
- * Revokes one invite, scoped to its trip. Revoking an already-revoked invite
- * keeps its first revocation time and still counts as found.
- * @returns True when the trip has an invite with that id
+ * Revokes one PENDING invite, scoped to its trip. An accepted invite is never
+ * revoked (`accepted_at IS NULL` in the same statement): its member already
+ * holds the trip link, so revoking could not withdraw access and would only
+ * hide them from the owner. Revoking an already-revoked invite keeps its
+ * first revocation time and still counts as done.
+ * @returns True when the trip has a pending invite with that id
  */
 export async function revokeTripInvite(env: Env, tripId: string, inviteId: string, revokedAt: number): Promise<boolean> {
   const res = await env.DB.prepare(
-    'UPDATE trip_invites SET revoked_at = COALESCE(revoked_at, ?) WHERE id = ? AND trip_id = ?',
+    'UPDATE trip_invites SET revoked_at = COALESCE(revoked_at, ?) WHERE id = ? AND trip_id = ? AND accepted_at IS NULL',
   )
     .bind(revokedAt, inviteId, tripId)
     .run()

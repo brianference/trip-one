@@ -1,5 +1,11 @@
 import { z } from 'zod'
 import type { Env, TripInviteRow, TripRow } from './db'
+import {
+  claimTripInviteSend,
+  countInviteSendsSince,
+  countInviteSendsToEmailSince,
+  countTripInviteSendsSince,
+} from './db'
 import { isRateLimited } from './rateLimitGuard'
 import { stripTripId } from './recapAccess'
 import { cleanDisplayName } from '../../src/lib/location/displayName'
@@ -13,6 +19,29 @@ import { DEMO_TRIP_ID_SET } from '../../src/lib/api/demoIds'
 
 /** Per-IP hourly cap on invite writes (`trip-invites`): creating and revoking share one budget. */
 export const TRIP_INVITES_PER_HOUR = 30
+
+/** The window every invite-email cap counts over, and the minimum gap between two sends of one invite. */
+export const INVITE_SEND_WINDOW_MS = 24 * 60 * 60 * 1000
+/** Most invite emails one trip may send per {@link INVITE_SEND_WINDOW_MS}. */
+export const MAX_INVITE_SENDS_PER_TRIP = 20
+/** Most live (unrevoked) invites one trip may hold, accepted ones included. */
+export const MAX_LIVE_INVITES_PER_TRIP = 50
+/** Most invite emails one address may receive per {@link INVITE_SEND_WINDOW_MS}, across every trip. */
+export const MAX_INVITE_SENDS_PER_RECIPIENT = 3
+/** App-wide circuit breaker: most invite emails per {@link INVITE_SEND_WINDOW_MS}. */
+export const MAX_INVITE_SENDS_GLOBAL = 300
+
+/**
+ * Why an invite was saved but not emailed. `daily_limit` covers the per-trip,
+ * per-recipient and app-wide caps alike, so the answer never tells the sender
+ * anything about the recipient (whether they have an account, or how many
+ * other trips invited them).
+ */
+export type InviteNotSentReason = 'daily_limit' | 'recently_sent' | 'send_failed'
+
+export const LIVE_INVITE_LIMIT_MESSAGE = `This trip already has ${MAX_LIVE_INVITES_PER_TRIP} open invites. Remove one to invite someone new.`
+export const INVITES_UNAVAILABLE_MESSAGE =
+  'Invites are paused for the moment. Please try again later.'
 /** Longest trip name put in an invite's subject and body; a title can be longer. */
 export const MAX_INVITE_TRIP_NAME_LENGTH = 100
 /** Used when a trip has neither a title nor a place name. */
@@ -105,9 +134,44 @@ export function inviteTripName(trip: TripRow, rawDisplayName: string | null): st
 }
 
 /**
- * The invite email's subject line.
- * @param tripName - From {@link inviteTripName}, already a single line
+ * The invite email's subject line. Fixed text: the trip name is chosen by
+ * whoever holds the trip link, so it goes only in the (escaped) body, never in
+ * the subject where it would lead the message in the recipient's inbox.
  */
-export function inviteSubject(tripName: string): string {
-  return `${tripName}: you're invited to add your photos`
+export const INVITE_SUBJECT = "You're invited to add photos on Trip One"
+
+/**
+ * Decides whether an invite may be emailed now, and if so claims the send
+ * (stamps `last_sent_at`) so no concurrent request sends it again. Checked in
+ * order: no re-send within {@link INVITE_SEND_WINDOW_MS}, then the per-trip,
+ * per-recipient and app-wide caps. Every count reads `trip_invites.last_sent_at`.
+ *
+ * Throws when the database cannot answer; the caller must then send nothing
+ * (fail closed), because a cap it cannot read is a cap it cannot honour.
+ *
+ * @param env - Function env (DB)
+ * @param invite - The invite as just saved
+ * @param nowMs - Current time, epoch ms
+ * @returns `{ send: true }` with the send claimed, or `{ send: false, reason }`
+ */
+export async function claimInviteSend(
+  env: Env,
+  invite: TripInviteRow,
+  nowMs: number,
+): Promise<{ send: true } | { send: false; reason: InviteNotSentReason }> {
+  const windowStart = nowMs - INVITE_SEND_WINDOW_MS
+  if (invite.last_sent_at !== null && invite.last_sent_at > windowStart) return { send: false, reason: 'recently_sent' }
+
+  if ((await countTripInviteSendsSince(env, invite.trip_id, windowStart)) >= MAX_INVITE_SENDS_PER_TRIP) {
+    return { send: false, reason: 'daily_limit' }
+  }
+  if ((await countInviteSendsToEmailSince(env, invite.email, windowStart)) >= MAX_INVITE_SENDS_PER_RECIPIENT) {
+    return { send: false, reason: 'daily_limit' }
+  }
+  if ((await countInviteSendsSince(env, windowStart)) >= MAX_INVITE_SENDS_GLOBAL) {
+    return { send: false, reason: 'daily_limit' }
+  }
+  // Lost a race with a concurrent send of this same invite.
+  if (!(await claimTripInviteSend(env, invite.id, nowMs, windowStart))) return { send: false, reason: 'recently_sent' }
+  return { send: true }
 }
