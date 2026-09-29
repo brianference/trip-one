@@ -11,6 +11,7 @@ import { onRequestGet as getMyTrips } from '../../my-trips'
 import { recapTokenSchema } from '../../../lib/recapAccess'
 import { CONTRIBUTOR_FORBIDDEN_MESSAGE } from '../../../lib/recapMember'
 import { MAX_PHOTOS_PER_STOP } from '../../../lib/photoUpload'
+import { deletePhotoRowUploadedBy } from '../../../lib/db'
 import type { RecapPayload } from '../../../../src/features/recap/types'
 import { logger } from '../../../../src/lib/logger'
 import {
@@ -314,6 +315,15 @@ describe('DELETE /api/recap/:token/photos/:photoId', () => {
     expect(photoIds(w)).toEqual(expect.arrayContaining([JO_PHOTO, OWNER_PHOTO, SAM_PHOTO]))
     expect(w.r2.objects.has(`trips/${TRIP_ID}/${JO_PHOTO}`)).toBe(true)
     expect(w.r2.objects.has(`trips/${TRIP_ID}/${OWNER_PHOTO}`)).toBe(true)
+  })
+
+  it('the SQL itself refuses: deletePhotoRowUploadedBy removes nothing unless the uploader matches', async () => {
+    const w = contributorWorld()
+    expect(await deletePhotoRowUploadedBy(w.env, TRIP_ID, JO_PHOTO, SAM.id)).toBe(false)
+    expect(await deletePhotoRowUploadedBy(w.env, TRIP_ID, OWNER_PHOTO, SAM.id)).toBe(false)
+    expect(photoIds(w)).toEqual(expect.arrayContaining([JO_PHOTO, OWNER_PHOTO]))
+    expect(await deletePhotoRowUploadedBy(w.env, TRIP_ID, JO_PHOTO, JO.id)).toBe(true)
+    expect(photoIds(w)).not.toContain(JO_PHOTO)
   })
 
   it('answers 401 signed out and deletes nothing', async () => {
