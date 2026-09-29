@@ -8,6 +8,8 @@ const TOKYO = destinationFor('Tokyo, Japan') // international, non-English-speak
 const DUBLIN = destinationFor('Dublin, Ireland') // international (EUR), but English-speaking
 const MIAMI = destinationFor('Miami, Florida') // domestic (USD, not international)
 const LOADING = destinationFor(null)
+const HAVANA = destinationFor('Havana, Cuba') // international, currency and language unknown
+const TAIPEI = destinationFor('Taipei, Taiwan') // international, Mandarin, TWD
 
 describe('TripNav', () => {
   it('renders a real link per page, pointing at distinct URLs under the trip', () => {
@@ -92,6 +94,26 @@ describe('TripNav', () => {
     )
     expect(screen.getByRole('link', { name: /money/i })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /phrases/i })).not.toBeInTheDocument()
+  })
+
+  it('shows Phrases (the honest "no phrasebook yet" page) but not Money for an unknown-currency destination (Havana)', () => {
+    render(
+      <MemoryRouter>
+        <TripNav tripId="t1" variant="pill" destination={HAVANA} />
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('link', { name: /phrases/i })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /money/i })).not.toBeInTheDocument()
+  })
+
+  it('shows Money for Taipei now that Taiwan maps to TWD', () => {
+    render(
+      <MemoryRouter>
+        <TripNav tripId="t1" variant="pill" destination={TAIPEI} />
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('link', { name: /money/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /phrases/i })).toBeInTheDocument()
   })
 
   it('shows neither Phrases nor Money while the destination is still loading', () => {

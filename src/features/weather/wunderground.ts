@@ -4,17 +4,7 @@
 // region/country can't be resolved we fall back to a Google weather search so
 // the link always goes somewhere real.
 
-const US_STATES: Record<string, string> = {
-  alabama: 'al', alaska: 'ak', arizona: 'az', arkansas: 'ar', california: 'ca', colorado: 'co',
-  connecticut: 'ct', delaware: 'de', 'district of columbia': 'dc', florida: 'fl', georgia: 'ga',
-  hawaii: 'hi', idaho: 'id', illinois: 'il', indiana: 'in', iowa: 'ia', kansas: 'ks', kentucky: 'ky',
-  louisiana: 'la', maine: 'me', maryland: 'md', massachusetts: 'ma', michigan: 'mi', minnesota: 'mn',
-  mississippi: 'ms', missouri: 'mo', montana: 'mt', nebraska: 'ne', nevada: 'nv', 'new hampshire': 'nh',
-  'new jersey': 'nj', 'new mexico': 'nm', 'new york': 'ny', 'north carolina': 'nc', 'north dakota': 'nd',
-  ohio: 'oh', oklahoma: 'ok', oregon: 'or', pennsylvania: 'pa', 'rhode island': 'ri', 'south carolina': 'sc',
-  'south dakota': 'sd', tennessee: 'tn', texas: 'tx', utah: 'ut', vermont: 'vt', virginia: 'va',
-  washington: 'wa', 'west virginia': 'wv', wisconsin: 'wi', wyoming: 'wy',
-}
+import { US_STATE_CODES } from '../../lib/location/usRegions'
 
 // Common travel countries → ISO 3166-1 alpha-2 (Weather Underground's country slug).
 const COUNTRIES: Record<string, string> = {
@@ -56,7 +46,7 @@ export function hourlyForecastUrl(displayName: string, date: string): string {
   const citySlug = slugifyPlace(city)
   if (!citySlug) return googleWeatherUrl(displayName, date)
 
-  const state = US_STATES[region]
+  const state = Object.prototype.hasOwnProperty.call(US_STATE_CODES, region) ? US_STATE_CODES[region] : undefined
   if (state) return `https://www.wunderground.com/hourly/us/${state}/${citySlug}/date/${date}`
 
   const cc = COUNTRIES[region]

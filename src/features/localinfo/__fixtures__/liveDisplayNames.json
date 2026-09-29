@@ -43,5 +43,20 @@
     "query": "Valletta, Malta",
     "raw": "Valletta, Port Region, Malta",
     "clean": "Valletta, Malta"
+  },
+  {
+    "query": "Havana, Cuba",
+    "raw": "Havana, Habana del Este, 10000, Cuba",
+    "clean": "Havana, Cuba"
+  },
+  {
+    "query": "Phnom Penh, Cambodia",
+    "raw": "Phnom Penh, Cambodia",
+    "clean": "Phnom Penh, Cambodia"
+  },
+  {
+    "query": "Taipei, Taiwan",
+    "raw": "Taipei, Taiwan",
+    "clean": "Taipei, Taiwan"
   }
 ]

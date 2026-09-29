@@ -5,18 +5,18 @@ import { useState } from 'react'
  * resolved once by the shell and passed in, so the same tool can be rendered in
  * more than one place (the header card on desktop, the top bar on mobile)
  * without fetching twice. Renders nothing for a US / USD destination (where
- * "1 USD ≈ 1 USD" is noise) or when the rate isn't available.
+ * "1 USD ≈ 1 USD" is noise), for an unknown currency, or when the rate isn't available.
  *
- * @param code - The destination's ISO 4217 currency code
+ * @param code - The destination's ISO 4217 currency code, or null when unknown
  * @param rate - USD → `code` exchange rate, or null when unavailable
  * @param variant - `full` (default) is the interactive converter with an input;
  *   `compact` is a static "$1 = X CODE" chip for the slim mobile top bar, where
  *   an input box would push the result off-screen.
  */
-export function CurrencyTool({ code, rate, variant = 'full' }: { code: string; rate: number | null; variant?: 'full' | 'compact' }) {
+export function CurrencyTool({ code, rate, variant = 'full' }: { code: string | null; rate: number | null; variant?: 'full' | 'compact' }) {
   const [usd, setUsd] = useState('1')
 
-  if (code === 'USD' || rate === null) return null
+  if (code === null || code === 'USD' || rate === null) return null
 
   if (variant === 'compact') {
     // Format the rate in the destination currency so it shows the real symbol

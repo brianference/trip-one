@@ -1,18 +1,7 @@
 import { useTripContext } from '../useTripContext'
-import { destinationFor } from '../../localinfo/destination'
+import { destinationFor, countryDisplayName } from '../../localinfo/destination'
 import { phrasesForLanguage } from '../../localinfo/phrasebook'
 import { Phrasebook } from '../components/Phrasebook'
-
-/**
- * Capitalizes each word of a lowercase country name for display, e.g.
- * "united arab emirates" -> "United Arab Emirates". `destinationFor` keys
- * its lookups on a lowercased country string; this only affects what's shown.
- * @param value - A lowercase (possibly multi-word) country name
- * @returns The same string with each word's first letter capitalized
- */
-function toTitleCase(value: string): string {
-  return value.replace(/\b\w/g, (char) => char.toUpperCase())
-}
 
 /**
  * The Phrasebook page: a real, curated phrase list for the destination's
@@ -39,7 +28,7 @@ export function PhrasebookPage() {
 
   const { country, englishSpeaking, language } = destination
   const phrases = phrasesForLanguage(language)
-  const countryName = toTitleCase(country)
+  const countryName = countryDisplayName(country)
 
   return (
     <article className="chronicle-chapter">

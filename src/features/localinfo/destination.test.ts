@@ -75,6 +75,48 @@ describe('destinationFor (real Nominatim names from prod)', () => {
     })
   })
 
+  it('Havana (not in any lookup table) is international with unknown language and currency, never silently domestic', () => {
+    expect(destinationFor(byQuery('Havana, Cuba'))).toMatchObject({
+      status: 'known',
+      country: 'cuba',
+      international: true,
+      englishSpeaking: false,
+      language: null,
+      currency: null,
+    })
+  })
+
+  it('Phnom Penh (not in any lookup table) is international with unknown currency', () => {
+    expect(destinationFor(byQuery('Phnom Penh, Cambodia'))).toMatchObject({
+      international: true,
+      englishSpeaking: false,
+      language: null,
+      currency: null,
+    })
+  })
+
+  it('Taipei is international, Mandarin, TWD', () => {
+    expect(destinationFor(byQuery('Taipei, Taiwan'))).toMatchObject({
+      international: true,
+      englishSpeaking: false,
+      language: 'mandarin',
+      currency: 'TWD',
+    })
+  })
+
+  it('Miami is domestic, English-speaking, USD', () => {
+    expect(destinationFor(byQuery('Miami, Florida'))).toMatchObject({ international: false, englishSpeaking: true, currency: 'USD' })
+  })
+
+  it('a US city whose cleaned name ends in the state "Georgia" is domestic', () => {
+    expect(destinationFor('Atlanta, Georgia')).toMatchObject({ status: 'known', international: false, currency: 'USD' })
+  })
+
+  it('"United States" or "USA" as the trailing segment is domestic', () => {
+    expect(destinationFor('Somewhere, United States')).toMatchObject({ international: false, currency: 'USD' })
+    expect(destinationFor('Somewhere, USA')).toMatchObject({ international: false, currency: 'USD' })
+  })
+
   it('null means loading, never English-speaking', () => {
     expect(destinationFor(null)).toEqual({ status: 'loading' })
   })

@@ -79,9 +79,9 @@ function showPhrases(destination: DestinationInfo): boolean {
   return destination.status === 'known' && destination.international && !destination.englishSpeaking
 }
 
-/** A currency converter is only useful where the local currency actually differs from USD. */
+/** A currency converter is only useful where the local currency is known and actually differs from USD. */
 function showMoney(destination: DestinationInfo): boolean {
-  return destination.status === 'known' && destination.international && destination.currency !== 'USD'
+  return destination.status === 'known' && destination.international && destination.currency !== null && destination.currency !== 'USD'
 }
 
 /**

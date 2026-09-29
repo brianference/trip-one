@@ -35,6 +35,15 @@ describe('useCurrencyRate', () => {
     expect(result.current.rate).toBeNull()
   })
 
+  it('resolves an unknown (null) currency to no rate without calling fetch', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const { result } = renderHook(() => useCurrencyRate(null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.rate).toBeNull()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('short-circuits to a rate of 1 for USD without calling fetch', async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)

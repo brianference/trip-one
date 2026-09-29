@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTripContext } from '../useTripContext'
-import { destinationFor, type DestinationInfo } from '../../localinfo/destination'
+import { destinationFor, countryDisplayName, type DestinationInfo } from '../../localinfo/destination'
 import { useCurrencyRate } from '../../localinfo/useCurrencyRate'
 import { presetRows, formatMoney } from '../../localinfo/moneyAmounts'
 
@@ -64,9 +64,9 @@ function usdEquivalentFor(localAmountText: string, rate: number | null): string 
   return (localAmount / rate).toLocaleString('en-US', { style: 'currency', currency: USD_CURRENCY_CODE })
 }
 
-/** Whether the destination needs no currency conversion at all: a domestic (USD) trip, or one `destinationFor` didn't mark international. */
-function needsNoConversion(destination: DestinationInfo): boolean {
-  return destination.status === 'known' && (destination.currency === USD_CURRENCY_CODE || !destination.international)
+/** Whether the destination's currency is the US dollar, so there is nothing to convert. */
+function usesUsDollars(destination: DestinationInfo): boolean {
+  return destination.status === 'known' && destination.currency === USD_CURRENCY_CODE
 }
 
 /**
@@ -80,10 +80,10 @@ function needsNoConversion(destination: DestinationInfo): boolean {
 export function MoneyPage() {
   const { location } = useTripContext()
   const destination = destinationFor(location?.displayName)
-  // Always call the hook (Rules of Hooks) even when no conversion is needed
-  // below — for a domestic/USD destination this just resolves the trivial
-  // rate-of-1 short-circuit in `useCurrencyRate`, with no network call.
-  const currency = destination.status === 'known' ? destination.currency : USD_CURRENCY_CODE
+  // Always call the hook (Rules of Hooks) even when no conversion is shown
+  // below — a USD destination resolves the trivial rate-of-1 short-circuit and
+  // an unknown (null) currency resolves to no rate, neither with a network call.
+  const currency = destination.status === 'known' ? destination.currency : null
   const { rate, updatedAt, loading } = useCurrencyRate(currency)
   const [localAmountText, setLocalAmountText] = useState('')
   const usdEquivalent = usdEquivalentFor(localAmountText, rate)
@@ -94,11 +94,15 @@ export function MoneyPage() {
 
       {destination.status === 'loading' && <p className="chronicle-rate-line">Loading…</p>}
 
-      {needsNoConversion(destination) && (
+      {usesUsDollars(destination) && (
         <p className="chronicle-rate-line">No currency conversion needed for this trip — prices here are in US dollars.</p>
       )}
 
-      {destination.status === 'known' && !needsNoConversion(destination) && (
+      {destination.status === 'known' && currency === null && (
+        <p className="chronicle-rate-line">We don’t have currency info for {countryDisplayName(destination.country)} yet.</p>
+      )}
+
+      {destination.status === 'known' && currency !== null && !usesUsDollars(destination) && (
         <>
           {loading && <p className="chronicle-rate-line">Loading exchange rate…</p>}
 

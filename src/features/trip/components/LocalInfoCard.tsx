@@ -9,8 +9,9 @@ import { useCurrencyRate } from '../../localinfo/useCurrencyRate'
 export function LocalInfoCard({ displayName }: { displayName: string }) {
   const targetCurrency = currencyForDisplayName(displayName)
   // Same-currency destinations (US) get no exchange line — it would just read
-  // "1 USD ≈ 1 USD", which is noise.
-  const showCurrency = targetCurrency !== 'USD'
+  // "1 USD ≈ 1 USD", which is noise — and neither does a destination whose
+  // currency we don't know.
+  const showCurrency = targetCurrency !== null && targetCurrency !== 'USD'
   const { rate, loading } = useCurrencyRate(targetCurrency)
   const transitUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`public transit in ${displayName}`)}`
 

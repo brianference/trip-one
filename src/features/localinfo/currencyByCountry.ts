@@ -1,12 +1,15 @@
-const FRANKFURTER_BASE_CURRENCY = 'USD'
+import { isUsRegion } from '../../lib/location/usRegions'
+import { countryForDisplayName } from './languageByCountry'
+
+const US_DOLLAR = 'USD'
 
 /**
  * Country-name → ISO 4217 currency-code lookup, keyed by the lowercased
  * trailing country segment of a Nominatim `display_name` (e.g.
  * "Tokyo, Japan" → "japan" → "JPY"). Covers common tourist-destination
- * countries with their real currency, rather than a full ISO-3166 database —
- * anything genuinely obscure falls back to `FRANKFURTER_BASE_CURRENCY`
- * (USD), which is an honest "unknown," not a wrong currency guess.
+ * countries with their real currency, rather than a full ISO-3166 database.
+ * A country missing from this table has no known currency (null), never a
+ * guessed one. Every code here appears in open.er-api.com's USD rates.
  */
 const CURRENCY_BY_COUNTRY: Record<string, string> = {
   'united states': 'USD',
@@ -82,17 +85,19 @@ const CURRENCY_BY_COUNTRY: Record<string, string> = {
   tanzania: 'TZS',
   nepal: 'NPR',
   'sri lanka': 'LKR',
+  taiwan: 'TWD',
 }
 
 /**
  * Derive a target currency code from a location's display name by matching
- * its trailing (country) segment against a small lookup table.
- * @param displayName - Full location display name, e.g. "Tokyo, Japan"
- * @returns An ISO 4217 currency code, defaulting to USD when the country
- * segment isn't recognized
+ * its trailing segment: a US state, territory or the US itself is USD
+ * (`cleanDisplayName` leaves US places as "City, State"); a listed country is
+ * its currency; anything else is unknown.
+ * @param displayName - Cleaned location display name, e.g. "Tokyo, Japan" or "Miami, Florida"
+ * @returns An ISO 4217 currency code, or null when the place's currency is not known
  */
-export function currencyForDisplayName(displayName: string): string {
-  const segments = displayName.split(',').map((segment) => segment.trim().toLowerCase())
-  const country = segments[segments.length - 1] ?? ''
-  return CURRENCY_BY_COUNTRY[country] ?? FRANKFURTER_BASE_CURRENCY
+export function currencyForDisplayName(displayName: string): string | null {
+  const country = countryForDisplayName(displayName)
+  if (isUsRegion(country)) return US_DOLLAR
+  return Object.prototype.hasOwnProperty.call(CURRENCY_BY_COUNTRY, country) ? CURRENCY_BY_COUNTRY[country] : null
 }

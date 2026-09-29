@@ -58,10 +58,10 @@ function fetchRate(targetCurrency: string): Promise<CurrencyRateResult> {
  * Reads the current exchange rate from USD to `targetCurrency`, sharing one
  * in-flight request per code across every component that asks for it at
  * once (see {@link fetchRate}).
- * @param targetCurrency - ISO 4217 currency code to convert USD into, e.g. "JPY"
+ * @param targetCurrency - ISO 4217 currency code to convert USD into, e.g. "JPY"; null when the destination's currency is unknown (no request is made)
  * @returns The latest rate and provider update time (both null on failure/unknown currency), and a loading flag
  */
-export function useCurrencyRate(targetCurrency: string): CurrencyRateState {
+export function useCurrencyRate(targetCurrency: string | null): CurrencyRateState {
   const [result, setResult] = useState<CurrencyRateResult | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -69,6 +69,11 @@ export function useCurrencyRate(targetCurrency: string): CurrencyRateState {
     let cancelled = false
     setLoading(true)
     setResult(null)
+
+    if (targetCurrency === null) {
+      setLoading(false)
+      return
+    }
 
     if (targetCurrency === USD_CURRENCY_CODE) {
       setResult({ rate: 1, updatedAt: null })

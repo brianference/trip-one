@@ -126,6 +126,23 @@ describe('MoneyPage', () => {
     expect(screen.queryByRole('link', { name: /exchange rate api/i })).not.toBeInTheDocument()
   })
 
+  it('never claims US dollars for an international trip whose currency is unknown (Havana)', () => {
+    mockContext({ displayName: 'Havana, Cuba' })
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(
+      <MemoryRouter>
+        <MoneyPage />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('We don’t have currency info for Cuba yet.')).toBeInTheDocument()
+    expect(screen.queryByText(/us dollars/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('shows a loading state (never a fake USD-to-USD table) while the location has not resolved yet', () => {
     mockContext(null)
     vi.stubGlobal('fetch', vi.fn())
