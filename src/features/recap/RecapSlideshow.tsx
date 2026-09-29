@@ -175,8 +175,11 @@ export function RecapSlideshow({ slides, photoUrl, variant, playing, onPlayingCh
           className="chronicle-recap-btn"
           onClick={() => goTo(current - 1)}
           aria-disabled={current === 0}
+          // Visible "Previous" is contained in the name (WCAG 2.5.3), and the
+          // short label keeps all three controls on one row at 375 px.
+          aria-label="Previous photo"
         >
-          Previous photo
+          Previous
         </button>
         {!reducedMotion && slides.length > 1 && (
           <button type="button" className="chronicle-recap-btn" onClick={togglePlaying} aria-pressed={playing}>
@@ -188,8 +191,9 @@ export function RecapSlideshow({ slides, photoUrl, variant, playing, onPlayingCh
           className="chronicle-recap-btn"
           onClick={() => goTo(current + 1)}
           aria-disabled={current === lastIndex}
+          aria-label="Next photo"
         >
-          Next photo
+          Next
         </button>
       </div>
     </div>

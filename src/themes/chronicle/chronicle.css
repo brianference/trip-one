@@ -363,7 +363,8 @@
 
 .chronicle-recap-slide-frame {
   aspect-ratio: 4 / 3;
-  max-height: 70vh;
+  /* Keeps a desktop-width slide from pushing everything below it off screen. */
+  max-height: min(70vh, 520px);
   width: 100%;
   border-radius: var(--chronicle-radius-lg);
   border: 1px solid var(--chronicle-border-hairline);
@@ -459,9 +460,18 @@
 .chronicle-recap-share {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: var(--chronicle-space-xs);
-  max-width: 100%;
+  /* Wide enough for the read-only link fallback to show most of the URL. */
+  width: min(100%, 320px);
+}
+
+/* Beside the heading (tablet and up) the button sits flush right; on a
+   phone the header wraps and it lines up under the title instead. */
+@media (min-width: 600px) {
+  .chronicle-recap-share {
+    align-items: flex-end;
+  }
 }
 
 .chronicle-recap-share .chronicle-save-hint {
@@ -472,7 +482,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--chronicle-space-xs);
-  width: min(100%, 360px);
+  width: 100%;
 }
 
 .chronicle-recap-share-input {
@@ -509,6 +519,16 @@
 .chronicle-preview-card.chronicle-recap-over-card .chronicle-rate-line {
   color: var(--color-on-primary-soft);
   margin: 0;
+}
+
+.chronicle-preview-card.chronicle-recap-over-card .chronicle-rate-line {
+  font-family: var(--chronicle-font-body);
+}
+
+/* The public recap sits inside the site chrome, whose footer follows it:
+   .chronicle-page's full-viewport min-height would leave a blank band. */
+.chronicle-page.chronicle-recap-public {
+  min-height: 0;
 }
 
 .chronicle-recap-entry {

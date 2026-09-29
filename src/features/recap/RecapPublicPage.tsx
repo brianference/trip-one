@@ -68,7 +68,7 @@ export function RecapPublicPage() {
   const heading = state.kind === 'ready' ? (state.payload.title ?? `${state.payload.displayName} trip`) : 'Trip recap'
 
   return (
-    <main id="main" className="chronicle-page">
+    <main id="main" className="chronicle-page chronicle-recap-public">
       {/* noindex: a share link is meant for the people it was sent to, not search results. */}
       <Seo title={`${heading} recap`} description="A trip recap shared from Trip One." noindex />
       <div className="chronicle-book">
