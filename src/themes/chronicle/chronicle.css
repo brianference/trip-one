@@ -517,6 +517,255 @@
   color: var(--chronicle-danger);
 }
 
+/* Owner recap header actions: Share recap + Invite people, stacked. Beside
+   the heading (tablet and up) the column sits flush right, same as
+   .chronicle-recap-share alone; on a phone the header wraps and it lines up
+   under the title instead. */
+.chronicle-recap-owner-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--chronicle-space-md);
+  width: min(100%, 420px);
+}
+
+@media (min-width: 600px) {
+  .chronicle-recap-owner-actions {
+    align-items: flex-end;
+  }
+}
+
+/* Invite people to add photos (owner recap, next to Share recap). Hairline
+   card matching .chronicle-preview-card, styled per
+   docs/design/photo-controls-option-a.html: Chronicle typography and the
+   photo accent (--accent-photo) on the primary action. */
+.chronicle-invite-card {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--chronicle-bg-surface);
+  border: 1px solid var(--chronicle-border-hairline);
+  border-radius: var(--chronicle-radius-lg);
+  padding: var(--chronicle-space-md);
+  box-shadow: var(--chronicle-shadow-card);
+  text-align: left;
+}
+
+.chronicle-invite-title {
+  margin: 0 0 var(--chronicle-space-xs);
+  font-family: var(--chronicle-font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-invite-explainer {
+  margin: 0 0 var(--chronicle-space-md);
+  font-family: var(--chronicle-font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-invite-form {
+  margin: 0;
+}
+
+.chronicle-invite-label {
+  display: block;
+  margin-bottom: var(--chronicle-space-xs);
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--chronicle-text-tertiary);
+}
+
+.chronicle-invite-form-row {
+  display: flex;
+  gap: var(--chronicle-space-sm);
+  flex-wrap: wrap;
+}
+
+.chronicle-invite-input {
+  flex: 1 1 200px;
+  min-height: 44px;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0 var(--chronicle-space-sm);
+  border: 1px solid var(--chronicle-border-subtle);
+  border-radius: var(--chronicle-radius-sm);
+  background: var(--chronicle-bg-surface-2);
+  color: var(--chronicle-text-primary);
+  font-family: var(--chronicle-font-body);
+  font-size: 14px;
+}
+
+.chronicle-invite-send-btn {
+  flex: none;
+  min-height: 44px;
+  padding: 0 var(--chronicle-space-md);
+  border: none;
+  border-radius: var(--chronicle-radius-pill);
+  background: var(--accent-photo);
+  color: var(--on-accent-photo);
+  font-family: var(--chronicle-font-body);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.chronicle-invite-send-btn:hover,
+.chronicle-invite-send-btn:focus-visible {
+  background: var(--accent-photo-hover);
+  color: var(--on-accent-photo);
+}
+
+.chronicle-invite-send-btn[aria-disabled='true'] {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+.chronicle-invite-status {
+  margin: var(--chronicle-space-sm) 0 0;
+  font-family: var(--chronicle-font-body);
+  font-size: 13px;
+  color: var(--chronicle-text-secondary);
+  min-height: 1em;
+}
+
+.chronicle-invite-status:empty {
+  margin: 0;
+}
+
+.chronicle-invite-list {
+  list-style: none;
+  margin: var(--chronicle-space-md) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-sm);
+}
+
+.chronicle-invite-row {
+  padding-top: var(--chronicle-space-sm);
+  border-top: 1px solid var(--chronicle-border-hairline);
+}
+
+.chronicle-invite-list > .chronicle-invite-row:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.chronicle-invite-row-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--chronicle-space-sm);
+  flex-wrap: wrap;
+}
+
+.chronicle-invite-email {
+  font-family: var(--chronicle-font-body);
+  font-size: 14px;
+  color: var(--chronicle-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.chronicle-invite-badge {
+  flex: none;
+  padding: 3px 10px;
+  border-radius: var(--chronicle-radius-pill);
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  background: var(--chronicle-bg-surface-2);
+  color: var(--chronicle-text-secondary);
+  border: 1px solid var(--chronicle-border-hairline);
+}
+
+.chronicle-invite-badge--joined {
+  color: var(--accent-text);
+  border-color: color-mix(in srgb, var(--chronicle-teal) 40%, transparent);
+}
+
+.chronicle-invite-joined-note {
+  margin: var(--chronicle-space-xs) 0 0;
+  font-family: var(--chronicle-font-body);
+  font-size: 12px;
+  /* text-secondary, not tertiary: tertiary measured 4.1:1 on this card's
+     surface via axe-core, just under the 4.5:1 AA minimum. */
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-invite-remove-btn {
+  margin-top: var(--chronicle-space-xs);
+  min-height: 32px;
+  padding: 0 var(--chronicle-space-sm);
+  border: 1px solid var(--chronicle-border-hairline);
+  border-radius: var(--chronicle-radius-pill);
+  background: var(--chronicle-bg-surface-2);
+  /* danger-text, not the raw danger red: axe-core measured the raw color at
+     2.56:1 on the dark surface, well under the 4.5:1 AA minimum. */
+  color: var(--chronicle-danger-text);
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.chronicle-invite-remove-btn:hover,
+.chronicle-invite-remove-btn:focus-visible {
+  border-color: var(--chronicle-danger);
+}
+
+.chronicle-invite-row-confirm {
+  display: flex;
+  align-items: center;
+  gap: var(--chronicle-space-sm);
+  flex-wrap: wrap;
+  margin-top: var(--chronicle-space-xs);
+  font-family: var(--chronicle-font-body);
+  font-size: 12px;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-invite-row-confirm-btns {
+  display: flex;
+  gap: var(--chronicle-space-xs);
+}
+
+.chronicle-invite-row-confirm-yes,
+.chronicle-invite-row-confirm-no {
+  min-height: 32px;
+  padding: 0 var(--chronicle-space-sm);
+  border-radius: var(--chronicle-radius-pill);
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.chronicle-invite-row-confirm-yes {
+  border: 1px solid var(--chronicle-danger);
+  background: var(--chronicle-danger);
+  color: #ffffff;
+}
+
+.chronicle-invite-row-confirm-yes[aria-disabled='true'] {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+.chronicle-invite-row-confirm-no {
+  border: 1px solid var(--chronicle-border-hairline);
+  background: var(--chronicle-bg-surface-2);
+  color: var(--chronicle-text-secondary);
+}
+
 /* Overview entry points */
 .chronicle-preview-card.chronicle-recap-over-card {
   display: flex;

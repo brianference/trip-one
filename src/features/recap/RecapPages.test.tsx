@@ -143,6 +143,7 @@ describe('TripRecapPage', () => {
         status: 200,
         body: { photos: [{ id: 'p1', stopId: STOP_A, width: 1600, height: 1200, createdAt: '2026-09-01T10:00:00Z' }] },
       },
+      [`/api/trips/${TRIP_ID}/invites`]: { status: 200, body: { invites: [] } },
     })
     renderOwner(TRIP_ID)
     expect(await screen.findByRole('heading', { level: 1, name: 'Oslo, Norway trip' })).toBeInTheDocument()
@@ -155,6 +156,7 @@ describe('TripRecapPage', () => {
     expect(images).toHaveLength(2)
     for (const img of images) expect(img).toHaveAttribute('src', `/api/trips/${TRIP_ID}/photos/p1`)
     expect(screen.getByRole('button', { name: 'Share recap' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Invite people to add photos' })).toBeInTheDocument()
   })
 
   it('shows no Share button on a demo trip (the server refuses demo recap links)', async () => {
@@ -163,5 +165,6 @@ describe('TripRecapPage', () => {
     expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Share recap' })).toBeNull()
     expect(screen.getByText('No photos yet. Add photos to your stops on the Plan page.')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Invite people to add photos' })).toBeNull()
   })
 })
