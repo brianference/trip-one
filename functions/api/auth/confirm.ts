@@ -10,6 +10,10 @@ import type { Env } from '../../lib/db'
  */
 const RATE_LIMIT_PER_HOUR = 30
 
+/** The one answer for an unknown, expired or already-used link. Shared with /api/auth/confirm/deny. */
+export const CONFIRM_LINK_INVALID_MESSAGE =
+  'This confirmation link is invalid or has expired. Sign in and request a new one from your trips page.'
+
 /** JSON response with no-store: Pages Functions responses do not get `_headers`. */
 function json(body: unknown, status: number, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -21,12 +25,17 @@ function json(body: unknown, status: number, headers: Record<string, string> = {
 /**
  * POST /api/auth/confirm
  *
- * Redeems a confirmation token. One-time. Marks `users.email_verified = 1`.
- * Without the account's own session on the request, an unverified account's
- * password and sessions are also reset (see confirmEmail) and the response
- * says so with `passwordReset: true`.
+ * Redeems a confirmation token for the account's OWN session: marks
+ * `users.email_verified = 1` and spends the token, and the answer is
+ * `{ ok: true, email, passwordReset: false }` (the field is kept for the
+ * client; this endpoint never resets a password any more).
  *
- * @returns `{ ok, email, passwordReset }` or `{ error }` (400/429)
+ * Without that account's session (signed out, or signed in as someone else)
+ * nothing changes and the token is NOT spent: the answer is 200
+ * `{ ok: false, needsSignIn: true, email }`, so the page can ask them to sign
+ * in and come back, or offer "This wasn't me" (POST /api/auth/confirm/deny).
+ *
+ * @returns 200 as above, or `{ error }` with 400 (bad or spent link) or 429
  */
 export async function onRequestPost({ env, request }: { env: AuthEnv; request: Request }): Promise<Response> {
   const raw = (await request.json().catch(() => ({}))) as Record<string, unknown>
@@ -39,8 +48,7 @@ export async function onRequestPost({ env, request }: { env: AuthEnv; request: R
 
   const session = await getAuthedUser(env, request)
   const result = await confirmEmail(env, parsed.data.token, session?.id ?? null)
-  if (!result.ok) {
-    return json({ error: 'This confirmation link is invalid or has expired. Sign in and request a new one from your trips page.' }, 400)
-  }
-  return json({ ok: true, email: result.email, passwordReset: result.passwordReset }, 200)
+  if (result.ok) return json({ ok: true, email: result.email, passwordReset: false }, 200)
+  if (result.reason === 'needs-sign-in') return json({ ok: false, needsSignIn: true, email: result.email }, 200)
+  return json({ error: CONFIRM_LINK_INVALID_MESSAGE }, 400)
 }

@@ -3,7 +3,12 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { onRequestPost } from './request'
 import { codeStore } from '../../../lib/testEmailCodes'
 import { sha256hex } from '../../../lib/auth/tokens'
-import { MAX_CODES_PER_EMAIL_PER_DAY, MAX_CODES_PER_EMAIL_PER_HOUR } from '../../../lib/auth/emailCode'
+import {
+  MAX_CODE_EMAILS_PER_DAY,
+  MAX_CODES_PER_EMAIL_PER_DAY,
+  MAX_CODES_PER_EMAIL_PER_HOUR,
+} from '../../../lib/auth/emailCode'
+import { logger } from '../../../../src/lib/logger'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -124,6 +129,49 @@ describe('POST /api/auth/code/request', () => {
     expect(await res.json()).toEqual({ ok: true })
     expect(sent).toHaveLength(0)
     expect(store.codes).toHaveLength(MAX_CODES_PER_EMAIL_PER_DAY)
+  })
+
+  it(`sends nothing past ${MAX_CODE_EMAILS_PER_DAY} code emails app-wide per 24 hours, still answering {ok:true}`, async () => {
+    const sent = stubMail()
+    const store = codeStore(MAIL)
+    const now = Date.now()
+    for (let i = 0; i < MAX_CODE_EMAILS_PER_DAY; i += 1) {
+      store.codes.push({
+        id: `busy-${i}`,
+        email: `person${i}@example.com`,
+        code_hash: 'h',
+        expires_at: 0,
+        attempts: 0,
+        used_at: null,
+        created_at: now - 60 * 60 * 1000 - i,
+      })
+    }
+    const res = await onRequestPost({ env: store.fake.env, request: post({ email: 'fresh@example.com' }) })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ ok: true })
+    expect(sent).toHaveLength(0)
+    expect(store.codes.filter((c) => c.email === 'fresh@example.com')).toHaveLength(0)
+  })
+
+  it('sends nothing and still answers {ok:true} when the caps cannot be read (fail closed)', async () => {
+    const sent = stubMail()
+    const error = vi.spyOn(logger, 'error').mockImplementation(() => {})
+    const store = codeStore(MAIL)
+    const failing = {
+      ...store.fake.env,
+      DB: {
+        prepare(sql: string) {
+          // The rate limiter still works; every email_codes statement fails.
+          if (sql.includes('email_codes')) throw new Error('D1 unavailable')
+          return store.fake.env.DB.prepare(sql)
+        },
+      } as typeof store.fake.env.DB,
+    }
+    const res = await onRequestPost({ env: failing, request: post({ email: 'alex@example.com' }) })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ ok: true })
+    expect(sent).toHaveLength(0)
+    expect(error).toHaveBeenCalled()
   })
 
   it('limits one IP to 10 requests an hour across emails', async () => {

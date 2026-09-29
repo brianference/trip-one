@@ -136,6 +136,15 @@ export function inviteStore(
 
   const run = (sql: string, args: unknown[]): number => {
     if (failWhen(sql)) throw new Error('D1 unavailable')
+    if (sql.startsWith('DELETE FROM request_log')) {
+      // The rate limiter's occasional purge (purgeRequestLogBefore); the real
+      // SQL is proven against SQLite in rateLimitGuard.test.ts.
+      const [before] = args as [string]
+      const keep = requestLog.filter((r) => r.createdAt >= before)
+      const removed = requestLog.length - keep.length
+      requestLog.splice(0, requestLog.length, ...keep)
+      return removed
+    }
     if (sql.startsWith('INSERT INTO request_log')) {
       const [ipHash, endpoint, createdAt] = args as [string, string, string]
       requestLog.push({ ipHash, endpoint, createdAt })

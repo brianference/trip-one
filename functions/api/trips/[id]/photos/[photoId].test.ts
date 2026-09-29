@@ -22,6 +22,16 @@ function call(
   return handler({ env, request: new Request('https://x'), params: { id: tripId, photoId } })
 }
 
+
+/**
+ * A DELETE of trip data. The rate limiter's occasional request_log purge
+ * (about 1 request in 50) is bookkeeping, not a data delete, so it is ignored.
+ * @param sql - A statement the handler ran
+ */
+function isDataDelete(sql: string): boolean {
+  return sql.startsWith('DELETE') && !sql.startsWith('DELETE FROM request_log')
+}
+
 describe('GET /api/trips/:id/photos/:photoId', () => {
   it('serves the bytes with the DB-recorded content type and a private cache header', async () => {
     const row = photoRow({ content_type: 'image/png', bytes: PNG_BYTES.byteLength })
@@ -100,7 +110,7 @@ describe('DELETE /api/trips/:id/photos/:photoId', () => {
     const res = await call(onRequestDelete, env, TRIP_ID, PHOTO_ID)
     expect(res.status).toBe(404)
     expect(r2.objects.has(foreign.r2_key)).toBe(true)
-    expect(calls.some((c) => c.sql.startsWith('DELETE'))).toBe(false)
+    expect(calls.some((c) => isDataDelete(c.sql))).toBe(false)
   })
 
   it('refuses to delete a photo from a demo trip with 403 and deletes nothing', async () => {
@@ -110,7 +120,7 @@ describe('DELETE /api/trips/:id/photos/:photoId', () => {
     const res = await call(onRequestDelete, env, DEMO_TRIP_IDS.dublin, PHOTO_ID)
     expect(res.status).toBe(403)
     expect(r2.objects.has(row.r2_key)).toBe(true)
-    expect(calls.some((c) => c.sql.startsWith('DELETE'))).toBe(false)
+    expect(calls.some((c) => isDataDelete(c.sql))).toBe(false)
   })
 
   it('rate-limits deletes with 429 under the photos-delete key and deletes nothing', async () => {

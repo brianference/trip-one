@@ -5,6 +5,7 @@ import {
   DAY_MS,
   MAX_CODES_PER_EMAIL_PER_DAY,
   MAX_CODE_ATTEMPTS,
+  MAX_CODE_EMAILS_PER_DAY,
   MAX_CODES_PER_EMAIL_PER_HOUR,
   UNBIASED_LIMIT,
   constantTimeEqual,
@@ -15,7 +16,8 @@ import {
 } from './emailCode'
 import { sha256hex } from './tokens'
 import { codeStore } from '../testEmailCodes'
-import { getActiveEmailCode } from '../db'
+import { sqliteD1 } from '../testSqliteD1'
+import { getActiveEmailCode, insertEmailCodeUnderGlobalCap } from '../db'
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -147,6 +149,85 @@ describe('issueEmailCode', () => {
     expect(store.codes.map((c) => c.id)).not.toContain('old-other')
     expect(store.codes.map((c) => c.id)).toContain('young-other')
     expect(store.codes.filter((c) => c.email === ALEX)).toHaveLength(1)
+  })
+})
+
+describe('issueEmailCode app-wide breaker', () => {
+  /** Fills a store with `count` codes for distinct addresses, created within the last day. */
+  function fill(store: ReturnType<typeof codeStore>, count: number, now: number) {
+    for (let i = 0; i < count; i += 1) {
+      store.codes.push({
+        id: `other-${i}`,
+        email: `person${i}@example.com`,
+        code_hash: 'h',
+        expires_at: 0,
+        attempts: 0,
+        used_at: null,
+        created_at: now - DAY_MS + 60_000 + i,
+      })
+    }
+  }
+
+  it(`stores nothing once ${MAX_CODE_EMAILS_PER_DAY} codes went out app-wide in 24 hours`, async () => {
+    const store = codeStore()
+    const now = Date.now()
+    fill(store, MAX_CODE_EMAILS_PER_DAY, now)
+    expect(await issueEmailCode(store.fake.env, ALEX, now)).toBeNull()
+    expect(store.codes.filter((c) => c.email === ALEX)).toHaveLength(0)
+    expect(MAX_CODE_EMAILS_PER_DAY).toBe(500)
+  })
+
+  it('issues the last code under the breaker', async () => {
+    const store = codeStore()
+    const now = Date.now()
+    fill(store, MAX_CODE_EMAILS_PER_DAY - 1, now)
+    expect(await issueEmailCode(store.fake.env, ALEX, now)).toMatch(/^\d{6}$/)
+  })
+
+  it('fails closed: when D1 does not confirm the insert, no code is returned', async () => {
+    // A statement-level fake that reports no change count for any write.
+    const { fakeD1 } = await import('../testD1')
+    const { env } = fakeD1({ first: (sql) => (sql.includes('COUNT(*)') ? { n: 0 } : null) })
+    expect(await issueEmailCode(env, ALEX)).toBeNull()
+  })
+
+  it('fails closed: when the database throws, the error propagates and nothing is returned', async () => {
+    const { fakeD1 } = await import('../testD1')
+    const { env } = fakeD1({ fail: true })
+    await expect(issueEmailCode(env, ALEX)).rejects.toThrow()
+  })
+
+  it('the insert statement itself enforces the cap on real SQLite, counting every email', async () => {
+    const db = sqliteD1()
+    const now = Date.now()
+    for (let i = 0; i < 3; i += 1) {
+      expect(
+        await insertEmailCodeUnderGlobalCap(
+          db.env,
+          { id: `c${i}`, email: `p${i}@example.com`, code_hash: 'h', expires_at: now + 1, created_at: now },
+          now - DAY_MS,
+          3,
+        ),
+      ).toBe(true)
+    }
+    expect(
+      await insertEmailCodeUnderGlobalCap(
+        db.env,
+        { id: 'c3', email: 'p3@example.com', code_hash: 'h', expires_at: now + 1, created_at: now },
+        now - DAY_MS,
+        3,
+      ),
+    ).toBe(false)
+    expect(db.rows('SELECT id FROM email_codes')).toHaveLength(3)
+    // Rows before the window do not count.
+    expect(
+      await insertEmailCodeUnderGlobalCap(
+        db.env,
+        { id: 'c4', email: 'p4@example.com', code_hash: 'h', expires_at: now + 1, created_at: now },
+        now + 1,
+        3,
+      ),
+    ).toBe(true)
   })
 })
 

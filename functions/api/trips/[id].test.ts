@@ -19,6 +19,16 @@ const tripRow = {
   start_date: null,
 }
 
+
+/**
+ * A DELETE of trip data. The rate limiter's occasional request_log purge
+ * (about 1 request in 50) is bookkeeping, not a data delete, so it is ignored.
+ * @param sql - A statement the handler ran
+ */
+function isDataDelete(sql: string): boolean {
+  return sql.startsWith('DELETE') && !sql.startsWith('DELETE FROM request_log')
+}
+
 describe('GET /api/trips/:id', () => {
   it('returns the trip when found', async () => {
     const { env } = fakeD1({ first: (sql) => (sql.includes('FROM trips') ? tripRow : null) })
@@ -197,12 +207,12 @@ describe('DELETE /api/trips/:id', () => {
     const { res, calls, r2 } = await setup({ owned: false })
     expect(res.status).toBe(404)
     expect(r2.objects.size).toBe(photos.length)
-    expect(calls.some((c) => c.sql.startsWith('DELETE') || c.sql === 'R2 DELETE')).toBe(false)
+    expect(calls.some((c) => isDataDelete(c.sql) || c.sql === 'R2 DELETE')).toBe(false)
   })
 
   it('keeps the trip and its rows when the R2 delete fails, and answers 500', async () => {
     const { res, calls } = await setup({ r2Fails: true })
     expect(res.status).toBe(500)
-    expect(calls.some((c) => c.sql.startsWith('DELETE'))).toBe(false)
+    expect(calls.some((c) => isDataDelete(c.sql))).toBe(false)
   })
 })

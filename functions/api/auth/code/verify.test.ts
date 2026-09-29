@@ -127,6 +127,65 @@ describe('POST /api/auth/code/verify', () => {
     expect(owner?.emailVerified).toBe(true)
   })
 
+  /** Registers ALEX through the real endpoint and returns the session cookie. */
+  async function registerAlex(s: CodeStore, password: string): Promise<string> {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const reg = await register({
+      env: s.fake.env,
+      request: new Request('https://trip-one.pages.dev/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': '198.51.100.66' },
+        body: JSON.stringify({ email: ALEX, password }),
+      }),
+    })
+    expect(reg.status).toBe(201)
+    return `${SESSION_COOKIE}=${sessionToken(reg)}`
+  }
+
+  it('with the unverified account’s OWN session: only verifies; password and existing session survive', async () => {
+    const s = store()
+    const password = 'owner-real-password'
+    const cookie = await registerAlex(s, password)
+    const { password_hash: hashBefore, token_version: versionBefore } = s.users[0]
+
+    const request = post({ email: ALEX, code: await issueEmailCode(s.fake.env, ALEX) })
+    request.headers.set('Cookie', cookie)
+    const res = await onRequestPost({ env: s.fake.env, request })
+    expect(res.status).toBe(200)
+    expect(s.users[0].email_verified).toBe(1)
+    expect(s.users[0].password_hash).toBe(hashBefore)
+    expect(s.users[0].token_version).toBe(versionBefore)
+    expect(await verifyPassword(password, s.users[0].password_hash)).toBe(true)
+    const still = await getAuthedUser(s.fake.env, new Request('https://x/', { headers: { Cookie: cookie } }))
+    expect(still?.emailVerified).toBe(true)
+    // The new session cookie works too.
+    const fresh = await getAuthedUser(
+      s.fake.env,
+      new Request('https://x/', { headers: { Cookie: `${SESSION_COOKIE}=${sessionToken(res)}` } }),
+    )
+    expect(fresh?.id).toBe(s.users[0].id)
+  })
+
+  it('with ANOTHER user’s session: still wipes the unverified account (the session must be that account’s)', async () => {
+    const s = store()
+    const attackerPassword = 'attacker-chosen-password'
+    const attackerCookie = await registerAlex(s, attackerPassword)
+    s.users.push({
+      id: 'blair-user',
+      email: BLAIR,
+      password_hash: 'unused',
+      display_name: null,
+      created_at: '2026-09-01T00:00:00.000Z',
+      token_version: 0,
+      email_verified: 1,
+    })
+    const request = post({ email: ALEX, code: await issueEmailCode(s.fake.env, ALEX) })
+    request.headers.set('Cookie', `${SESSION_COOKIE}=${await signToken('blair-user', 0, SECRET)}`)
+    expect((await onRequestPost({ env: s.fake.env, request })).status).toBe(200)
+    expect(await verifyPassword(attackerPassword, s.users[0].password_hash)).toBe(false)
+    expect(await getAuthedUser(s.fake.env, new Request('https://x/', { headers: { Cookie: attackerCookie } }))).toBeNull()
+  })
+
   it('leaves an already-verified account alone: same password hash, existing sessions still valid', async () => {
     const s = store()
     const password = 'owner-real-password'
