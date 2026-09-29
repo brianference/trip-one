@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { ItineraryItem } from '../../../lib/validation/schemas'
 import { useTripContext } from '../useTripContext'
 import { useTripStore } from '../../../store/tripStore'
@@ -116,6 +117,9 @@ export function TripPlanPage() {
           </label>
         </div>
         <TripExport itinerary={itinerary} startDate={startDate} destinationName={location.displayName} />
+        <Link to={`/trip/${trip.id}/recap`} className="chronicle-preview-link">
+          View trip recap
+        </Link>
       </div>
 
       <TripMap

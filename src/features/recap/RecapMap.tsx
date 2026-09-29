@@ -43,6 +43,17 @@ interface Props {
   speedMs?: number
   /** Called whenever playback starts or stops, whatever the cause — the Play/Pause button, reaching the route's end, a marker selection, or an external `activeStopId` snap — so a parent (e.g. Task 12's slideshow) can mirror the map's playback state without polling it. */
   onPlayingChange?: (playing: boolean) => void
+  /**
+   * A pause request counter. Every change to this value after mount stops
+   * playback where it is (no snap, no move, the current stop is kept) and
+   * reports it via `onPlayingChange` if playback was running. The value
+   * itself carries no meaning, only its change does; the value present on
+   * mount never pauses. This is how a parent that owns a second playback
+   * (Task 12's slideshow autoplay) makes the map yield without moving it,
+   * which `activeStopId` cannot do: an `activeStopId` equal to the current
+   * stop, or the one being animated toward, is deliberately a no-op.
+   */
+  pauseRequest?: number
 }
 
 /** Zoom level used when panning to a stop that has no map yet (first render before any user zoom interaction). */
@@ -125,7 +136,15 @@ function prefersReducedMotion(): boolean {
  * Renders nothing map-wise (no crash) for a route with 0 or 1 plotted stops
  * — there are no legs to animate, so only the marker (if any) is drawn.
  */
-export function RecapMap({ route, activeStopId, onStopSelect, playing = false, speedMs, onPlayingChange }: Props) {
+export function RecapMap({
+  route,
+  activeStopId,
+  onStopSelect,
+  playing = false,
+  speedMs,
+  onPlayingChange,
+  pauseRequest,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const fullRoutePolylineRef = useRef<L.Polyline | null>(null)
@@ -414,6 +433,17 @@ export function RecapMap({ route, activeStopId, onStopSelect, playing = false, s
     // are always read fresh, and a `route` content change is handled
     // entirely by the map-rebuild effect above.
   }, [activeStopId])
+
+  // A parent's pause request (see the Props JSDoc): stop in place. The ref
+  // starts at the mount value so only a later change pauses, never the
+  // initial render, which would otherwise cancel a `playing` autostart.
+  const lastPauseRequestRef = useRef(pauseRequest)
+  useEffect(() => {
+    if (pauseRequest === lastPauseRequestRef.current) return
+    lastPauseRequestRef.current = pauseRequest
+    stopAnimating()
+    setPlaying(false)
+  }, [pauseRequest])
 
   /** Toggles playback. Starting from the last stop restarts from the first. */
   function togglePlaying() {

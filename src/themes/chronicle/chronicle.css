@@ -258,7 +258,8 @@
   flex-wrap: wrap;
 }
 
-.chronicle-recap-map-btn {
+.chronicle-recap-map-btn,
+.chronicle-recap-btn {
   flex: none;
   min-height: 44px;
   min-width: 44px;
@@ -275,12 +276,14 @@
   transition: background 0.15s ease, color 0.15s ease;
 }
 
-.chronicle-recap-map-btn:hover {
+.chronicle-recap-map-btn:hover,
+.chronicle-recap-btn:hover:not([aria-disabled='true']) {
   background: var(--chronicle-teal);
   color: var(--color-on-primary);
 }
 
-.chronicle-recap-map-btn[aria-pressed='true'] {
+.chronicle-recap-map-btn[aria-pressed='true'],
+.chronicle-recap-btn[aria-pressed='true'] {
   background: var(--chronicle-teal);
   color: var(--color-on-primary);
 }
@@ -288,6 +291,228 @@
 .chronicle-recap-map-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* aria-disabled (not disabled) keeps a first/last-photo button focusable. */
+.chronicle-recap-btn[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---------- Recap page (Task 12) ---------- */
+.chronicle-recap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-xl);
+}
+
+.chronicle-recap h1 {
+  margin-bottom: var(--chronicle-space-xs);
+}
+
+.chronicle-recap-dates {
+  margin: 0;
+  font-family: var(--chronicle-font-mono);
+  font-size: 14px;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-recap-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-md);
+  min-width: 0;
+}
+
+.chronicle-recap-h2 {
+  margin: 0;
+  font-family: var(--chronicle-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-recap-h3 {
+  margin: 0 0 var(--chronicle-space-sm);
+  font-family: var(--chronicle-font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--chronicle-gold);
+}
+
+/* Slideshow: a fixed-ratio frame so a portrait photo never pushes the
+   controls around, with the photo letterboxed inside it (object-fit: contain). */
+.chronicle-recap-slideshow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-md);
+}
+
+.chronicle-recap-slide {
+  border-radius: var(--chronicle-radius-lg);
+}
+
+.chronicle-recap-slide-figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-sm);
+}
+
+.chronicle-recap-slide-frame {
+  aspect-ratio: 4 / 3;
+  max-height: 70vh;
+  width: 100%;
+  border-radius: var(--chronicle-radius-lg);
+  border: 1px solid var(--chronicle-border-hairline);
+  background: var(--chronicle-bg-surface-2);
+  overflow: hidden;
+}
+
+.chronicle-recap-slide-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.chronicle-recap-slide-caption {
+  font-family: var(--chronicle-font-body);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-recap-slide-count {
+  margin: var(--chronicle-space-xs) 0 0;
+  font-family: var(--chronicle-font-mono);
+  font-size: 13px;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-recap-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--chronicle-space-sm);
+}
+
+/* Day-by-day list */
+.chronicle-recap-day + .chronicle-recap-day {
+  margin-top: var(--chronicle-space-lg);
+}
+
+.chronicle-recap-stops {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-md);
+}
+
+.chronicle-recap-stop {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--chronicle-space-md);
+}
+
+.chronicle-recap-stop-order {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-family: var(--chronicle-font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chronicle-recap-stop-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-sm);
+  min-width: 0;
+  padding-top: 3px;
+}
+
+.chronicle-recap-stop-name {
+  font-family: var(--chronicle-font-body);
+  font-size: 16px;
+  color: var(--chronicle-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.chronicle-recap-footer {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--chronicle-space-lg);
+  border-top: 1px solid var(--chronicle-border-hairline);
+}
+
+/* Share recap (owner) */
+.chronicle-recap-share {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--chronicle-space-xs);
+  max-width: 100%;
+}
+
+.chronicle-recap-share .chronicle-save-hint {
+  margin: 0;
+}
+
+.chronicle-recap-share-manual {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-xs);
+  width: min(100%, 360px);
+}
+
+.chronicle-recap-share-input {
+  min-height: 44px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 var(--chronicle-space-sm);
+  border: 1px solid var(--chronicle-border-subtle);
+  border-radius: var(--chronicle-radius-sm);
+  background: var(--chronicle-bg-surface);
+  color: var(--chronicle-text-primary);
+  font-family: var(--chronicle-font-mono);
+  font-size: 13px;
+}
+
+.chronicle-recap-share-error {
+  margin: 0;
+  font-family: var(--chronicle-font-body);
+  font-size: 14px;
+  color: var(--chronicle-danger);
+}
+
+/* Overview entry points */
+.chronicle-preview-card.chronicle-recap-over-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--chronicle-space-sm);
+  border-color: var(--chronicle-teal);
+  background: var(--color-primary-soft);
+}
+
+.chronicle-preview-card.chronicle-recap-over-card h2,
+.chronicle-preview-card.chronicle-recap-over-card .chronicle-rate-line {
+  color: var(--color-on-primary-soft);
+  margin: 0;
+}
+
+.chronicle-recap-entry {
+  margin: 0 0 var(--chronicle-space-sm);
 }
 
 /* ---------- Theme toggle (fixed, top-right, every page) ---------- */

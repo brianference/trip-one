@@ -607,4 +607,42 @@ describe('RecapMap', () => {
     const secondMapInstance = vi.mocked(L).map.mock.results[1].value as { setView: ReturnType<typeof vi.fn> }
     expect(secondMapInstance.setView).toHaveBeenCalledWith([35.7, 139.77], expect.any(Number), { animate: false })
   })
+  it('a changed pauseRequest stops playback in place without moving, and reports it; the mount value never pauses', () => {
+    const raf = stubRaf()
+    const onPlayingChange = vi.fn()
+    const onStopSelect = vi.fn()
+    const { rerender } = render(
+      <RecapMap
+        route={threeStops}
+        activeStopId={null}
+        onStopSelect={onStopSelect}
+        playing
+        onPlayingChange={onPlayingChange}
+        pauseRequest={0}
+      />,
+    )
+    // The mount value did not cancel the autostart.
+    expect(onPlayingChange).toHaveBeenLastCalledWith(true)
+    expect(raf.pendingCount()).toBe(1)
+    const mapInstance = vi.mocked(L).map.mock.results[0].value as { setView: ReturnType<typeof vi.fn> }
+    const setViewCallsBefore = mapInstance.setView.mock.calls.length
+
+    rerender(
+      <RecapMap
+        route={threeStops}
+        activeStopId={null}
+        onStopSelect={onStopSelect}
+        playing
+        onPlayingChange={onPlayingChange}
+        pauseRequest={1}
+      />,
+    )
+
+    expect(onPlayingChange).toHaveBeenLastCalledWith(false)
+    expect(raf.cafSpy).toHaveBeenCalled()
+    expect(raf.pendingCount()).toBe(0)
+    expect(onStopSelect).not.toHaveBeenCalled()
+    expect(mapInstance.setView.mock.calls.length).toBe(setViewCallsBefore)
+    expect(screen.getByRole('button', { name: 'Play' })).toBeInstanceOf(HTMLButtonElement)
+  })
 })

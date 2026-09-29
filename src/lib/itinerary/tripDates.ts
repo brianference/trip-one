@@ -24,3 +24,23 @@ export function dayHeading(startDate: string | null | undefined, dayNumber: numb
   const label = dayDateLabel(startDate, dayNumber)
   return label ? `Day ${dayNumber} · ${label}` : `Day ${dayNumber}`
 }
+
+/**
+ * Whether the trip has ended: true from the day after its last day (start
+ * date + length - 1), compared as local calendar dates. False when the start
+ * date or length is missing or invalid, since then there is no end to pass.
+ * @param startDate - The trip's start date (`YYYY-MM-DD`) or null
+ * @param tripLengthDays - The number of days the trip runs, or null
+ * @param now - The current time (a parameter so callers and tests can pin it)
+ */
+export function isTripOver(
+  startDate: string | null | undefined,
+  tripLengthDays: number | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  if (!tripLengthDays || tripLengthDays < 1) return false
+  const lastDay = dateForDay(startDate, tripLengthDays)
+  if (!lastDay) return false
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  return lastDay.getTime() < today.getTime()
+}

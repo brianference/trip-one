@@ -7,7 +7,7 @@ import type { RecapPayload } from './types'
  * one directly from trip data, with none of the server's validation) lands
  * on the same day the server would have assigned.
  */
-const DEFAULT_DAY = 1
+export const DEFAULT_DAY = 1
 
 /** Milliseconds in a day, for UTC date arithmetic. */
 const MS_PER_DAY = 24 * 60 * 60 * 1000
