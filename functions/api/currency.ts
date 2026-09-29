@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { isRateLimited } from '../lib/rateLimitGuard'
+import { getUsdRates } from '../lib/fxRates'
 import type { Env } from '../lib/db'
 import { logger } from '../../src/lib/logger'
 
@@ -13,13 +14,14 @@ function json(body: unknown, status: number) {
 /**
  * GET /api/currency?to=<ISO 4217 code>
  *
- * Proxies the current USD exchange rate from the free Frankfurter API
- * (api.frankfurter.dev) so the browser never calls it directly — Frankfurter
- * sends no Access-Control-Allow-Origin header, so a direct client-side fetch
- * is blocked by CORS regardless of this app's own CSP.
- * @param context - Request context with `request`
- * @returns JSON response: `{ rate }` on success (rate is null if Frankfurter
- * doesn't recognize the currency), or `{ error }` with 400 for an invalid query
+ * Serves the current USD exchange rate from the D1-cached table in
+ * {@link getUsdRates}, which itself is backed by the free open.er-api.com
+ * endpoint. The browser never calls that endpoint directly, and the D1 cache
+ * means most requests never make an upstream call at all.
+ * @param context - Request context with `env` and `request`
+ * @returns JSON response: `{ rate, updatedAt }` on success (`rate` is null if
+ * the code isn't in the table, `updatedAt` is the provider's last-update time),
+ * or `{ error }` with 400 for an invalid query
  */
 export async function onRequestGet({ env, request }: { env: Env; request: Request }): Promise<Response> {
   const to = new URL(request.url).searchParams.get('to') ?? ''
@@ -27,19 +29,14 @@ export async function onRequestGet({ env, request }: { env: Env; request: Reques
   if (!parsed.success) return json({ error: 'That currency code isn’t one we recognise.' }, 400)
 
   if (await isRateLimited(env, request, 'currency', CURRENCY_PER_HOUR)) {
-    return json({ rate: null }, 200)
+    return json({ rate: null, updatedAt: null }, 200)
   }
 
   try {
-    const res = await fetch(`https://api.frankfurter.dev/v1/latest?from=USD&to=${parsed.data}`)
-    if (!res.ok) {
-      logger.warn('frankfurter non-ok response', { status: res.status })
-      return json({ rate: null }, 200)
-    }
-    const body = (await res.json()) as { rates?: Record<string, number> }
-    return json({ rate: body.rates?.[parsed.data] ?? null }, 200)
+    const table = await getUsdRates(env)
+    return json({ rate: table?.rates[parsed.data] ?? null, updatedAt: table?.updatedAt ?? null }, 200)
   } catch (err) {
     logger.error('currency rate lookup failed', err)
-    return json({ rate: null }, 200)
+    return json({ rate: null, updatedAt: null }, 200)
   }
 }
