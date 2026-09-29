@@ -72,9 +72,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   )
 })
 
-/** Same look as {@link Button}, but a real link so it can be opened in a new tab. */
+/**
+ * Same look as {@link Button}, but a real link so it can be opened in a new tab.
+ * `state` is passed to the router (kept out of the URL).
+ */
 export function ButtonLink({
   to,
+  state,
   variant = 'primary',
   size = 'md',
   block = false,
@@ -82,6 +86,7 @@ export function ButtonLink({
   children,
 }: {
   to: string
+  state?: unknown
   variant?: ButtonVariant
   size?: ButtonSize
   block?: boolean
@@ -89,7 +94,7 @@ export function ButtonLink({
   children: ReactNode
 }) {
   return (
-    <Link to={to} className={`${BASE} ${VARIANTS[variant]} ${SIZES[size]} ${block ? 'w-full' : ''} ${className}`}>
+    <Link to={to} state={state} className={`${BASE} ${VARIANTS[variant]} ${SIZES[size]} ${block ? 'w-full' : ''} ${className}`}>
       {children}
     </Link>
   )

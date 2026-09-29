@@ -16,6 +16,8 @@
  * current cost, and the login route upgrades them transparently.
  */
 
+import { randomToken } from './tokens'
+
 /**
  * Current work factor, chosen against the Workers CPU budget rather than from
  * the guideline number.
@@ -120,6 +122,21 @@ export async function hashPassword(password: string, pepperSecret?: string): Pro
   const digest = await derive(input, salt, PBKDF2_ITERATIONS)
   const prefix = pepperSecret ? PREFIX_PEPPERED : PREFIX
   return `${prefix}$${PBKDF2_ITERATIONS}$${toBase64(salt)}$${toBase64(digest)}`
+}
+
+/** Random bytes in the discarded secret behind an unusable password hash. */
+const UNUSABLE_SECRET_BYTES = 32
+
+/**
+ * A password hash nobody can match: a normal hash of a random 32-byte secret
+ * that is thrown away. Used for accounts whose owner proved the address by
+ * email (a code, or a confirmation link opened without the account's own
+ * session) so a password someone else chose cannot survive. The owner sets a
+ * real password later through reset.
+ * @param pepperSecret - The server pepper, when configured
+ */
+export function unusablePasswordHash(pepperSecret?: string): Promise<string> {
+  return hashPassword(randomToken(UNUSABLE_SECRET_BYTES), pepperSecret)
 }
 
 /**

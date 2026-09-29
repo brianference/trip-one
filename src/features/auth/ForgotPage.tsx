@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Field, FormError } from '../../components/ui/Field'
 import { Seo } from '../../components/Seo'
@@ -14,10 +14,21 @@ const SENT_COPY =
   "If an account exists for that address, we've sent a link to reset the password. Check your inbox, and your spam folder."
 
 /**
- * Forgot-password page. Email only.
+ * The email another page handed over in router state (the confirm page does,
+ * after a confirmation reset the password), or ''.
+ * @param state - `location.state`, untrusted shape
+ */
+function prefilledEmail(state: unknown): string {
+  if (state && typeof state === 'object' && 'email' in state && typeof state.email === 'string') return state.email
+  return ''
+}
+
+/**
+ * Forgot-password page. Email only, pre-filled when the previous page passed one.
  */
 export function ForgotPage() {
-  const [email, setEmail] = useState('')
+  const location = useLocation()
+  const [email, setEmail] = useState(() => prefilledEmail(location.state))
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
   const [submitting, setSubmitting] = useState(false)

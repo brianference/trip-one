@@ -9,6 +9,7 @@ import type { RecapPayload } from './types'
 import { DEFAULT_DAY } from './buildRecap'
 import { RecapView } from './RecapView'
 import { ShareRecap } from './ShareRecap'
+import { InvitePeople } from './InvitePeople'
 import { TripSkeleton } from '../trip/components/TripSkeleton'
 
 /**
@@ -95,7 +96,14 @@ export function TripRecapPage() {
         payload={payload}
         photoUrl={(photoId) => tripPhotoUrl(trip.id, photoId)}
         variant="owner"
-        headerAction={DEMO_TRIP_ID_SET.has(trip.id) ? undefined : <ShareRecap tripId={trip.id} tripName={displayName} />}
+        headerAction={
+          DEMO_TRIP_ID_SET.has(trip.id) ? undefined : (
+            <div className="chronicle-recap-owner-actions">
+              <ShareRecap tripId={trip.id} tripName={displayName} />
+              <InvitePeople tripId={trip.id} />
+            </div>
+          )
+        }
       />
     </>
   )

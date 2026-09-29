@@ -88,6 +88,12 @@
    * its foreground must not change with the page behind it.
    *
    * Orange is now reserved for the logo mark and nothing else.
+   *
+   * UPDATE 2026-09-29: the trip owner approved dusk-orange for one more
+   * purpose — the stop popup's "Add photos" pill and photo actions (see
+   * --accent-photo below). It stays off every other control; this is the
+   * one supersession of the "logo only" rule above, not a re-opening of
+   * orange as a general accent.
    */
   --color-primary: var(--color-pine-600);
   --color-primary-hover: var(--color-pine-500);
@@ -166,6 +172,25 @@
        axe-core (Task 13b fix round 1), not hand-computed. */
     --accent-danger-text: var(--color-danger-600);
     --accent-danger-soft: var(--color-danger-50);
+
+    /* Photo actions only (the stop popup's "Add photos" pill and its hover
+       state) — approved 2026-09-29, see the supersession note on
+       --color-primary above. White on dusk-700 (the resting state) passed
+       axe-core clean (zero color-contrast violations). dusk-600 was tried
+       for the hover state first, per the task brief, but axe-core measured
+       white-on-dusk-600 at 4.39:1 — below the 4.5:1 AA minimum — so hover
+       instead darkens dusk-700 itself, which raises contrast instead of
+       lowering it; re-verified clean via axe-core afterward. */
+    --accent-photo: var(--color-dusk-700);
+    --accent-photo-hover: color-mix(in oklab, var(--color-dusk-700) 85%, black);
+    --on-accent-photo: #ffffff;
+
+    /* The public recap's "Were you on this trip?" banner: a dusk-tinted card
+       whose text and icon are darkened dusk. Values from the approved design
+       (docs/design/photo-controls-option-a.html, .theme-light). */
+    --photo-tint-bg: #fbe6d3;
+    --photo-tint-text: #7a3811;
+    --photo-tint-icon: var(--color-dusk-700);
   }
 
   /* Dark applies ONLY when the visitor asks for it via the toggle
@@ -185,6 +210,16 @@
       --color-on-primary-soft: var(--color-sand-100);
       --accent-danger-text: color-mix(in oklab, var(--color-danger-500) 62%, white);
       --accent-danger-soft: color-mix(in oklab, var(--color-danger-500) 22%, var(--color-ink-800));
+
+      /* Same values as light — the pill paints its own background, so its
+         contrast doesn't depend on the page behind it. Re-checked with
+         axe-core against the dark surface, not assumed. */
+      --accent-photo: var(--color-dusk-700);
+      --accent-photo-hover: color-mix(in oklab, var(--color-dusk-700) 85%, black);
+      --on-accent-photo: #ffffff;
+      --photo-tint-bg: #3a2415;
+      --photo-tint-text: #f3c9a4;
+      --photo-tint-icon: #f0a877;
     }
   }
 
@@ -201,6 +236,16 @@
     --color-on-primary-soft: var(--color-sand-100);
     --accent-danger-text: color-mix(in oklab, var(--color-danger-500) 62%, white);
     --accent-danger-soft: color-mix(in oklab, var(--color-danger-500) 22%, var(--color-ink-800));
+
+    /* Same values as light — see the media-query block above. */
+    --accent-photo: var(--color-dusk-700);
+    --accent-photo-hover: color-mix(in oklab, var(--color-dusk-700) 85%, black);
+    --on-accent-photo: #ffffff;
+
+    /* The recap banner's tint, dark values from the design's .theme-dark. */
+    --photo-tint-bg: #3a2415;
+    --photo-tint-text: #f3c9a4;
+    --photo-tint-icon: #f0a877;
   }
 
   html {

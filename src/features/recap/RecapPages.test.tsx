@@ -5,6 +5,7 @@ import type { RecapStop } from './buildRecap'
 import type { RecapPayload } from './types'
 import { useTripStore } from '../../store/tripStore'
 import { DEMO_TRIP_IDS } from '../../lib/api/demoIds'
+import { AuthProvider } from '../auth/AuthContext'
 
 /** The route the (stubbed) map last received. */
 let mapRoute: RecapStop[] = []
@@ -42,10 +43,11 @@ const publicPayload: RecapPayload = {
   photos: [{ id: 'p1', stopId: STOP_B, width: 1600, height: 1200, createdAt: '2026-09-02T10:00:00Z' }],
 }
 
-/** Stubs fetch with one JSON response per URL suffix. */
+/** Stubs fetch with one JSON response per URL suffix; the session check answers "signed out" unless overridden. */
 function stubFetch(routes: Record<string, { status: number; body: unknown }>) {
+  const withSession = { '/api/auth/me': { status: 200, body: { user: null } }, ...routes }
   const fetchMock = vi.fn().mockImplementation(async (url: string) => {
-    const match = Object.entries(routes).find(([suffix]) => url.endsWith(suffix))
+    const match = Object.entries(withSession).find(([suffix]) => url.endsWith(suffix))
     if (!match) throw new Error(`unexpected fetch ${url}`)
     const [, { status, body }] = match
     return { ok: status >= 200 && status < 300, status, json: async () => body }
@@ -58,9 +60,11 @@ function stubFetch(routes: Record<string, { status: number; body: unknown }>) {
 function renderPublic(token = TOKEN) {
   return render(
     <MemoryRouter initialEntries={[`/recap/${token}`]}>
-      <Routes>
-        <Route path="/recap/:token" element={<RecapPublicPage />} />
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path="/recap/:token" element={<RecapPublicPage />} />
+        </Routes>
+      </AuthProvider>
     </MemoryRouter>,
   )
 }
@@ -93,6 +97,9 @@ describe('RecapPublicPage', () => {
     // The public view has no Share button and no owner-only hint.
     expect(screen.queryByRole('button', { name: 'Share recap' })).toBeNull()
     expect(screen.getByRole('link', { name: 'Plan your next trip with us' })).toHaveAttribute('href', '/')
+    // The "Were you on this trip?" banner sits directly under the header.
+    const banner = screen.getByRole('region', { name: 'Were you on this trip?' })
+    expect(banner.previousElementSibling?.tagName).toBe('HEADER')
   })
 
   it('shows the inactive-link message on 404, still with the next-trip link', async () => {
@@ -143,6 +150,7 @@ describe('TripRecapPage', () => {
         status: 200,
         body: { photos: [{ id: 'p1', stopId: STOP_A, width: 1600, height: 1200, createdAt: '2026-09-01T10:00:00Z' }] },
       },
+      [`/api/trips/${TRIP_ID}/invites`]: { status: 200, body: { invites: [] } },
     })
     renderOwner(TRIP_ID)
     expect(await screen.findByRole('heading', { level: 1, name: 'Oslo, Norway trip' })).toBeInTheDocument()
@@ -155,6 +163,11 @@ describe('TripRecapPage', () => {
     expect(images).toHaveLength(2)
     for (const img of images) expect(img).toHaveAttribute('src', `/api/trips/${TRIP_ID}/photos/p1`)
     expect(screen.getByRole('button', { name: 'Share recap' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Invite people to add photos' })).toBeInTheDocument()
+    // The owner never sees the join banner or its sheet.
+    expect(screen.queryByRole('heading', { name: 'Were you on this trip?' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Add photos' })).toBeNull()
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   it('shows no Share button on a demo trip (the server refuses demo recap links)', async () => {
@@ -163,5 +176,6 @@ describe('TripRecapPage', () => {
     expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Share recap' })).toBeNull()
     expect(screen.getByText('No photos yet. Add photos to your stops on the Plan page.')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Invite people to add photos' })).toBeNull()
   })
 })

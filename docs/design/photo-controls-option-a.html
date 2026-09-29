@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Option A — Photo strip first</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --dusk-500:#e0722c;
+    --dusk-600:#c25a1d;
+    --dusk-700:#9a4616;
+    --pine-600:#33564a;
+    --pine-500:#45705f;
+    --on-primary:#ffffff;
+    --danger:#c2401f;
+    --radius-card:16px;
+    --radius-pill:999px;
+    --shadow-card:0 1px 2px rgb(20 18 15 / .04), 0 8px 24px -12px rgb(20 18 15 / .18);
+    --font-head:'Sora',system-ui,sans-serif;
+    --font-body:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --font-mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  }
+  .theme-light{
+    --page:#fdfbf7; --surface:#ffffff; --surface-alt:#f7f2e9; --surface-alt2:#ece4d6;
+    --hairline:#dcd0bc; --text:#221f1a; --text-2:#4a4438; --text-3:#6b6355;
+    --frame-bezel:#221f1a; --scrim: rgb(20 18 15 / .48);
+    --pine-text:#33564a; --danger-text:#c2401f;
+    --dusk-tint-bg:#fbe6d3; --dusk-tint-text:#7a3811; --dusk-tint-icon:#9a4616;
+    --chip-bg:#f7f2e9; --chip-border:#dcd0bc;
+  }
+  .theme-dark{
+    --page:#14120f; --surface:#221f1a; --surface-alt:#2b2721; --surface-alt2:#332e27;
+    --hairline:#4a4438; --text:#f7f2e9; --text-2:#d9d0bd; --text-3:#b3a996;
+    --frame-bezel:#000000; --scrim: rgb(0 0 0 / .6);
+    --pine-text:#93b7a6; --danger-text:#e28a6c;
+    --dusk-tint-bg:#3a2415; --dusk-tint-text:#f3c9a4; --dusk-tint-icon:#f0a877;
+    --chip-bg:#2b2721; --chip-border:#4a4438;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:#f0e9db;
+    font-family:var(--font-body);
+    color:#221f1a;
+    padding:32px 40px 96px;
+  }
+  h1.page-title{font-family:var(--font-head);font-weight:800;font-size:32px;margin:0 0 10px;color:#14120f;}
+  p.rationale{max-width:920px;font-size:15px;line-height:1.6;color:#4a4438;margin:0 0 40px;}
+  section.row{margin-bottom:56px;}
+  h2.row-label{
+    font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.04em;
+    font-size:12px;font-weight:700;color:#6b6355;margin:0 0 14px;
+    border-bottom:1px solid #dcd0bc;padding-bottom:8px;
+  }
+  .pair{display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap;}
+  .frame-block{display:flex;flex-direction:column;gap:10px;align-items:flex-start;}
+  .frame-tag{
+    font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+    color:#6b6355;font-weight:700;
+  }
+
+  /* ---- phone device ---- */
+  .device{
+    width:390px;border-radius:46px;padding:10px;
+    background:var(--frame-bezel);box-shadow:var(--shadow-card);
+  }
+  .device-screen{
+    position:relative;width:100%;height:800px;border-radius:36px;overflow:hidden;
+    background:var(--page);
+  }
+  .status-bar{
+    position:relative;z-index:3;height:40px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 24px;font:700 13px var(--font-body);color:var(--text);
+  }
+  .status-bar .battery{display:flex;align-items:center;gap:4px;}
+  .app-bg{
+    position:absolute;inset:0;
+    background:
+      radial-gradient(circle at 20% 30%, rgb(194 90 29 / .10), transparent 40%),
+      radial-gradient(circle at 75% 20%, rgb(51 86 74 / .14), transparent 42%),
+      linear-gradient(180deg, var(--surface-alt) 0%, var(--surface-alt2) 100%);
+  }
+  .app-bg .pin{position:absolute;width:14px;height:14px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 4px rgb(20 18 15/.3);}
+  .scrim{position:absolute;inset:0;background:var(--scrim);z-index:1;}
+
+  /* ---- bottom sheet ---- */
+  .sheet{
+    position:absolute;left:0;right:0;bottom:0;z-index:2;
+    background:var(--surface);border-radius:20px 20px 0 0;
+    box-shadow:0 -8px 28px -10px rgb(20 18 15/.35);
+    padding:18px 18px 22px;max-height:78%;overflow-y:auto;
+  }
+  .sheet-grab{width:36px;height:4px;border-radius:2px;background:var(--hairline);margin:0 auto 14px;}
+  .sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+  .sheet-title{font-family:var(--font-head);font-weight:800;font-size:21px;color:var(--text);margin:0;line-height:1.2;}
+  .close-btn{
+    width:32px;height:32px;min-width:32px;border-radius:50%;border:none;background:var(--surface-alt);
+    color:var(--text-2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;
+  }
+  .chip-row{margin-top:8px;}
+  .chip{
+    display:inline-flex;align-items:center;gap:6px;padding:5px 12px 5px 8px;border-radius:999px;
+    background:var(--chip-bg);border:1px solid var(--chip-border);font-size:12px;font-weight:600;color:var(--text-2);
+  }
+  .chip .dot{width:9px;height:9px;border-radius:50%;background:#3b78c9;}
+
+  .btn-add-photos{
+    width:100%;min-height:48px;margin-top:16px;margin-bottom:14px;
+    background:var(--dusk-700);color:#fff;border:none;border-radius:999px;
+    font:700 15px var(--font-body);display:flex;align-items:center;justify-content:center;gap:9px;
+    cursor:pointer;
+  }
+  .btn-add-photos.focus-demo{outline:2px solid var(--dusk-600);outline-offset:3px;}
+
+  .photo-strip{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;margin-bottom:4px;}
+  .photo-tile-wrap{flex:0 0 108px;}
+  .photo-tile{
+    width:108px;height:108px;border-radius:12px;border:1px solid var(--hairline);
+    background:
+      repeating-linear-gradient(135deg,var(--surface-alt2) 0 10px, var(--surface-alt) 10px 20px);
+    display:flex;align-items:center;justify-content:center;color:var(--text-3);
+  }
+  .photo-caption{font:11px var(--font-mono);color:var(--text-3);line-height:1.35;margin-top:6px;}
+
+  .empty-box{
+    border:1.5px dashed var(--hairline);border-radius:12px;padding:26px 16px;
+    text-align:center;color:var(--text-3);margin-bottom:4px;
+  }
+  .empty-box svg{margin-bottom:8px;}
+  .empty-box p{margin:0;font-size:13px;font-weight:600;color:var(--text-2);}
+
+  .action-row{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+    margin-top:14px;padding-top:14px;border-top:1px solid var(--hairline);
+  }
+  .action-left{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  .on-day{display:flex;align-items:center;gap:5px;font:700 12px var(--font-mono);color:var(--pine-text);text-transform:uppercase;letter-spacing:.03em;}
+  .remove-link{font:700 12px var(--font-mono);color:var(--danger-text);text-transform:uppercase;letter-spacing:.03em;background:none;border:none;cursor:pointer;padding:0;}
+  .btn-outline{
+    display:flex;align-items:center;gap:7px;min-height:40px;padding:0 16px;border-radius:999px;
+    border:1.5px solid var(--text-2);color:var(--text);background:transparent;font:700 13px var(--font-body);cursor:pointer;
+  }
+
+  .details-block{margin-top:14px;display:flex;flex-direction:column;gap:8px;}
+  .details-line{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2);}
+  .details-line svg{flex-shrink:0;color:var(--text-3);}
+  .skeleton-label{font-style:italic;color:var(--text-3);}
+  .skeleton-bar{display:inline-block;height:10px;width:120px;border-radius:5px;background:var(--surface-alt2);}
+
+  /* ---- header toolbar ---- */
+  .toolbar-card-1280{
+    width:1280px;max-width:100%;background:var(--surface);border:1px solid var(--hairline);
+    border-radius:20px;box-shadow:var(--shadow-card);padding:28px 32px;
+  }
+  .toolbar-h1{font-family:var(--font-head);font-weight:800;font-style:italic;font-size:34px;margin:0 0 20px;color:var(--text);}
+  .toolbar-row-1280{display:flex;align-items:center;gap:26px;flex-wrap:wrap;}
+  .field-group{display:flex;flex-direction:column;gap:6px;}
+  .field-label{font:700 11px var(--font-mono);text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);}
+  .field-box{
+    display:flex;align-items:center;gap:8px;height:44px;padding:0 14px;border-radius:12px;
+    border:1px solid var(--hairline);background:var(--surface-alt);color:var(--text);font:600 14px var(--font-body);
+  }
+  .field-pill{
+    display:flex;align-items:center;gap:8px;height:44px;padding:0 16px;border-radius:999px;
+    border:1px solid var(--hairline);background:var(--surface-alt);color:var(--text);font:600 14px var(--font-body);
+  }
+  .split-group{display:inline-flex;height:44px;border-radius:999px;border:1px solid var(--hairline);overflow:hidden;}
+  .split-seg{display:flex;align-items:center;gap:8px;padding:0 18px;font:700 13px var(--font-body);}
+  .split-seg.left{background:var(--surface-alt);color:var(--text);border-right:1px solid var(--hairline);}
+  .split-seg.right{background:var(--dusk-700);color:#fff;}
+  .helper-text{font-size:12px;color:var(--text-3);}
+  .recap-link{margin-left:auto;font:700 13px var(--font-body);color:var(--pine-text);text-decoration:underline;}
+
+  /* mobile toolbar (inside phone) */
+  .toolbar-mobile{padding:20px 18px;}
+  .toolbar-mobile .toolbar-h1{font-size:26px;margin-bottom:18px;}
+  .mobile-field-row{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+  .mobile-field-row .field-group{flex:1 1 120px;}
+  .split-group.full{display:flex;width:100%;margin-bottom:10px;}
+  .split-group.full .split-seg{flex:1;justify-content:center;}
+  .toolbar-mobile .helper-text{margin-bottom:14px;display:block;}
+  .toolbar-mobile .recap-link{margin-left:0;display:inline-block;}
+
+  /* ---- recap page ---- */
+  .recap-scroll{padding:22px 18px;height:800px;overflow-y:auto;}
+  .recap-eyebrow{font:700 11px var(--font-mono);text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin:0 0 6px;}
+  .recap-title{font-family:var(--font-head);font-weight:800;font-size:24px;color:var(--text);margin:0 0 18px;}
+  .recap-banner{
+    background:var(--dusk-tint-bg);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px;margin-bottom:22px;
+  }
+  .recap-banner-top{display:flex;align-items:center;gap:10px;}
+  .recap-banner-icon{
+    width:36px;height:36px;border-radius:50%;background:rgb(255 255 255 / .35);
+    display:flex;align-items:center;justify-content:center;color:var(--dusk-tint-icon);flex-shrink:0;
+  }
+  .recap-banner h3{margin:0;font-family:var(--font-head);font-size:16px;color:var(--dusk-tint-text);}
+  .recap-banner p{margin:0;font-size:13px;color:var(--dusk-tint-text);line-height:1.4;}
+  .btn-dusk-solid{
+    align-self:flex-start;min-height:44px;padding:0 20px;border-radius:999px;border:none;
+    background:var(--dusk-700);color:#fff;font:700 14px var(--font-body);display:flex;align-items:center;gap:8px;cursor:pointer;
+  }
+  .recap-day-card{
+    border:1px solid var(--hairline);border-radius:14px;padding:14px 16px;margin-bottom:12px;background:var(--surface);
+  }
+  .recap-day-card h4{margin:0 0 6px;font-family:var(--font-head);font-size:15px;color:var(--text);}
+  .recap-day-card p{margin:0;font-size:13px;color:var(--text-2);}
+
+  /* ---- stepper sheets ---- */
+  .step-dots{display:flex;gap:6px;justify-content:center;margin-bottom:14px;}
+  .step-dot{width:7px;height:7px;border-radius:50%;background:var(--hairline);}
+  .step-dot.active{background:var(--dusk-700);width:20px;border-radius:4px;}
+  .step-dot.done{background:var(--pine-text);}
+  .invite-note{
+    display:flex;gap:8px;align-items:flex-start;background:var(--surface-alt);border-radius:10px;
+    padding:10px 12px;margin-bottom:16px;font-size:12px;color:var(--text-2);line-height:1.4;
+  }
+  .invite-note svg{flex-shrink:0;margin-top:1px;color:var(--text-3);}
+  .step-title{font-family:var(--font-head);font-weight:800;font-size:20px;color:var(--text);margin:0 0 6px;text-align:center;}
+  .step-sub{font-size:13px;color:var(--text-3);text-align:center;margin:0 0 20px;}
+  .form-field{margin-bottom:14px;}
+  .form-field label{display:block;font:700 11px var(--font-mono);text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);margin-bottom:6px;}
+  .input-box{
+    display:flex;align-items:center;gap:8px;height:48px;padding:0 14px;border-radius:12px;
+    border:1.5px solid var(--hairline);background:var(--surface-alt);color:var(--text);font-size:14px;
+  }
+  .input-box svg{color:var(--text-3);flex-shrink:0;}
+  .input-box .ph{color:var(--text-3);}
+  .btn-primary-pine{
+    width:100%;min-height:48px;border:none;border-radius:999px;background:var(--pine-600);color:#fff;
+    font:700 15px var(--font-body);margin-bottom:10px;cursor:pointer;
+  }
+  .btn-outline-pine{
+    width:100%;min-height:48px;border-radius:999px;background:transparent;color:var(--pine-text);
+    border:1.5px solid var(--pine-text);font:700 15px var(--font-body);margin-bottom:14px;cursor:pointer;
+  }
+  .step-link{display:block;text-align:center;font:700 13px var(--font-body);color:var(--pine-text);text-decoration:underline;background:none;border:none;cursor:pointer;width:100%;}
+  .code-row{display:flex;gap:8px;justify-content:center;margin:18px 0 16px;}
+  .code-box{
+    width:44px;height:54px;border-radius:10px;border:1.5px solid var(--hairline);background:var(--surface-alt);
+    display:flex;align-items:center;justify-content:center;font:800 20px var(--font-head);color:var(--text);
+  }
+  .code-box.filled{border-color:var(--pine-text);}
+  .code-box.cursor{border-color:var(--dusk-600);outline:2px solid var(--dusk-600);outline-offset:2px;}
+  .step3-check{
+    width:64px;height:64px;border-radius:50%;background:var(--surface-alt);color:var(--pine-text);
+    display:flex;align-items:center;justify-content:center;margin:0 auto 16px;border:1.5px solid var(--pine-text);
+  }
+  .step3-body{font-size:13px;color:var(--text-2);text-align:center;line-height:1.5;margin:0 0 22px;}
+</style>
+</head>
+<body>
+
+<h1 class="page-title">Option A — Photo strip first</h1>
+<p class="rationale">
+  This option puts the photo strip itself, not just the button, directly under the place name so the owner's core ask — "photos and the button at the top" — is answered with the content, not only the affordance. A single full-width dusk pill sits above the strip as the one unmistakable entry point, and it stays the only dusk element on the screen so it never competes with the pine primary actions below it. The same photo-strip logic repeats as a split toolbar segment on the plan header and a top banner on the recap page, so "add photos" reads as one consistent colored affordance across the whole product rather than three different patterns.
+</p>
+
+<section class="row">
+  <h2 class="row-label">1. Stop popup — photos populated (Disneyland Park)</h2>
+  <div class="pair">
+    <div class="frame-block">
+      <span class="frame-tag">Light</span>
+      <div class="device">
+        <div class="device-screen theme-light">
+          <div class="status-bar"><span>9:41</span><span class="battery">📶 🔋</span></div>
+          <div class="app-bg">
+            <div class="pin" style="background:#d3491f;top:120px;left:150px;"></div>
+            <div class="pin" style="background:#e0a520;top:80px;right:60px;"></div>
+          </div>
+          <div class="scrim"></div>
+          <div class="sheet">
+            <div class="sheet-grab"></div>
+            <div class="sheet-head">
+              <h3 class="sheet-title">Disneyland Park</h3>
+              <button class="close-btn" aria-label="Close">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div class="chip-row">
+              <span class="chip"><span class="dot"></span>Attraction</span>
+            </div>
+
+            <button class="btn-add-photos focus-demo">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+              Add photos
+            </button>
+
+            <div class="photo-strip">
+              <div class="photo-tile-wrap">
+                <div class="photo-tile">
+                  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 15-5-5L5 20"/></svg>
+                </div>
+                <p class="photo-caption">Photo 1 of 3 at Disneyland Park</p>
+              </div>
+              <div class="photo-tile-wrap">
+                <div class="photo-tile">
+                  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 15-5-5L5 20"/></svg>
+                </div>
+                <p class="photo-caption">Photo 2 of 3 at Disneyland Park</p>
+              </div>
+              <div class="photo-tile-wrap">
+                <div class="photo-tile">
+                  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 15-5-5L5 20"/></svg>
+                </div>
+                <p class="photo-caption">Photo 3 of 3 at Disneyland Park</p>
+              </div>
+            </div>
+
+            <div class="action-row">
+              <div class="action-left">
+                <span class="on-day">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  On Day 1
+                </span>
+                <button class="remove-link">Remove from trip</button>
+              </div>
+              <button class="btn-outline">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-7.5-7-12a7 7 0 0 1 14 0c0 4.5-7 12-7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                Get Directions
+              </button>
+            </div>
+
+            <div class="details-block">
+              <div class="details-line">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+                <span class="skeleton-label">Hours from Google Places</span>
+              </div>
+              <div class="details-line">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.9L5.7 21l1.7-7L2 9.2l7.1-.6L12 2Z"/></svg>
+                <span class="skeleton-label">Rating from Google Places</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="frame-block">
+      <span class="frame-tag">Dark</span>
+      <div class="device">
+        <div class="device-screen theme-dark">
+          <div class="status-bar"><span>9:41</span><span class="battery">📶 🔋</span></div>
+          <div class="app-bg">
+            <div class="pin" style="background:#d3491f;top:120px;left:150px;"></div>
+            <div class="pin" style="background:#e0a520;top:80px;right:60px;"></div>
+          </div>
+          <div class="scrim"></div>
+          <div class="sheet">
+            <div class="sheet-grab"></div>
+            <div class="sheet-head">
+              <h3 class="sheet-title">Disneyland Park</h3>
+              <button class="close-btn" aria-label="Close">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div class="chip-row">
+              <span class="chip"><span class="dot"></span>Attraction</span>
+            </div>
+
+            <button class="btn-add-photos">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+              Add photos
+            </button>
+
+            <div class="photo-strip">
+              <div class="photo-tile-wrap">
+                <div class="photo-tile">
+                  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 15-5-5L5 20"/></svg>
+                </div>
+                <p class="photo-caption">Photo 1 of 3 at Disneyland Park</p>
+              </div>
+              <div class="photo-tile-wrap">
+                <div class="photo-tile">
+                  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 15-5-5L5 20"/></svg>
+                </div>
+                <p class="photo-caption">Photo 2 of 3 at Disneyland Park</p>
+              </div>
+              <div class="photo-tile-wrap">
+                <div class="photo-tile">
+                  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 15-5-5L5 20"/></svg>
+                </div>
+                <p class="photo-caption">Photo 3 of 3 at Disneyland Park</p>
+              </div>
+            </div>
+
+            <div class="action-row">
+              <div class="action-left">
+                <span class="on-day">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  On Day 1
+                </span>
+                <button class="remove-link">Remove from trip</button>
+              </div>
+              <button class="btn-outline">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-7.5-7-12a7 7 0 0 1 14 0c0 4.5-7 12-7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                Get Directions
+              </button>
+            </div>
+
+            <div class="details-block">
+              <div class="details-line">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+                <span class="skeleton-label">Hours from Google Places</span>
+              </div>
+              <div class="details-line">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.9L5.7 21l1.7-7L2 9.2l7.1-.6L12 2Z"/></svg>
+                <span class="skeleton-label">Rating from Google Places</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="row">
+  <h2 class="row-label">2. Stop popup — empty state (no photos yet)</h2>
+  <div class="pair">
+    <div class="frame-block">
+      <span class="frame-tag">Light</span>
+      <div class="device">
+        <div class="device-screen theme-light">
+          <div class="status-bar"><span>9:41</span><span class="battery">📶 🔋</span></div>
+          <div class="app-bg">
+            <div class="pin" style="background:#3b78c9;top:100px;left:120px;"></div>
+          </div>
+          <div class="scrim"></div>
+          <div class="sheet">
+            <div class="sheet-grab"></div>
+            <div class="sheet-head">
+              <h3 class="sheet-title">Adventure City</h3>
+              <button class="close-btn" aria-label="Close">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div class="chip-row">
+              <span class="chip"><span class="dot" style="background:#3b78c9;"></span>Attraction</span>
+            </div>
+
+            <button class="btn-add-photos">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+              Add photos
+            </button>
+
+            <div class="empty-box">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 15-5-5L5 20"/></svg>
+              <p>No photos yet — add the first one</p>
+            </div>
+
+            <div class="action-row">
+              <div class="action-left">
+                <span class="on-day">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  On Day 2
+                </span>
+                <button class="remove-link">Remove from trip</button>
+              </div>
+              <button class="btn-outline">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-7.5-7-12a7 7 0 0 1 14 0c0 4.5-7 12-7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                Get Directions
+              </button>
+            </div>
+
+            <div class="details-block">
+              <div class="details-line">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+                <span class="skeleton-label">Hours from Google Places</span>
+              </div>
+              <div class="details-line">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.9L5.7 21l1.7-7L2 9.2l7.1-.6L12 2Z"/></svg>
+                <span class="skeleton-label">Rating from Google Places</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="frame-block">
+      <span class="frame-tag">Dark</span>
+      <div class="device">
+        <div class="device-screen theme-dark">
+          <div class="status-bar"><span>9:41</span><span class="battery">📶 🔋</span></div>
+          <div class="app-bg">
+            <div class="pin" style="background:#3b78c9;top:100px;left:120px;"></div>
+          </div>
+          <div class="scrim"></div>
+          <div class="sheet">
+            <div class="sheet-grab"></div>
+            <div class="sheet-head">
+              <h3 class="sheet-title">Adventure City</h3>
+              <button class="close-btn" aria-label="Close">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div class="chip-row">
+              <span class="chip"><span class="dot" style="background:#3b78c9;"></span>Attraction</span>
+            </div>
+
+            <button class="btn-add-photos">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+              Add photos
+            </button>
+
+            <div class="empty-box">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 15-5-5L5 20"/></svg>
+              <p>No photos yet — add the first one</p>
+            </div>
+
+            <div class="action-row">
+              <div class="action-left">
+                <span class="on-day">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  On Day 2
+                </span>
+                <button class="remove-link">Remove from trip</button>
+              </div>
+              <button class="btn-outline">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-7.5-7-12a7 7 0 0 1 14 0c0 4.5-7 12-7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                Get Directions
+              </button>
+            </div>
+
+            <div class="details-block">
+              <div class="details-line">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+                <span class="skeleton-label">Hours from Google Places</span>
+              </div>
+              <div class="details-line">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.9L5.7 21l1.7-7L2 9.2l7.1-.6L12 2Z"/></svg>
+                <span class="skeleton-label">Rating from Google Places</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="row">
+  <h2 class="row-label">3. "Your trip" header toolbar — split button group at 1280 (light, then dark, stacked)</h2>
+  <div style="display:flex;flex-direction:column;gap:28px;">
+    <div class="frame-block">
+      <span class="frame-tag">Light</span>
+      <div class="toolbar-card-1280 theme-light">
+        <h1 class="toolbar-h1">Your trip</h1>
+        <div class="toolbar-row-1280">
+          <div class="field-group">
+            <span class="field-label">Start date</span>
+            <div class="field-box">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+              mm/dd
+            </div>
+          </div>
+          <div class="field-group">
+            <span class="field-label">Trip length</span>
+            <div class="field-pill">
+              4 days
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+          </div>
+          <div class="split-group">
+            <span class="split-seg left">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><path d="M6 18H4a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2"/><path d="M6 14h12v7H6z"/></svg>
+              Print / PDF
+            </span>
+            <span class="split-seg right">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+              Add photos
+            </span>
+          </div>
+          <span class="helper-text">Set a start date to add to your calendar</span>
+          <a class="recap-link" href="#">View trip recap</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="frame-block">
+      <span class="frame-tag">Dark</span>
+      <div class="toolbar-card-1280 theme-dark">
+        <h1 class="toolbar-h1">Your trip</h1>
+        <div class="toolbar-row-1280">
+          <div class="field-group">
+            <span class="field-label">Start date</span>
+            <div class="field-box">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+              mm/dd
+            </div>
+          </div>
+          <div class="field-group">
+            <span class="field-label">Trip length</span>
+            <div class="field-pill">
+              4 days
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+          </div>
+          <div class="split-group">
+            <span class="split-seg left">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><path d="M6 18H4a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2"/><path d="M6 14h12v7H6z"/></svg>
+              Print / PDF
+            </span>
+            <span class="split-seg right">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+              Add photos
+            </span>
+          </div>
+          <span class="helper-text">Set a start date to add to your calendar</span>
+          <a class="recap-link" href="#">View trip recap</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="row">
+  <h2 class="row-label">4. Header toolbar wrapped at 390px (phone frame)</h2>
+  <div class="pair">
+    <div class="frame-block">
+      <span class="frame-tag">Light</span>
+      <div class="device">
+        <div class="device-screen theme-light">
+          <div class="status-bar"><span>9:41</span><span class="battery">📶 🔋</span></div>
+          <div class="toolbar-mobile">
+            <h1 class="toolbar-h1">Your trip</h1>
+            <div class="mobile-field-row">
+              <div class="field-group">
+                <span class="field-label">Start date</span>
+                <div class="field-box"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>mm/dd</div>
+              </div>
+              <div class="field-group">
+                <span class="field-label">Trip length</span>
+                <div class="field-pill">4 days<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div>
+              </div>
+            </div>
+            <div class="split-group full">
+              <span class="split-seg left">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><path d="M6 18H4a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2"/><path d="M6 14h12v7H6z"/></svg>
+                Print / PDF
+              </span>
+              <span class="split-seg right">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+                Add photos
+              </span>
+            </div>
+            <span class="helper-text">Set a start date to add to your calendar</span><br>
+            <a class="recap-link" href="#">View trip recap</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="frame-block">
+      <span class="frame-tag">Dark</span>
+      <div class="device">
+        <div class="device-screen theme-dark">
+          <div class="status-bar"><span>9:41</span><span class="battery">📶 🔋</span></div>
+          <div class="toolbar-mobile">
+            <h1 class="toolbar-h1">Your trip</h1>
+            <div class="mobile-field-row">
+              <div class="field-group">
+                <span class="field-label">Start date</span>
+                <div class="field-box"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>mm/dd</div>
+              </div>
+              <div class="field-group">
+                <span class="field-label">Trip length</span>
+                <div class="field-pill">4 days<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div>
+              </div>
+            </div>
+            <div class="split-group full">
+              <span class="split-seg left">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><path d="M6 18H4a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2"/><path d="M6 14h12v7H6z"/></svg>
+                Print / PDF
+              </span>
+              <span class="split-seg right">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+                Add photos
+              </span>
+            </div>
+            <span class="helper-text">Set a start date to add to your calendar</span><br>
+            <a class="recap-link" href="#">View trip recap</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="row">
+  <h2 class="row-label">5. Recap page — top banner CTA</h2>
+  <div class="pair">
+    <div class="frame-block">
+      <span class="frame-tag">Light</span>
+      <div class="device">
+        <div class="device-screen theme-light">
+          <div class="status-bar"><span>9:41</span><span class="battery">📶 🔋</span></div>
+          <div class="recap-scroll">
+            <p class="recap-eyebrow">Trip recap</p>
+            <h2 class="recap-title">Anaheim, California trip</h2>
+            <div class="recap-banner">
+              <div class="recap-banner-top">
+                <span class="recap-banner-icon">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+                </span>
+                <h3>Were you on this trip?</h3>
+              </div>
+              <p>Add your photos to this trip so everyone can see how it went.</p>
+              <button class="btn-dusk-solid">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+                Add photos
+              </button>
+            </div>
+            <div class="recap-day-card">
+              <h4>Day 1</h4>
+              <p>Disneyland Park · Anaheim Packing District · Knott's Berry Farm · Disney California Adventure Park</p>
+            </div>
+            <div class="recap-day-card">
+              <h4>Day 2</h4>
+              <p>Adventure City</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="frame-block">
+      <span class="frame-tag">Dark</span>
+      <div class="device">
+        <div class="device-screen theme-dark">
+          <div class="status-bar"><span>9:41</span><span class="battery">📶 🔋</span></div>
+          <div class="recap-scroll">
+            <p class="recap-eyebrow">Trip recap</p>
+            <h2 class="recap-title">Anaheim, California trip</h2>
+            <div class="recap-banner">
+              <div class="recap-banner-top">
+                <span class="recap-banner-icon">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+                </span>
+                <h3>Were you on this trip?</h3>
+              </div>
+              <p>Add your photos to this trip so everyone can see how it went.</p>
+              <button class="btn-dusk-solid">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+                Add photos
+              </button>
+            </div>
+            <div class="recap-day-card">
+              <h4>Day 1</h4>
+              <p>Disneyland Park · Anaheim Packing District · Knott's Berry Farm · Disney California Adventure Park</p>
+            </div>
+            <div class="recap-day-card">
+              <h4>Day 2</h4>
+              <p>Adventure City</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="row">
+  <h2 class="row-label">6. Verify gate — Step 1 of 3: Sign in or create an account</h2>
+  <div class="pair">
+    <div class="frame-block">
+      <span class="frame-tag">Light</span>
+      <div class="device">
+        <div class="device-screen theme-light">
+          <div class="status-bar"><span>9:41</span><span class="battery">📶 🔋</span></div>
+          <div class="app-bg"></div>
+          <div class="scrim"></div>
+          <div class="sheet" style="max-height:88%;">
+            <div class="sheet-grab"></div>
+            <div class="step-dots">
+              <span class="step-dot active"></span><span class="step-dot"></span><span class="step-dot"></span>
+            </div>
+            <div class="invite-note">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>
+              The owner of the Anaheim, California trip invited this email to add photos.
+            </div>
+            <h3 class="step-title">Sign in or create an account</h3>
+            <p class="step-sub">Verify it's you before adding photos to this trip.</p>
+            <div class="form-field">
+              <label>Email</label>
+              <div class="input-box">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>
+                <span class="ph">you@example.com</span>
+              </div>
+            </div>
+            <button class="btn-primary-pine">Continue</button>
+            <button class="btn-outline-pine">Create an account</button>
+            <button class="step-link">Sign in with a password instead</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="frame-block">
+      <span class="frame-tag">Dark</span>
+      <div class="device">
+        <div class="device-screen theme-dark">
+          <div class="status-bar"><span>9:41</span><span class="battery">📶 🔋</span></div>
+          <div class="app-bg"></div>
+          <div class="scrim"></div>
+          <div class="sheet" style="max-height:88%;">
+            <div class="sheet-grab"></div>
+            <div class="step-dots">
+              <span class="step-dot active"></span><span class="step-dot"></span><span class="step-dot"></span>
+            </div>
+            <div class="invite-note">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>
+              The owner of the Anaheim, California trip invited this email to add photos.
+            </div>
+            <h3 class="step-title">Sign in or create an account</h3>
+            <p class="step-sub">Verify it's you before adding photos to this trip.</p>
+            <div class="form-field">
+              <label>Email</label>
+              <div class="input-box">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>
+                <span class="ph">you@example.com</span>
+              </div>
+            </div>
+            <button class="btn-primary-pine">Continue</button>
+            <button class="btn-outline-pine">Create an account</button>
+            <button class="step-link">Sign in with a password instead</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="row">
+  <h2 class="row-label">7. Verify gate — Step 2 of 3: Check your email</h2>
+  <div class="pair">
+    <div class="frame-block">
+      <span class="frame-tag">Light</span>
+      <div class="device">
+        <div class="device-screen theme-light">
+          <div class="status-bar"><span>9:41</span><span class="battery">📶 🔋</span></div>
+          <div class="app-bg"></div>
+          <div class="scrim"></div>
+          <div class="sheet" style="max-height:88%;">
+            <div class="sheet-grab"></div>
+            <div class="step-dots">
+              <span class="step-dot done"></span><span class="step-dot active"></span><span class="step-dot"></span>
+            </div>
+            <h3 class="step-title">Check your email</h3>
+            <p class="step-sub">We sent a code to b•••@example.com</p>
+            <div class="code-row">
+              <span class="code-box filled">4</span>
+              <span class="code-box filled">8</span>
+              <span class="code-box filled">2</span>
+              <span class="code-box cursor"></span>
+              <span class="code-box"></span>
+              <span class="code-box"></span>
+            </div>
+            <button class="btn-primary-pine">Verify code</button>
+            <button class="step-link">Didn't get it? Resend code</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="frame-block">
+      <span class="frame-tag">Dark</span>
+      <div class="device">
+        <div class="device-screen theme-dark">
+          <div class="status-bar"><span>9:41</span><span class="battery">📶 🔋</span></div>
+          <div class="app-bg"></div>
+          <div class="scrim"></div>
+          <div class="sheet" style="max-height:88%;">
+            <div class="sheet-grab"></div>
+            <div class="step-dots">
+              <span class="step-dot done"></span><span class="step-dot active"></span><span class="step-dot"></span>
+            </div>
+            <h3 class="step-title">Check your email</h3>
+            <p class="step-sub">We sent a code to b•••@example.com</p>
+            <div class="code-row">
+              <span class="code-box filled">4</span>
+              <span class="code-box filled">8</span>
+              <span class="code-box filled">2</span>
+              <span class="code-box cursor"></span>
+              <span class="code-box"></span>
+              <span class="code-box"></span>
+            </div>
+            <button class="btn-primary-pine">Verify code</button>
+            <button class="step-link">Didn't get it? Resend code</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="row">
+  <h2 class="row-label">8. Verify gate — Step 3 of 3: You're on this trip</h2>
+  <div class="pair">
+    <div class="frame-block">
+      <span class="frame-tag">Light</span>
+      <div class="device">
+        <div class="device-screen theme-light">
+          <div class="status-bar"><span>9:41</span><span class="battery">📶 🔋</span></div>
+          <div class="app-bg"></div>
+          <div class="scrim"></div>
+          <div class="sheet" style="max-height:88%;">
+            <div class="sheet-grab"></div>
+            <div class="step-dots">
+              <span class="step-dot done"></span><span class="step-dot done"></span><span class="step-dot active"></span>
+            </div>
+            <div class="step3-check">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            </div>
+            <h3 class="step-title">You're on this trip</h3>
+            <p class="step3-body">b•••@example.com is confirmed on the Anaheim, California trip. The owner added this email, so you can add your own photos now.</p>
+            <button class="btn-dusk-solid" style="width:100%;justify-content:center;">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+              Go to the trip and add photos
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="frame-block">
+      <span class="frame-tag">Dark</span>
+      <div class="device">
+        <div class="device-screen theme-dark">
+          <div class="status-bar"><span>9:41</span><span class="battery">📶 🔋</span></div>
+          <div class="app-bg"></div>
+          <div class="scrim"></div>
+          <div class="sheet" style="max-height:88%;">
+            <div class="sheet-grab"></div>
+            <div class="step-dots">
+              <span class="step-dot done"></span><span class="step-dot done"></span><span class="step-dot active"></span>
+            </div>
+            <div class="step3-check">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            </div>
+            <h3 class="step-title">You're on this trip</h3>
+            <p class="step3-body">b•••@example.com is confirmed on the Anaheim, California trip. The owner added this email, so you can add your own photos now.</p>
+            <button class="btn-dusk-solid" style="width:100%;justify-content:center;">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+              Go to the trip and add photos
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

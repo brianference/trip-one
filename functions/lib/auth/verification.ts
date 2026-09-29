@@ -13,13 +13,17 @@ import {
   insertEmailVerification,
   markEmailVerified,
   markEmailVerificationUsed,
+  secureUnverifiedUser,
   type Env,
 } from '../db'
 import { confirmEmailHtml, sendEmail, siteOrigin, type MailEnv, type SendResult } from '../email'
 import { randomToken, sha256hex, VERIFY_TTL_MS } from './tokens'
+import { unusablePasswordHash } from './password'
 import { logger } from '../../../src/lib/logger'
 
-export type ConfirmResult = { ok: true; email: string } | { ok: false; reason: 'invalid' }
+export type ConfirmResult =
+  | { ok: true; email: string; passwordReset: boolean }
+  | { ok: false; reason: 'invalid' }
 
 /**
  * Create a confirmation token and email it. Returns the send result so the
@@ -73,10 +77,23 @@ export async function trySendConfirmationEmail(env: Env & MailEnv, userId: strin
  * Invalid, expired, and already-used tokens share one answer so the endpoint
  * is not an oracle for "this token existed".
  *
- * @param env - D1 env
+ * Clicking the link proves control of the inbox, not that the clicker chose
+ * the account's password: anyone can register someone else's address and
+ * re-send the link. So unless the request carries the account's OWN session
+ * (the person who registered is the one confirming), an unverified account is
+ * secured the same way as a code sign-in: unusable password, every session
+ * revoked, verified, in one statement. The owner then sets a password through
+ * reset. `passwordReset` reports which path ran.
+ *
+ * @param env - D1 env, plus the optional password pepper
  * @param token - The plaintext token from the link
+ * @param sessionUserId - The signed-in user on this request, or null
  */
-export async function confirmEmail(env: Env, token: string): Promise<ConfirmResult> {
+export async function confirmEmail(
+  env: Env & { PASSWORD_PEPPER?: string },
+  token: string,
+  sessionUserId: string | null,
+): Promise<ConfirmResult> {
   const hash = await sha256hex(token)
   const now = Date.now()
   const row = await getEmailVerification(env, hash)
@@ -84,8 +101,15 @@ export async function confirmEmail(env: Env, token: string): Promise<ConfirmResu
   if (!row || row.used_at != null || row.expires_at < now) return { ok: false, reason: 'invalid' }
 
   await markEmailVerificationUsed(env, hash, now)
-  await markEmailVerified(env, row.user_id)
+
+  let passwordReset = false
+  if (sessionUserId === row.user_id) {
+    await markEmailVerified(env, row.user_id)
+  } else {
+    // Guarded on email_verified = 0, so an already-verified account is left as it is.
+    passwordReset = await secureUnverifiedUser(env, row.user_id, await unusablePasswordHash(env.PASSWORD_PEPPER))
+  }
 
   const user = await getUserById(env, row.user_id)
-  return { ok: true, email: user?.email ?? '' }
+  return { ok: true, email: user?.email ?? '', passwordReset }
 }

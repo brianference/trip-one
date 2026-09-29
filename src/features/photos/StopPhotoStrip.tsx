@@ -16,6 +16,14 @@ type PendingFocus = { kind: 'remove'; photoId: string } | { kind: 'add' } | null
  * cancelling returns focus to that thumbnail's Remove button; confirming
  * moves focus to the next thumbnail's Remove button, or to the stop's
  * "+ Photo" button (via `addButtonRef`) when no photo is left.
+ *
+ * Two visual variants share the same confirm flow and focus management:
+ * `compact` (default, an itinerary row) stacks small 64px squares with a
+ * text "Remove" button under each; `captioned` (the stop popup, design
+ * docs/design/photo-controls-option-a.html section 1) lays out 108px tiles
+ * in a horizontal scroller with a visible "Photo N of M at {stop}" caption
+ * under each, and a small corner × button (28px visual, 44×44 hit area)
+ * instead of the stacked text button.
  */
 export function StopPhotoStrip({
   tripId,
@@ -23,6 +31,7 @@ export function StopPhotoStrip({
   photos,
   onRemove,
   addButtonRef,
+  variant = 'compact',
 }: {
   /** The trip the photos belong to, for building each thumbnail's `<img src>`. */
   tripId: string
@@ -34,6 +43,8 @@ export function StopPhotoStrip({
   onRemove: (photoId: string) => void
   /** The stop's "+ Photo" button — focused after the last photo here is removed. */
   addButtonRef?: RefObject<HTMLButtonElement | null>
+  /** 'compact' (default, an itinerary row) or 'captioned' (the stop popup). */
+  variant?: 'captioned' | 'compact'
 }) {
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const removeButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
@@ -85,14 +96,24 @@ export function StopPhotoStrip({
     onRemove(photoId)
   }
 
+  const captioned = variant === 'captioned'
+  const tileSize = captioned ? 108 : 64
+  const stripClassName = `chronicle-photo-strip${captioned ? ' chronicle-photo-strip--captioned' : ''}`
+
   return (
-    <ul className="chronicle-photo-strip" aria-label={`Photos at ${stopName}`}>
+    <ul className={stripClassName} aria-label={`Photos at ${stopName}`}>
       {photos.map((photo, index) => {
         const confirming = confirmingId === photo.id
         const label = `Photo ${index + 1} of ${photos.length} at ${stopName}`
+        const removeRef = (el: HTMLButtonElement | null) => {
+          if (el) removeButtonRefs.current.set(photo.id, el)
+          else removeButtonRefs.current.delete(photo.id)
+        }
         return (
-          <li key={photo.id} className={`chronicle-photo-thumb${confirming ? ' chronicle-photo-thumb--confirming' : ''}`}>
-            <img src={tripPhotoUrl(tripId, photo.id)} alt={label} loading="lazy" className="chronicle-photo-thumb__img" width={64} height={64} />
+          <li
+            key={photo.id}
+            className={`chronicle-photo-thumb${captioned ? ' chronicle-photo-thumb--captioned' : ''}${confirming ? ' chronicle-photo-thumb--confirming' : ''}`}
+          >
             {confirming ? (
               <div className="chronicle-photo-thumb__confirm">
                 <span>Remove this photo?</span>
@@ -114,19 +135,52 @@ export function StopPhotoStrip({
                   </button>
                 </div>
               </div>
+            ) : captioned ? (
+              <>
+                <div className="chronicle-photo-thumb__media">
+                  <img
+                    src={tripPhotoUrl(tripId, photo.id)}
+                    alt={label}
+                    loading="lazy"
+                    className="chronicle-photo-thumb__img"
+                    width={tileSize}
+                    height={tileSize}
+                  />
+                  <button
+                    ref={removeRef}
+                    type="button"
+                    className="chronicle-photo-thumb__remove-corner"
+                    onClick={() => startConfirm(photo.id)}
+                    aria-label={`Remove photo ${index + 1} of ${photos.length} at ${stopName}`}
+                  >
+                    <span aria-hidden="true" className="chronicle-photo-thumb__remove-corner-icon">
+                      ×
+                    </span>
+                  </button>
+                </div>
+                {/* Visible caption, not just alt text — design section 1. */}
+                <p className="chronicle-photo-thumb__caption">{label}</p>
+              </>
             ) : (
-              <button
-                ref={(el) => {
-                  if (el) removeButtonRefs.current.set(photo.id, el)
-                  else removeButtonRefs.current.delete(photo.id)
-                }}
-                type="button"
-                className="chronicle-photo-thumb__remove"
-                onClick={() => startConfirm(photo.id)}
-                aria-label={`Remove photo ${index + 1} of ${photos.length} at ${stopName}`}
-              >
-                Remove
-              </button>
+              <>
+                <img
+                  src={tripPhotoUrl(tripId, photo.id)}
+                  alt={label}
+                  loading="lazy"
+                  className="chronicle-photo-thumb__img"
+                  width={tileSize}
+                  height={tileSize}
+                />
+                <button
+                  ref={removeRef}
+                  type="button"
+                  className="chronicle-photo-thumb__remove"
+                  onClick={() => startConfirm(photo.id)}
+                  aria-label={`Remove photo ${index + 1} of ${photos.length} at ${stopName}`}
+                >
+                  Remove
+                </button>
+              </>
             )}
           </li>
         )

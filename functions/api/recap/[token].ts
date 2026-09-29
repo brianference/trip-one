@@ -1,7 +1,7 @@
 import type { Env, PhotoRow, TripRow } from '../../lib/db'
 import { getActiveRecapLinkByToken, getTrip, getLocationBySlug, listPhotosForTrip } from '../../lib/db'
 import { isRateLimited } from '../../lib/rateLimitGuard'
-import { recapTokenSchema, RECAP_READS_PER_HOUR, RECAP_NOT_FOUND_MESSAGE } from '../../lib/recapAccess'
+import { recapTokenSchema, RECAP_READS_PER_HOUR, RECAP_NOT_FOUND_MESSAGE, stripTripId } from '../../lib/recapAccess'
 import { cleanDisplayName } from '../../../src/lib/location/displayName'
 import type { RecapPayload } from '../../../src/features/recap/types'
 import { logger } from '../../../src/lib/logger'
@@ -23,22 +23,6 @@ type RecapPhoto = RecapPayload['photos'][number]
  */
 function json(body: unknown, status: number) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
-}
-
-/** Escapes a string for literal use inside a RegExp. */
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-/**
- * Removes every occurrence of the trip id (any letter case) from user-written
- * text. The trip URL grants edit access, so a recap must not carry the id even
- * if the traveler pasted their own trip link into a stop or the title.
- * @param text - User-written text
- * @param tripId - The trip id to strip
- */
-function stripTripId(text: string, tripId: string): string {
-  return text.replace(new RegExp(escapeRegExp(tripId), 'gi'), '').trim()
 }
 
 /**

@@ -71,6 +71,28 @@ describe('StopPhotoButton', () => {
     expect(clickSpy).not.toHaveBeenCalled()
   })
 
+  it('defaults to the compact variant, showing "+ Photo"', () => {
+    render(<StopPhotoButton stopName="Louvre Museum" uploading={false} onSelect={vi.fn()} />)
+    const button = screen.getByRole('button', { name: 'Add photo to Louvre Museum' })
+    expect(button).toHaveTextContent('+ Photo')
+    expect(button.className).not.toContain('chronicle-photo-add-btn--primary')
+  })
+
+  it('the primary variant shows visible "Add photos" text and an icon, but keeps the same accessible name', () => {
+    render(<StopPhotoButton stopName="Louvre Museum" uploading={false} onSelect={vi.fn()} variant="primary" />)
+    const button = screen.getByRole('button', { name: 'Add photo to Louvre Museum' })
+    expect(button).toHaveTextContent('Add photos')
+    expect(button.className).toContain('chronicle-photo-add-btn--primary')
+    expect(button.querySelector('svg')).toBeInTheDocument()
+  })
+
+  it('the primary variant still swaps to "Uploading…" while an upload is in flight', () => {
+    render(<StopPhotoButton stopName="Louvre Museum" uploading={true} onSelect={vi.fn()} variant="primary" />)
+    const button = screen.getByRole('button', { name: 'Add photo to Louvre Museum' })
+    expect(button).toHaveTextContent('Uploading…')
+    expect(button).toHaveAttribute('aria-disabled', 'true')
+  })
+
   it('announces the upload state through a visually hidden status region', () => {
     const { rerender } = render(<StopPhotoButton stopName="Louvre Museum" uploading={false} onSelect={vi.fn()} />)
     expect(screen.getByRole('status')).toHaveTextContent('')

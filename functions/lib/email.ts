@@ -139,14 +139,18 @@ export async function sendEmail(
   }
 }
 
+/** Footer for mail sent to account holders and contact senders. */
+const DEFAULT_FOOTER = 'You received this because you have a Trip One account, or because you wrote to us.'
+
 /**
  * Wraps inner HTML in the branded Trip One layout used by every template.
  * @param inner - The body content, already HTML
+ * @param footer - Plain-text reason the recipient got this mail
  */
-function wrap(inner: string): string {
+function wrap(inner: string, footer: string = DEFAULT_FOOTER): string {
   return `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:520px;margin:0 auto;color:${TEXT_COLOR}">
      <h2 style="color:${BRAND_COLOR};margin:0 0 12px">${APP_NAME}</h2>${inner}
-     <p style="color:${MUTED_COLOR};font-size:12px;margin-top:24px">You received this because you have a Trip One account, or because you wrote to us.</p>
+     <p style="color:${MUTED_COLOR};font-size:12px;margin-top:24px">${footer}</p>
    </div>`
 }
 
@@ -181,6 +185,36 @@ export function passwordResetHtml(link: string): string {
     `<p>Someone asked to reset the password on this account. Choose a new one:</p>
      ${button(link, 'Set a new password')}
      <p style="color:${MUTED_COLOR};font-size:13px">This link expires in 60 minutes and can be used once. If you didn't request it, ignore this email — your password stays as it is.</p>`,
+  )
+}
+
+/**
+ * Sign-in code email. The address may not have an account yet (verifying the
+ * code creates one), so the footer does not claim it does.
+ * @param code - The 6-digit code; escaped anyway since it lands in HTML
+ */
+export function signInCodeHtml(code: string): string {
+  const safe = escapeHtml(code)
+  return wrap(
+    `<p>Your Trip One sign-in code is <strong style="font-size:20px;letter-spacing:4px">${safe}</strong>. It expires in 10 minutes.</p>
+     <p style="color:${MUTED_COLOR};font-size:13px">Enter it on the page where you asked for it. Never share it: anyone with this code can sign in as you.</p>`,
+    "You received this because someone asked to sign in to Trip One with this address. If it wasn't you, ignore this email and nothing will happen.",
+  )
+}
+
+/**
+ * Invitation to add photos to a trip. The invitee may not have an account yet
+ * (a sign-in code creates one), so neither the body nor the footer claims one.
+ * The link is the trip's read-only recap, never the trip itself.
+ * @param invite - `tripName` (untrusted, escaped) and the absolute `recapUrl`
+ */
+export function tripInviteHtml(invite: { tripName: string; recapUrl: string }): string {
+  const name = escapeHtml(invite.tripName)
+  return wrap(
+    `<p>You're invited to add your photos to <strong>${name}</strong>.</p>
+     ${button(escapeHtml(invite.recapUrl), 'Add your photos')}
+     <p style="color:${MUTED_COLOR};font-size:13px">Open the link and sign in with this email address. You can then add photos to any stop on the trip.</p>`,
+    "You received this because someone planning this trip invited this address to add photos. If you weren't expecting it, ignore this email and nothing will happen.",
   )
 }
 

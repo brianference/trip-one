@@ -21,6 +21,9 @@ const EXPECTED_TABLES = [
   'fx_rates',
   'trip_photos',
   'trip_recap_links',
+  'email_codes',
+  'trip_invites',
+  'trip_members',
 ]
 
 /**

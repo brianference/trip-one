@@ -166,7 +166,7 @@ describe('DELETE /api/trips/:id', () => {
     return { res, calls: d1.calls, r2 }
   }
 
-  it('deletes the trip’s R2 photos, then its photo rows and recap links, then the trip', async () => {
+  it('deletes the trip’s R2 photos, then its photo rows, recap links, invites and members, then the trip', async () => {
     const { res, calls, r2 } = await setup()
     expect(res.status).toBe(200)
     expect(r2.objects.size).toBe(0)
@@ -175,14 +175,21 @@ describe('DELETE /api/trips/:id', () => {
     const r2Delete = indexOf('R2 DELETE')
     const photoRows = indexOf('DELETE FROM trip_photos')
     const recapLinks = indexOf('DELETE FROM trip_recap_links')
+    const invites = indexOf('DELETE FROM trip_invites WHERE trip_id = ?')
+    const members = indexOf('DELETE FROM trip_members WHERE trip_id = ?')
     const trip = indexOf('DELETE FROM trips')
     expect(calls[r2Delete].args.slice().sort()).toEqual(photos.map((p) => p.r2_key).sort())
-    expect([r2Delete, photoRows, recapLinks, trip].every((i) => i >= 0)).toBe(true)
+    expect([r2Delete, photoRows, recapLinks, invites, members, trip].every((i) => i >= 0)).toBe(true)
     expect(r2Delete).toBeLessThan(photoRows)
     expect(photoRows).toBeLessThan(trip)
     expect(recapLinks).toBeLessThan(trip)
+    // trip_invites and trip_members reference trips(id); D1 enforces that, so they go first.
+    expect(invites).toBeLessThan(trip)
+    expect(members).toBeLessThan(trip)
     expect(calls[photoRows].args).toEqual([TRIP_ID])
     expect(calls[recapLinks].args).toEqual([TRIP_ID])
+    expect(calls[invites].args).toEqual([TRIP_ID])
+    expect(calls[members].args).toEqual([TRIP_ID])
     expect(calls[trip].args).toEqual([TRIP_ID, OWNER_ID])
   })
 

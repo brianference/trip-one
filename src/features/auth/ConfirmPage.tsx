@@ -5,14 +5,17 @@ import { PageShell } from '../../components/layout/PageShell'
 import { ButtonLink } from '../../components/ui/Button'
 import { useAuth } from './AuthContext'
 
-type Status = 'pending' | 'success' | 'invalid' | 'error'
+/** `reset`: confirmed, and the password was reset because the link was opened without the account's session. */
+type Status = 'pending' | 'success' | 'reset' | 'invalid' | 'error'
 
 /**
  * Email confirmation page.
  *
  * Reads `?token=` on mount and POSTs it. Confirmation is not a login gate —
  * this page only records that the address works, then points the visitor
- * onward.
+ * onward. When the server reports `passwordReset` (the link was opened
+ * without the account's own session, so any password someone else chose was
+ * wiped), it sends the visitor to set a password through the reset flow.
  */
 export function ConfirmPage() {
   const [params] = useSearchParams()
@@ -35,11 +38,11 @@ export function ConfirmPage() {
       body: JSON.stringify({ token }),
     })
       .then(async (res) => {
-        const body = (await res.json().catch(() => ({}))) as { ok?: boolean; email?: string }
+        const body = (await res.json().catch(() => ({}))) as { ok?: boolean; email?: string; passwordReset?: boolean }
         if (cancelled) return
         if (res.ok && body.ok) {
           setEmail(typeof body.email === 'string' ? body.email : null)
-          setStatus('success')
+          setStatus(body.passwordReset === true ? 'reset' : 'success')
           await refresh()
         } else {
           setStatus('invalid')
@@ -68,6 +71,15 @@ export function ConfirmPage() {
               </p>
               <ButtonLink to={user ? '/my-trips' : '/login'} size="lg" block>
                 {user ? 'Go to my trips' : 'Sign in'}
+              </ButtonLink>
+            </>
+          )}
+
+          {status === 'reset' && (
+            <>
+              <p>Your email is confirmed. For your security, set a password to sign in.</p>
+              <ButtonLink to="/forgot" state={email ? { email } : undefined} size="lg" block>
+                Set a password
               </ButtonLink>
             </>
           )}

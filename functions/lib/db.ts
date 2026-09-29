@@ -429,19 +429,23 @@ export function normalizeEmail(email: string): string {
 
 /**
  * Creates a user. The caller must have already validated and hashed.
+ *
+ * `email_verified` is set in the same insert, so an account created by a
+ * proof of the address (an emailed code) is never briefly unverified.
  * @throws If the email is already registered (SQLite unique constraint)
  */
 export async function createUser(
   env: Env,
-  row: { email: string; password_hash: string; display_name?: string | null },
+  row: { email: string; password_hash: string; display_name?: string | null; email_verified?: boolean },
 ): Promise<UserRow> {
   const id = crypto.randomUUID()
   const created_at = nowIso()
   const email = normalizeEmail(row.email)
+  const emailVerified = row.email_verified ? 1 : 0
   await env.DB.prepare(
-    'INSERT INTO users (id, email, password_hash, display_name, created_at, token_version) VALUES (?, ?, ?, ?, ?, 0)',
+    'INSERT INTO users (id, email, password_hash, display_name, created_at, token_version, email_verified) VALUES (?, ?, ?, ?, ?, 0, ?)',
   )
-    .bind(id, email, row.password_hash, row.display_name ?? null, created_at)
+    .bind(id, email, row.password_hash, row.display_name ?? null, created_at, emailVerified)
     .run()
   return {
     id,
@@ -450,7 +454,7 @@ export async function createUser(
     display_name: row.display_name ?? null,
     created_at,
     token_version: 0,
-    email_verified: 0,
+    email_verified: emailVerified,
   }
 }
 
@@ -475,9 +479,23 @@ function normalizeUserRow(row: UserRow): UserRow {
   return { ...row, email_verified: row.email_verified === 1 ? 1 : 0 }
 }
 
-/** Replaces a user's password hash (used by the transparent rehash on login). */
-export async function updateUserPasswordHash(env: Env, id: string, passwordHash: string): Promise<void> {
-  await env.DB.prepare('UPDATE users SET password_hash = ? WHERE id = ?').bind(passwordHash, id).run()
+/**
+ * Replaces a user's password hash for the transparent rehash on login, but
+ * only if it is still the hash that was just verified. A reset, or a takeover
+ * by email proof, that lands between the login's read and this write must
+ * win; overwriting it would bring the old password back.
+ * @returns true when the row still held `oldHash` and was updated
+ */
+export async function updateUserPasswordHash(
+  env: Env,
+  id: string,
+  oldHash: string,
+  newHash: string,
+): Promise<boolean> {
+  const res = await env.DB.prepare('UPDATE users SET password_hash = ? WHERE id = ? AND password_hash = ?')
+    .bind(newHash, id, oldHash)
+    .run()
+  return (res.meta?.changes ?? 0) > 0
 }
 
 /**
@@ -495,6 +513,28 @@ export async function resetUserPassword(env: Env, id: string, passwordHash: stri
   await env.DB.prepare('UPDATE users SET password_hash = ?, token_version = token_version + 1 WHERE id = ?')
     .bind(passwordHash, id)
     .run()
+}
+
+/**
+ * Takes over an UNVERIFIED account for the person who just proved they own its
+ * address: replaces the password hash, drops every existing session (token
+ * version bump) and marks the email verified, in one statement. Anyone who
+ * registered the address first, without owning it, loses both the password
+ * and the session. An already-verified account is left untouched (the
+ * `email_verified = 0` guard), and false is returned for it.
+ *
+ * @param env - D1 env
+ * @param id - The user id
+ * @param passwordHash - Already hashed (an unusable one for code sign-in)
+ * @returns true when the account was unverified and has been secured
+ */
+export async function secureUnverifiedUser(env: Env, id: string, passwordHash: string): Promise<boolean> {
+  const res = await env.DB.prepare(
+    'UPDATE users SET password_hash = ?, token_version = token_version + 1, email_verified = 1 WHERE id = ? AND email_verified = 0',
+  )
+    .bind(passwordHash, id)
+    .run()
+  return (res.meta?.changes ?? 0) > 0
 }
 
 /** Marks the address confirmed. Idempotent. */
@@ -765,4 +805,303 @@ export async function revokeRecapLinksForTrip(env: Env, tripId: string, revokedA
 /** Deletes every recap share link for a trip. */
 export async function deleteRecapLinksForTrip(env: Env, tripId: string): Promise<void> {
   await env.DB.prepare('DELETE FROM trip_recap_links WHERE trip_id = ?').bind(tripId).run()
+}
+
+// --- email sign-in codes ---
+
+/** A row in `email_codes`. Only the hash of `email:code` is stored, never the code. */
+export interface EmailCodeRow {
+  id: string
+  email: string
+  code_hash: string
+  expires_at: number
+  attempts: number
+  used_at: number | null
+  created_at: number
+}
+
+/**
+ * How many codes were issued to this email since `sinceMs`, used or not. Both
+ * per-email caps (hourly and daily) count these, which is why superseded codes
+ * are expired rather than deleted.
+ */
+export async function countEmailCodesSince(env: Env, email: string, sinceMs: number): Promise<number> {
+  const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM email_codes WHERE email = ? AND created_at >= ?')
+    .bind(email, sinceMs)
+    .first<{ n: number }>()
+  return row?.n ?? 0
+}
+
+/**
+ * Removes every code row, for any email, created before `beforeMs`. Called with
+ * the start of the longest counting window (24 hours), so it never drops a row
+ * a cap still needs, and keeps the table bounded.
+ */
+export async function deleteEmailCodesCreatedBefore(env: Env, beforeMs: number): Promise<void> {
+  await env.DB.prepare('DELETE FROM email_codes WHERE created_at < ?').bind(beforeMs).run()
+}
+
+/**
+ * Expires every live, unused code for this email so only the next one issued
+ * can work. The rows stay so the hourly and daily caps still count them.
+ */
+export async function expireActiveEmailCodes(env: Env, email: string, nowMs: number): Promise<void> {
+  await env.DB.prepare('UPDATE email_codes SET expires_at = ? WHERE email = ? AND used_at IS NULL AND expires_at > ?')
+    .bind(nowMs, email, nowMs)
+    .run()
+}
+
+/** Inserts a hashed sign-in code. */
+export async function insertEmailCode(
+  env: Env,
+  row: { id: string; email: string; code_hash: string; expires_at: number; created_at: number },
+): Promise<void> {
+  await env.DB.prepare(
+    'INSERT INTO email_codes (id, email, code_hash, expires_at, attempts, used_at, created_at) VALUES (?, ?, ?, ?, 0, NULL, ?)',
+  )
+    .bind(row.id, row.email, row.code_hash, row.expires_at, row.created_at)
+    .run()
+}
+
+/** The newest unused, unexpired code for this email, or null. `id` breaks created_at ties so the pick is deterministic. */
+export async function getActiveEmailCode(env: Env, email: string, nowMs: number): Promise<EmailCodeRow | null> {
+  const row = await env.DB.prepare(
+    `SELECT id, email, code_hash, expires_at, attempts, used_at, created_at FROM email_codes
+     WHERE email = ? AND used_at IS NULL AND expires_at > ?
+     ORDER BY created_at DESC, id DESC LIMIT 1`,
+  )
+    .bind(email, nowMs)
+    .first<EmailCodeRow>()
+  return row ?? null
+}
+
+/**
+ * Spends one attempt on a code, but only while it has attempts left and is
+ * unused. The check and the increment are one statement, so parallel guesses
+ * cannot slip past the cap. Returns false when no attempt was available.
+ */
+export async function takeEmailCodeAttempt(env: Env, id: string, maxAttempts: number): Promise<boolean> {
+  const res = await env.DB.prepare(
+    'UPDATE email_codes SET attempts = attempts + 1 WHERE id = ? AND used_at IS NULL AND attempts < ?',
+  )
+    .bind(id, maxAttempts)
+    .run()
+  return (res.meta?.changes ?? 0) > 0
+}
+
+/**
+ * Marks a code used. Only the first caller wins (`used_at IS NULL` in the same
+ * statement), which is what makes a code one-time under concurrent verifies.
+ */
+export async function markEmailCodeUsed(env: Env, id: string, usedAtMs: number): Promise<boolean> {
+  const res = await env.DB.prepare('UPDATE email_codes SET used_at = ? WHERE id = ? AND used_at IS NULL')
+    .bind(usedAtMs, id)
+    .run()
+  return (res.meta?.changes ?? 0) > 0
+}
+
+// --- trip invites and members ---
+
+/** A row in `trip_invites`. Times are epoch milliseconds; an invite is live while `revoked_at` is null. */
+export interface TripInviteRow {
+  id: string
+  trip_id: string
+  /** Normalized with {@link normalizeEmail}. */
+  email: string
+  created_at: number
+  accepted_user_id: string | null
+  accepted_at: number | null
+  revoked_at: number | null
+  /** When the invite email last went out, or null if it never did. */
+  last_sent_at: number | null
+}
+
+const TRIP_INVITE_COLUMNS = 'id, trip_id, email, created_at, accepted_user_id, accepted_at, revoked_at, last_sent_at'
+
+/**
+ * Creates the invite for (trip, email), or un-revokes the existing one. The
+ * unique (trip_id, email) index makes this one statement, so two concurrent
+ * invites for the same address cannot both insert. The caller reads the row
+ * back with {@link getTripInviteByEmail}.
+ */
+export async function upsertTripInvite(
+  env: Env,
+  row: { id: string; trip_id: string; email: string; created_at: number },
+): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO trip_invites (id, trip_id, email, created_at, accepted_user_id, accepted_at, revoked_at, last_sent_at)
+     VALUES (?, ?, ?, ?, NULL, NULL, NULL, NULL)
+     ON CONFLICT (trip_id, email) DO UPDATE SET revoked_at = NULL`,
+  )
+    .bind(row.id, row.trip_id, normalizeEmail(row.email), row.created_at)
+    .run()
+}
+
+/** The invite for (trip, email), revoked or not, or null. */
+export async function getTripInviteByEmail(env: Env, tripId: string, email: string): Promise<TripInviteRow | null> {
+  const row = await env.DB.prepare(`SELECT ${TRIP_INVITE_COLUMNS} FROM trip_invites WHERE trip_id = ? AND email = ?`)
+    .bind(tripId, normalizeEmail(email))
+    .first<TripInviteRow>()
+  return row ?? null
+}
+
+/**
+ * The live (unrevoked) invite for (trip, email), or null. The trip is part of
+ * the WHERE clause, so an invite to one trip never admits anyone to another.
+ */
+export async function getActiveTripInvite(env: Env, tripId: string, email: string): Promise<TripInviteRow | null> {
+  const row = await env.DB.prepare(
+    `SELECT ${TRIP_INVITE_COLUMNS} FROM trip_invites WHERE trip_id = ? AND email = ? AND revoked_at IS NULL`,
+  )
+    .bind(tripId, normalizeEmail(email))
+    .first<TripInviteRow>()
+  return row ?? null
+}
+
+/** One invite by id, scoped to its trip (revoked or not), or null. */
+export async function getTripInviteById(env: Env, tripId: string, inviteId: string): Promise<TripInviteRow | null> {
+  const row = await env.DB.prepare(`SELECT ${TRIP_INVITE_COLUMNS} FROM trip_invites WHERE id = ? AND trip_id = ?`)
+    .bind(inviteId, tripId)
+    .first<TripInviteRow>()
+  return row ?? null
+}
+
+/** How many live (unrevoked) invites a trip has, accepted or not. */
+export async function countLiveTripInvites(env: Env, tripId: string): Promise<number> {
+  const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM trip_invites WHERE trip_id = ? AND revoked_at IS NULL')
+    .bind(tripId)
+    .first<{ n: number }>()
+  return row?.n ?? 0
+}
+
+/** The limits one invite send is checked against, all over the same window. */
+export interface InviteSendClaim {
+  inviteId: string
+  tripId: string
+  /** Normalized with {@link normalizeEmail}. */
+  email: string
+  nowMs: number
+  /** Start of the counting window; a send after this moment is "within 24 hours". */
+  windowStartMs: number
+  maxPerTrip: number
+  maxPerRecipient: number
+  maxGlobal: number
+}
+
+/**
+ * Claims the right to email an invite now, stamping `last_sent_at`, in ONE
+ * statement that also enforces every cap. It changes the row only when:
+ * the invite was never sent or last sent at or before the window start; the
+ * trip has sent fewer than `maxPerTrip` invites in the window; the address has
+ * received fewer than `maxPerRecipient` in the window across all trips; and
+ * fewer than `maxGlobal` went out app-wide in the window.
+ *
+ * D1 runs each statement on its own, one at a time, so the counts and the
+ * stamp cannot interleave with another claim: of two concurrent claims that
+ * both fit under a cap's last slot, only the first changes a row. Counting
+ * rows beforehand is only ever advisory; this statement is what enforces.
+ *
+ * @returns True when this caller may send
+ */
+export async function claimTripInviteSend(env: Env, claim: InviteSendClaim): Promise<boolean> {
+  const res = await env.DB.prepare(
+    `UPDATE trip_invites SET last_sent_at = ?
+     WHERE id = ?
+       AND (last_sent_at IS NULL OR last_sent_at <= ?)
+       AND (SELECT COUNT(*) FROM trip_invites WHERE trip_id = ? AND last_sent_at > ?) < ?
+       AND (SELECT COUNT(*) FROM trip_invites WHERE email = ? AND last_sent_at > ?) < ?
+       AND (SELECT COUNT(*) FROM trip_invites WHERE last_sent_at > ?) < ?`,
+  )
+    .bind(
+      claim.nowMs,
+      claim.inviteId,
+      claim.windowStartMs,
+      claim.tripId,
+      claim.windowStartMs,
+      claim.maxPerTrip,
+      normalizeEmail(claim.email),
+      claim.windowStartMs,
+      claim.maxPerRecipient,
+      claim.windowStartMs,
+      claim.maxGlobal,
+    )
+    .run()
+  return (res.meta?.changes ?? 0) > 0
+}
+
+/**
+ * Undoes a claim whose email never left (the provider refused or was down),
+ * putting `last_sent_at` back to what it was, so an outage neither spends the
+ * recipient's daily budget nor blocks a re-send for 24 hours. Only undoes this
+ * caller's own stamp (`last_sent_at = claimedAtMs`).
+ * @param env - D1 env
+ * @param inviteId - The invite
+ * @param claimedAtMs - The `nowMs` the claim stamped
+ * @param previousMs - `last_sent_at` before the claim (null if never sent)
+ */
+export async function releaseTripInviteSend(
+  env: Env,
+  inviteId: string,
+  claimedAtMs: number,
+  previousMs: number | null,
+): Promise<void> {
+  await env.DB.prepare('UPDATE trip_invites SET last_sent_at = ? WHERE id = ? AND last_sent_at = ?')
+    .bind(previousMs, inviteId, claimedAtMs)
+    .run()
+}
+
+/** A trip's live invites, oldest first. */
+export async function listActiveTripInvites(env: Env, tripId: string): Promise<TripInviteRow[]> {
+  const res = await env.DB.prepare(
+    `SELECT ${TRIP_INVITE_COLUMNS} FROM trip_invites WHERE trip_id = ? AND revoked_at IS NULL ORDER BY created_at ASC, id ASC`,
+  )
+    .bind(tripId)
+    .all<TripInviteRow>()
+  return res.results ?? []
+}
+
+/**
+ * Revokes one PENDING invite, scoped to its trip. An accepted invite is never
+ * revoked (`accepted_at IS NULL` in the same statement): its member already
+ * holds the trip link, so revoking could not withdraw access and would only
+ * hide them from the owner. Revoking an already-revoked invite keeps its
+ * first revocation time and still counts as done.
+ * @returns True when the trip has a pending invite with that id
+ */
+export async function revokeTripInvite(env: Env, tripId: string, inviteId: string, revokedAt: number): Promise<boolean> {
+  const res = await env.DB.prepare(
+    'UPDATE trip_invites SET revoked_at = COALESCE(revoked_at, ?) WHERE id = ? AND trip_id = ? AND accepted_at IS NULL',
+  )
+    .bind(revokedAt, inviteId, tripId)
+    .run()
+  return (res.meta?.changes ?? 0) > 0
+}
+
+/** Records the first acceptance of an invite; later calls change nothing. */
+export async function markTripInviteAccepted(env: Env, inviteId: string, userId: string, acceptedAt: number): Promise<void> {
+  await env.DB.prepare(
+    'UPDATE trip_invites SET accepted_user_id = ?, accepted_at = ? WHERE id = ? AND accepted_at IS NULL',
+  )
+    .bind(userId, acceptedAt, inviteId)
+    .run()
+}
+
+/** Adds a user to a trip as a contributor. Idempotent: an existing membership is left as it is. */
+export async function addTripMember(env: Env, row: { trip_id: string; user_id: string; created_at: number }): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO trip_members (trip_id, user_id, role, created_at) VALUES (?, ?, 'contributor', ?)
+     ON CONFLICT (trip_id, user_id) DO NOTHING`,
+  )
+    .bind(row.trip_id, row.user_id, row.created_at)
+    .run()
+}
+
+/** Deletes every invite for a trip. */
+export async function deleteTripInvitesForTrip(env: Env, tripId: string): Promise<void> {
+  await env.DB.prepare('DELETE FROM trip_invites WHERE trip_id = ?').bind(tripId).run()
+}
+
+/** Deletes every membership of a trip. */
+export async function deleteTripMembersForTrip(env: Env, tripId: string): Promise<void> {
+  await env.DB.prepare('DELETE FROM trip_members WHERE trip_id = ?').bind(tripId).run()
 }

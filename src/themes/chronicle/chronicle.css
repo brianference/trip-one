@@ -517,6 +517,653 @@
   color: var(--chronicle-danger);
 }
 
+/* Owner recap header actions: Share recap + Invite people, stacked. Beside
+   the heading (tablet and up) the column sits flush right, same as
+   .chronicle-recap-share alone; on a phone the header wraps and it lines up
+   under the title instead. */
+.chronicle-recap-owner-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--chronicle-space-md);
+  width: min(100%, 420px);
+}
+
+@media (min-width: 600px) {
+  .chronicle-recap-owner-actions {
+    align-items: flex-end;
+  }
+}
+
+/* Invite people to add photos (owner recap, next to Share recap). Hairline
+   card matching .chronicle-preview-card, styled per
+   docs/design/photo-controls-option-a.html: Chronicle typography and the
+   photo accent (--accent-photo) on the primary action. */
+.chronicle-invite-card {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--chronicle-bg-surface);
+  border: 1px solid var(--chronicle-border-hairline);
+  border-radius: var(--chronicle-radius-lg);
+  padding: var(--chronicle-space-md);
+  box-shadow: var(--chronicle-shadow-card);
+  text-align: left;
+}
+
+.chronicle-invite-title {
+  margin: 0 0 var(--chronicle-space-xs);
+  font-family: var(--chronicle-font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-invite-explainer {
+  margin: 0 0 var(--chronicle-space-md);
+  font-family: var(--chronicle-font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-invite-form {
+  margin: 0;
+}
+
+.chronicle-invite-label {
+  display: block;
+  margin-bottom: var(--chronicle-space-xs);
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--chronicle-text-tertiary);
+}
+
+.chronicle-invite-form-row {
+  display: flex;
+  gap: var(--chronicle-space-sm);
+  flex-wrap: wrap;
+}
+
+.chronicle-invite-input {
+  flex: 1 1 200px;
+  min-height: 44px;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0 var(--chronicle-space-sm);
+  border: 1px solid var(--chronicle-border-subtle);
+  border-radius: var(--chronicle-radius-sm);
+  background: var(--chronicle-bg-surface-2);
+  color: var(--chronicle-text-primary);
+  font-family: var(--chronicle-font-body);
+  font-size: 14px;
+}
+
+.chronicle-invite-send-btn {
+  flex: none;
+  min-height: 44px;
+  padding: 0 var(--chronicle-space-md);
+  border: none;
+  border-radius: var(--chronicle-radius-pill);
+  background: var(--accent-photo);
+  color: var(--on-accent-photo);
+  font-family: var(--chronicle-font-body);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.chronicle-invite-send-btn:hover,
+.chronicle-invite-send-btn:focus-visible {
+  background: var(--accent-photo-hover);
+  color: var(--on-accent-photo);
+}
+
+.chronicle-invite-send-btn[aria-disabled='true'] {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+.chronicle-invite-status {
+  margin: var(--chronicle-space-sm) 0 0;
+  font-family: var(--chronicle-font-body);
+  font-size: 13px;
+  color: var(--chronicle-text-secondary);
+  min-height: 1em;
+}
+
+.chronicle-invite-status:empty {
+  margin: 0;
+}
+
+.chronicle-invite-list {
+  list-style: none;
+  margin: var(--chronicle-space-md) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-sm);
+}
+
+.chronicle-invite-row {
+  padding-top: var(--chronicle-space-sm);
+  border-top: 1px solid var(--chronicle-border-hairline);
+}
+
+.chronicle-invite-list > .chronicle-invite-row:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.chronicle-invite-row-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--chronicle-space-sm);
+  flex-wrap: wrap;
+}
+
+.chronicle-invite-email {
+  font-family: var(--chronicle-font-body);
+  font-size: 14px;
+  color: var(--chronicle-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.chronicle-invite-badge {
+  flex: none;
+  padding: 3px 10px;
+  border-radius: var(--chronicle-radius-pill);
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  background: var(--chronicle-bg-surface-2);
+  color: var(--chronicle-text-secondary);
+  border: 1px solid var(--chronicle-border-hairline);
+}
+
+.chronicle-invite-badge--joined {
+  color: var(--accent-text);
+  border-color: color-mix(in srgb, var(--chronicle-teal) 40%, transparent);
+}
+
+.chronicle-invite-joined-note {
+  margin: var(--chronicle-space-xs) 0 0;
+  font-family: var(--chronicle-font-body);
+  font-size: 12px;
+  /* text-secondary, not tertiary: tertiary measured 4.1:1 on this card's
+     surface via axe-core, just under the 4.5:1 AA minimum. */
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-invite-remove-btn {
+  margin-top: var(--chronicle-space-xs);
+  min-height: 32px;
+  padding: 0 var(--chronicle-space-sm);
+  border: 1px solid var(--chronicle-border-hairline);
+  border-radius: var(--chronicle-radius-pill);
+  background: var(--chronicle-bg-surface-2);
+  /* danger-text, not the raw danger red: axe-core measured the raw color at
+     2.56:1 on the dark surface, well under the 4.5:1 AA minimum. */
+  color: var(--chronicle-danger-text);
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.chronicle-invite-remove-btn:hover,
+.chronicle-invite-remove-btn:focus-visible {
+  border-color: var(--chronicle-danger);
+}
+
+.chronicle-invite-row-confirm {
+  display: flex;
+  align-items: center;
+  gap: var(--chronicle-space-sm);
+  flex-wrap: wrap;
+  margin-top: var(--chronicle-space-xs);
+  font-family: var(--chronicle-font-body);
+  font-size: 12px;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-invite-row-confirm-btns {
+  display: flex;
+  gap: var(--chronicle-space-xs);
+}
+
+.chronicle-invite-row-confirm-yes,
+.chronicle-invite-row-confirm-no {
+  min-height: 32px;
+  padding: 0 var(--chronicle-space-sm);
+  border-radius: var(--chronicle-radius-pill);
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.chronicle-invite-row-confirm-yes {
+  border: 1px solid var(--chronicle-danger);
+  background: var(--chronicle-danger);
+  color: #ffffff;
+}
+
+.chronicle-invite-row-confirm-yes[aria-disabled='true'] {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+.chronicle-invite-row-confirm-no {
+  border: 1px solid var(--chronicle-border-hairline);
+  background: var(--chronicle-bg-surface-2);
+  color: var(--chronicle-text-secondary);
+}
+
+/* ---------- Public recap: "Were you on this trip?" banner + join sheet ----------
+   Styled per docs/design/photo-controls-option-a.html sections 5-8. The
+   banner and the "Add photos" / "Go to the trip" buttons carry the photo
+   accent; Continue and Verify code are the pine primary, as in the design. */
+.chronicle-recap-join-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* Tucked under the title as in the design (18px there): the negative top
+     margin cancels the recap column's flex gap, leaving the h1's own bottom
+     margin. Below, the recap's usual gap separates it from the map. */
+  margin: calc(-1 * var(--chronicle-space-xl)) 0 0;
+  padding: 18px;
+  border-radius: var(--radius-card);
+  background: var(--photo-tint-bg);
+  color: var(--photo-tint-text);
+}
+
+.chronicle-recap-join-banner-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chronicle-recap-join-banner-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.35);
+  color: var(--photo-tint-icon);
+}
+
+.chronicle-recap-join-banner-title {
+  margin: 0;
+  font-family: var(--chronicle-font-display);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--photo-tint-text);
+}
+
+.chronicle-recap-join-banner-text,
+.chronicle-recap-join-banner-error {
+  margin: 0;
+  font-family: var(--chronicle-font-body);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--photo-tint-text);
+}
+
+.chronicle-recap-join-banner-error {
+  font-weight: 600;
+}
+
+.chronicle-recap-join-banner-btn,
+.chronicle-join-photo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 20px;
+  border: none;
+  border-radius: var(--chronicle-radius-pill);
+  background: var(--accent-photo);
+  color: var(--on-accent-photo);
+  font-family: var(--chronicle-font-body);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.chronicle-recap-join-banner-btn {
+  align-self: flex-start;
+}
+
+.chronicle-recap-join-banner-btn:hover,
+.chronicle-join-photo-btn:hover {
+  background: var(--accent-photo-hover);
+  color: var(--on-accent-photo);
+}
+
+.chronicle-recap-join-banner-btn[aria-disabled='true'] {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+.chronicle-join-photo-btn {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* The sheet is portalled to <body>, outside .chronicle-page, so it brings
+   its own focus ring: the dusk ring the design draws on the active code box. */
+.chronicle-join-sheet :focus-visible,
+.chronicle-recap-join-banner-btn:focus-visible {
+  outline: 2px solid var(--color-dusk-600);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+.chronicle-join-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgb(20 18 15 / 0.55);
+}
+
+.chronicle-join-sheet {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 480px;
+  max-height: 88dvh;
+  overflow-y: auto;
+  padding: 18px 18px 22px;
+  border-radius: 20px 20px 0 0;
+  background: var(--surface);
+  color: var(--page-fg);
+  font-family: var(--chronicle-font-body);
+  box-shadow: 0 -8px 28px -10px rgb(20 18 15 / 0.35);
+}
+
+.chronicle-join-grab {
+  width: 36px;
+  height: 4px;
+  margin: 0 auto 14px;
+  border-radius: 2px;
+  background: var(--hairline);
+}
+
+.chronicle-join-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--chronicle-text-secondary);
+  cursor: pointer;
+}
+
+.chronicle-join-close:hover {
+  background: var(--surface-muted);
+}
+
+.chronicle-join-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.chronicle-join-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--hairline);
+}
+
+.chronicle-join-dot--active {
+  width: 20px;
+  border-radius: 4px;
+  background: var(--color-dusk-700);
+}
+
+.chronicle-join-dot--done {
+  background: var(--accent-text);
+}
+
+.chronicle-join-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-join-note svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.chronicle-join-title {
+  margin: 0 0 6px;
+  font-family: var(--chronicle-font-display);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--page-fg);
+}
+
+.chronicle-join-sheet .chronicle-join-title:focus,
+.chronicle-join-sheet .chronicle-join-title:focus-visible {
+  outline: none;
+}
+
+.chronicle-join-sub {
+  margin: 0 0 20px;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-join-body {
+  margin: 0 0 22px;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-join-field {
+  margin-bottom: 14px;
+}
+
+.chronicle-join-label {
+  display: block;
+  margin-bottom: 6px;
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-join-input-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--surface-muted);
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-join-input-box:focus-within {
+  border-color: var(--color-dusk-600);
+}
+
+.chronicle-join-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--page-fg);
+  font-family: var(--chronicle-font-body);
+  font-size: 16px;
+}
+
+.chronicle-join-input::placeholder {
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-join-sheet .chronicle-join-input:focus-visible {
+  outline: none;
+}
+
+.chronicle-join-primary,
+.chronicle-join-outline {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  border-radius: var(--chronicle-radius-pill);
+  font-family: var(--chronicle-font-body);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chronicle-join-primary {
+  margin-bottom: 10px;
+  border: none;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.chronicle-join-primary:hover {
+  background: var(--color-primary-hover);
+}
+
+.chronicle-join-outline {
+  margin-bottom: 4px;
+  border: 1.5px solid var(--accent-text);
+  background: transparent;
+  color: var(--accent-text);
+}
+
+.chronicle-join-primary:disabled,
+.chronicle-join-outline:disabled {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+.chronicle-join-link {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--chronicle-font-body);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.chronicle-join-link:disabled {
+  color: var(--chronicle-text-secondary);
+  text-decoration: none;
+  cursor: default;
+}
+
+.chronicle-join-error {
+  margin: -4px 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--chronicle-danger-text);
+}
+
+.chronicle-join-code-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 18px 0 16px;
+}
+
+.chronicle-join-code-box {
+  flex: 0 1 44px;
+  min-width: 36px;
+  height: 54px;
+  box-sizing: border-box;
+  padding: 0;
+  border: 1.5px solid var(--hairline);
+  border-radius: 10px;
+  background: var(--surface-muted);
+  color: var(--page-fg);
+  font-family: var(--chronicle-font-display);
+  font-size: 20px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.chronicle-join-code-box--filled {
+  border-color: var(--accent-text);
+}
+
+.chronicle-join-sheet .chronicle-join-code-box:focus,
+.chronicle-join-sheet .chronicle-join-code-box:focus-visible {
+  border-color: var(--color-dusk-600);
+  outline: 2px solid var(--color-dusk-600);
+  outline-offset: 2px;
+}
+
+.chronicle-join-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--accent-text);
+  border-radius: 50%;
+  background: var(--surface-muted);
+  color: var(--accent-text);
+}
+
 /* Overview entry points */
 .chronicle-preview-card.chronicle-recap-over-card {
   display: flex;
@@ -1248,6 +1895,74 @@ body {
   cursor: default;
 }
 
+/* Primary variant: the full-width dusk pill at the top of the photos-first
+   stop popup (design docs/design/photo-controls-option-a.html, section 1-2).
+   Dusk-orange is otherwise reserved for the logo mark — see the
+   supersession note on theme.css's --color-primary. */
+.chronicle-photo-add-btn--primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--chronicle-space-sm);
+  width: 100%;
+  min-height: 48px;
+  min-width: 0;
+  padding: 0 18px;
+  border: none;
+  background: var(--accent-photo);
+  color: var(--on-accent-photo);
+  font-family: var(--chronicle-font-body);
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.chronicle-photo-add-btn--primary:hover:not([aria-disabled='true']),
+.chronicle-photo-add-btn--primary:focus-visible {
+  background: var(--accent-photo-hover);
+  color: var(--on-accent-photo);
+  border-color: transparent;
+}
+
+.chronicle-photo-add-btn--primary .chronicle-photo-add-btn__icon {
+  flex-shrink: 0;
+}
+
+/* The choose-stop sheet's "Choose photo" button reuses this same primary
+   pill, disabled only in the edge case where the trip has no id'd stops yet
+   to attach a photo to. */
+.chronicle-photo-add-btn--primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Empty state under the primary pill when a stop has no photos yet
+   (design section 2). */
+.chronicle-photo-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--chronicle-space-xs);
+  padding: 22px 16px;
+  border: 1.5px dashed var(--chronicle-border-hairline);
+  border-radius: var(--chronicle-radius-md);
+  color: var(--chronicle-text-secondary);
+  text-align: center;
+}
+
+.chronicle-photo-empty svg {
+  color: var(--chronicle-text-tertiary);
+}
+
+.chronicle-photo-empty p {
+  margin: 0;
+  font-family: var(--chronicle-font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--chronicle-text-secondary);
+}
+
 .chronicle-photo-strip {
   display: flex;
   flex-wrap: wrap;
@@ -1276,6 +1991,93 @@ body {
   border-radius: var(--chronicle-radius-sm);
   border: 1px solid var(--chronicle-border-hairline);
   display: block;
+}
+
+/* Captioned variant: the stop popup's horizontal photo strip (design
+   docs/design/photo-controls-option-a.html section 1) — 108px tiles in a
+   horizontal scroller, a visible caption under each, and a small corner ×
+   instead of the stacked text "Remove" button. */
+.chronicle-photo-strip--captioned {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.chronicle-photo-thumb--captioned {
+  flex: 0 0 108px;
+  width: 108px;
+}
+
+/* Higher specificity than either single-class rule above, so the confirm
+   prompt still gets its wider auto/148px sizing instead of being squeezed
+   into the 108px tile width while it's open. */
+.chronicle-photo-thumb--captioned.chronicle-photo-thumb--confirming {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 148px;
+}
+
+.chronicle-photo-thumb--captioned .chronicle-photo-thumb__img {
+  width: 108px;
+  height: 108px;
+}
+
+.chronicle-photo-thumb__media {
+  position: relative;
+  width: 108px;
+  height: 108px;
+}
+
+.chronicle-photo-thumb__caption {
+  margin: 0;
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  line-height: 1.35;
+  /* --chronicle-text-tertiary measured below AA on this surface (see the
+     confirm-prompt note further down); secondary clears it in both themes. */
+  color: var(--chronicle-text-secondary);
+}
+
+/* 44×44 real hit area (WCAG target size), drawn as a smaller ~28px circle
+   centered inside it so it reads as a small corner control, not a full-size
+   button, over the top-right of the photo. */
+.chronicle-photo-thumb__remove-corner {
+  /* Kept fully inside the 108x108 media box (not offset negative) — the
+     strip scrolls horizontally via overflow-x:auto, which also computes
+     overflow-y to auto (not visible) and would clip anything poking past
+     the tile's own edge. */
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.chronicle-photo-thumb__remove-corner-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--chronicle-bg-surface);
+  border: 1px solid var(--chronicle-border-hairline);
+  color: var(--chronicle-text-secondary);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.chronicle-photo-thumb__remove-corner:hover .chronicle-photo-thumb__remove-corner-icon,
+.chronicle-photo-thumb__remove-corner:focus-visible .chronicle-photo-thumb__remove-corner-icon {
+  color: var(--chronicle-danger-text);
+  border-color: var(--chronicle-danger);
 }
 
 .chronicle-photo-thumb__remove {
@@ -3926,6 +4728,69 @@ body:has(.chronicle-page) label {
   font-size: 11px;
   /* Same AA-contrast fix as .chronicle-section-nav-item. */
   color: var(--chronicle-text-secondary);
+}
+
+/* Split pill: [Print / PDF | Add photos] — one joined control, Print/PDF
+   plain and Add photos in the photo accent (--accent-photo, theme.css),
+   matching docs/design/photo-controls-option-a.html sections 3-4. On a demo
+   trip the Add photos segment is omitted entirely (photo writes are
+   rejected server-side there) and the remaining Print/PDF segment fills the
+   pill alone. */
+.chronicle-split-group {
+  display: inline-flex;
+  min-height: 44px;
+  border-radius: var(--chronicle-radius-pill);
+  border: 1px solid var(--chronicle-border-hairline);
+  overflow: hidden;
+}
+
+.chronicle-split-seg {
+  display: flex;
+  align-items: center;
+  gap: var(--chronicle-space-sm);
+  min-height: 44px;
+  padding: 0 18px;
+  border: none;
+  font-family: var(--chronicle-font-body);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chronicle-split-seg--left {
+  background: var(--chronicle-bg-surface-2);
+  color: var(--chronicle-text-primary);
+  border-right: 1px solid var(--chronicle-border-hairline);
+}
+
+.chronicle-split-seg--left:hover,
+.chronicle-split-seg--left:focus-visible {
+  color: var(--accent-text);
+}
+
+.chronicle-split-seg--right {
+  background: var(--accent-photo);
+  color: var(--on-accent-photo);
+}
+
+.chronicle-split-seg--right:hover,
+.chronicle-split-seg--right:focus-visible {
+  background: var(--accent-photo-hover);
+  color: var(--on-accent-photo);
+}
+
+@media (max-width: 600px) {
+  /* The joined pill drops to its own full-width row under the date/length
+     fields, each segment sharing it evenly (design section 4). */
+  .chronicle-split-group {
+    display: flex;
+    width: 100%;
+  }
+
+  .chronicle-split-seg {
+    flex: 1;
+    justify-content: center;
+  }
 }
 
 /* Print-only trip title (destination + dates); hidden on screen. */
