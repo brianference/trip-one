@@ -14,6 +14,11 @@ import { forwardRef, useEffect, useRef, useState, type ChangeEvent } from 'react
  *
  * Forwards its ref to the underlying `<button>` so a sibling `StopPhotoStrip`
  * can return focus here after the last photo at this stop is removed.
+ *
+ * Two visual variants share the same behaviour and accessible name:
+ * `compact` (default) is the small "+ Photo" pill used inline on an
+ * itinerary row; `primary` is the full-width dusk pill with a camera icon
+ * and visible "Add photos" text used at the top of the stop popup.
  */
 export const StopPhotoButton = forwardRef<
   HTMLButtonElement,
@@ -24,8 +29,10 @@ export const StopPhotoButton = forwardRef<
     uploading: boolean
     /** Called with the file the traveler picked; the caller resizes and uploads it. */
     onSelect: (file: File) => void
+    /** 'compact' (default, an itinerary row) or 'primary' (the stop popup's full-width pill). */
+    variant?: 'primary' | 'compact'
   }
->(function StopPhotoButton({ stopName, uploading, onSelect }, ref) {
+>(function StopPhotoButton({ stopName, uploading, onSelect, variant = 'compact' }, ref) {
   const inputRef = useRef<HTMLInputElement>(null)
   const wasUploading = useRef(false)
   const [status, setStatus] = useState('')
@@ -57,17 +64,37 @@ export const StopPhotoButton = forwardRef<
     inputRef.current?.click()
   }
 
+  const className =
+    variant === 'primary' ? 'chronicle-photo-add-btn chronicle-photo-add-btn--primary' : 'chronicle-photo-add-btn'
+
   return (
     <>
       <button
         ref={ref}
         type="button"
-        className="chronicle-photo-add-btn"
+        className={className}
         onClick={handleClick}
         aria-disabled={uploading}
         aria-label={`Add photo to ${stopName}`}
       >
-        {uploading ? 'Uploading…' : '+ Photo'}
+        {variant === 'primary' && !uploading && (
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            width="20"
+            height="20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="chronicle-photo-add-btn__icon"
+          >
+            <path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" />
+            <circle cx="12" cy="13" r="3.5" />
+          </svg>
+        )}
+        {uploading ? 'Uploading…' : variant === 'primary' ? 'Add photos' : '+ Photo'}
       </button>
       <input
         ref={inputRef}

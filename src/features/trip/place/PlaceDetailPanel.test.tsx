@@ -176,6 +176,75 @@ describe('PlaceDetailPanel', () => {
     expect(screen.getByAltText('Photo 1 of 1 at Sushi Ota')).toBeInTheDocument()
   })
 
+  it('renders the photo block while details are still loading', () => {
+    render(
+      <PlaceDetailPanel
+        query={query}
+        detail={null}
+        loading
+        error={null}
+        onClose={vi.fn()}
+        tripId="trip-1"
+        photos={stubPhotos()}
+        planStopId="stop-1"
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Add photo to Sushi Ota' })).toBeInTheDocument()
+    expect(screen.getByText(/loading details/i)).toBeInTheDocument()
+  })
+
+  it('renders the photo block when a transport error is set', () => {
+    render(
+      <PlaceDetailPanel
+        query={query}
+        detail={null}
+        loading={false}
+        error="Something went wrong on our end."
+        onClose={vi.fn()}
+        tripId="trip-1"
+        photos={stubPhotos()}
+        planStopId="stop-1"
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Add photo to Sushi Ota' })).toBeInTheDocument()
+  })
+
+  it('places the photo block before the details (address) in DOM order', () => {
+    render(
+      <PlaceDetailPanel
+        query={query}
+        detail={detail}
+        loading={false}
+        error={null}
+        onClose={vi.fn()}
+        tripId="trip-1"
+        photos={stubPhotos()}
+        planStopId="stop-1"
+      />,
+    )
+    const addButton = screen.getByRole('button', { name: 'Add photo to Sushi Ota' })
+    const address = screen.getByText(/4529 Mission Bay Dr/)
+    // Node.DOCUMENT_POSITION_FOLLOWING (4) means `address` comes after `addButton`.
+    expect(addButton.compareDocumentPosition(address) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('shows the empty state when the stop has zero photos', () => {
+    render(
+      <PlaceDetailPanel
+        query={query}
+        detail={detail}
+        loading={false}
+        error={null}
+        onClose={vi.fn()}
+        tripId="trip-1"
+        photos={stubPhotos()}
+        planStopId="stop-1"
+      />,
+    )
+    expect(screen.getByText('No photos yet — add the first one')).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: /photos at sushi ota/i })).not.toBeInTheDocument()
+  })
+
   it('uploads the chosen file for the on-plan stop', () => {
     const upload = vi.fn()
     render(

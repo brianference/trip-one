@@ -1248,6 +1248,66 @@ body {
   cursor: default;
 }
 
+/* Primary variant: the full-width dusk pill at the top of the photos-first
+   stop popup (design docs/design/photo-controls-option-a.html, section 1-2).
+   Dusk-orange is otherwise reserved for the logo mark — see the
+   supersession note on theme.css's --color-primary. */
+.chronicle-photo-add-btn--primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--chronicle-space-sm);
+  width: 100%;
+  min-height: 48px;
+  min-width: 0;
+  padding: 0 18px;
+  border: none;
+  background: var(--accent-photo);
+  color: var(--on-accent-photo);
+  font-family: var(--chronicle-font-body);
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.chronicle-photo-add-btn--primary:hover:not([aria-disabled='true']),
+.chronicle-photo-add-btn--primary:focus-visible {
+  background: var(--accent-photo-hover);
+  color: var(--on-accent-photo);
+  border-color: transparent;
+}
+
+.chronicle-photo-add-btn--primary .chronicle-photo-add-btn__icon {
+  flex-shrink: 0;
+}
+
+/* Empty state under the primary pill when a stop has no photos yet
+   (design section 2). */
+.chronicle-photo-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--chronicle-space-xs);
+  padding: 22px 16px;
+  border: 1.5px dashed var(--chronicle-border-hairline);
+  border-radius: var(--chronicle-radius-md);
+  color: var(--chronicle-text-secondary);
+  text-align: center;
+}
+
+.chronicle-photo-empty svg {
+  color: var(--chronicle-text-tertiary);
+}
+
+.chronicle-photo-empty p {
+  margin: 0;
+  font-family: var(--chronicle-font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--chronicle-text-secondary);
+}
+
 .chronicle-photo-strip {
   display: flex;
   flex-wrap: wrap;

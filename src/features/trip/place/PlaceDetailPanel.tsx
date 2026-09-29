@@ -123,6 +123,48 @@ export function PlaceDetailPanel({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+          {/* Photos-first: this block renders unconditionally on whether the place
+              is on the plan, OUTSIDE the showBody gate below, so a traveler can add
+              or browse a stop's photos while Google's rating/hours/reviews are still
+              loading, failed, or only partial — the photo strip is the owner's own
+              content, not something that should wait on a third-party API. */}
+          {planStopId && tripId && photos && (
+            <div className="space-y-2 pb-3">
+              {!demoTrip && (
+                <StopPhotoButton
+                  ref={addPhotoRef}
+                  variant="primary"
+                  stopName={title}
+                  uploading={photos.uploading.has(planStopId)}
+                  onSelect={(file) => photos.upload(planStopId, file)}
+                />
+              )}
+              {(photos.byStop.get(planStopId)?.length ?? 0) > 0 ? (
+                <StopPhotoStrip
+                  tripId={tripId}
+                  stopName={title}
+                  photos={photos.byStop.get(planStopId) ?? []}
+                  onRemove={photos.remove}
+                  addButtonRef={addPhotoRef}
+                />
+              ) : (
+                <div className="chronicle-photo-empty">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="16" rx="2" />
+                    <circle cx="8.5" cy="9.5" r="1.5" />
+                    <path d="m21 15-5-5L5 20" />
+                  </svg>
+                  <p>No photos yet — add the first one</p>
+                </div>
+              )}
+              {photos.error && (
+                <p role="alert" className="text-sm text-danger-500">
+                  {photos.error}
+                </p>
+              )}
+            </div>
+          )}
+
           {loading && <p className="text-sm opacity-70">Loading details…</p>}
           {/* Transient transport/rate-limit failures only — "not found" is a
               partial panel, not an error (server returns 200 + partial). */}
@@ -227,38 +269,6 @@ export function PlaceDetailPanel({
                     </cite>
                   </blockquote>
                 ))}
-              </div>
-            )}
-
-            {/* Only shown once this place is on the plan (has a stable stop id) and the
-                page wired up photo state — a place not yet added has nowhere to attach a photo. */}
-            {planStopId && tripId && photos && (
-              <div className="space-y-2 pt-1">
-                <h3 className="font-[family-name:var(--font-display)] text-base font-semibold">Your photos</h3>
-                <div className="chronicle-photo-row">
-                  {!demoTrip && (
-                    <StopPhotoButton
-                      ref={addPhotoRef}
-                      stopName={title}
-                      uploading={photos.uploading.has(planStopId)}
-                      onSelect={(file) => photos.upload(planStopId, file)}
-                    />
-                  )}
-                  {(photos.byStop.get(planStopId)?.length ?? 0) > 0 && (
-                    <StopPhotoStrip
-                      tripId={tripId}
-                      stopName={title}
-                      photos={photos.byStop.get(planStopId) ?? []}
-                      onRemove={photos.remove}
-                      addButtonRef={addPhotoRef}
-                    />
-                  )}
-                </div>
-                {photos.error && (
-                  <p role="alert" className="text-sm text-danger-500">
-                    {photos.error}
-                  </p>
-                )}
               </div>
             )}
           </div>

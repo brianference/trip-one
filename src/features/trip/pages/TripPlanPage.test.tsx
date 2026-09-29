@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { TripPlanPage } from './TripPlanPage'
 import { useTripStore } from '../../../store/tripStore'
@@ -93,7 +93,13 @@ describe('TripPlanPage photo error', () => {
       partial: true,
     })
     renderPlanPage()
-    await waitFor(() => expect(screen.getByRole('heading', { name: /your photos/i })).toBeInTheDocument())
+    // The photo block (and its "Add photo to {stop}" button) renders outside the
+    // detail panel's loading gate, so wait on the dialog's own copy rather than a
+    // heading that no longer exists — see PlaceDetailPanel's photos-first layout.
+    // Scoped to the dialog because the itinerary row behind it has its own
+    // "Add photo to Trinity College" button too.
+    const dialog = screen.getByRole('dialog')
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: /add photo to trinity college/i })).toBeInTheDocument())
     expect(screen.getAllByRole('alert').filter((el) => el.textContent === PHOTO_ERROR)).toHaveLength(1)
   })
 })
