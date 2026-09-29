@@ -7,6 +7,8 @@ import {
   listPhotosForTrip,
   deletePhotosForTrip,
   deleteRecapLinksForTrip,
+  deleteTripInvitesForTrip,
+  deleteTripMembersForTrip,
 } from '../../lib/db'
 import { isRateLimited } from '../../lib/rateLimitGuard'
 import { getAuthedUser, type AuthEnv } from '../../lib/auth/session'
@@ -114,8 +116,10 @@ export async function onRequestPatch({
  * 404, so this cannot be used to discover which trip ids are real. Anonymous
  * trips have no owner and so can never be deleted through this route.
  *
- * The trip's photos and recap links go first, in this order: R2 objects, then
- * photo rows, then recap links, then the trip. Objects before rows, because a
+ * The trip's photos, recap links, invites and members go first, in this
+ * order: R2 objects, then photo rows, recap links, invites and members, then
+ * the trip (D1 enforces the foreign keys, so the trip row must go last).
+ * Objects before rows, because a
  * row is the only record of where an object lives; if the R2 delete fails the
  * whole request fails with every row intact and can simply be retried. Because
  * that cleanup has to run before the ownership-checked delete, ownership is
@@ -150,6 +154,8 @@ export async function onRequestDelete({
     }
     await deletePhotosForTrip(env, id)
     await deleteRecapLinksForTrip(env, id)
+    await deleteTripInvitesForTrip(env, id)
+    await deleteTripMembersForTrip(env, id)
 
     const deleted = await deleteTripOwnedBy(env, id, user.id)
     if (!deleted) return json({ error: 'We couldn’t find that trip. It may have already been deleted.' }, 404)

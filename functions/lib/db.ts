@@ -855,3 +855,112 @@ export async function markEmailCodeUsed(env: Env, id: string, usedAtMs: number):
     .run()
   return (res.meta?.changes ?? 0) > 0
 }
+
+// --- trip invites and members ---
+
+/** A row in `trip_invites`. Times are epoch milliseconds; an invite is live while `revoked_at` is null. */
+export interface TripInviteRow {
+  id: string
+  trip_id: string
+  /** Normalized with {@link normalizeEmail}. */
+  email: string
+  created_at: number
+  accepted_user_id: string | null
+  accepted_at: number | null
+  revoked_at: number | null
+}
+
+const TRIP_INVITE_COLUMNS = 'id, trip_id, email, created_at, accepted_user_id, accepted_at, revoked_at'
+
+/**
+ * Creates the invite for (trip, email), or un-revokes the existing one. The
+ * unique (trip_id, email) index makes this one statement, so two concurrent
+ * invites for the same address cannot both insert. The caller reads the row
+ * back with {@link getTripInviteByEmail}.
+ */
+export async function upsertTripInvite(
+  env: Env,
+  row: { id: string; trip_id: string; email: string; created_at: number },
+): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO trip_invites (id, trip_id, email, created_at, accepted_user_id, accepted_at, revoked_at)
+     VALUES (?, ?, ?, ?, NULL, NULL, NULL)
+     ON CONFLICT (trip_id, email) DO UPDATE SET revoked_at = NULL`,
+  )
+    .bind(row.id, row.trip_id, normalizeEmail(row.email), row.created_at)
+    .run()
+}
+
+/** The invite for (trip, email), revoked or not, or null. */
+export async function getTripInviteByEmail(env: Env, tripId: string, email: string): Promise<TripInviteRow | null> {
+  const row = await env.DB.prepare(`SELECT ${TRIP_INVITE_COLUMNS} FROM trip_invites WHERE trip_id = ? AND email = ?`)
+    .bind(tripId, normalizeEmail(email))
+    .first<TripInviteRow>()
+  return row ?? null
+}
+
+/**
+ * The live (unrevoked) invite for (trip, email), or null. The trip is part of
+ * the WHERE clause, so an invite to one trip never admits anyone to another.
+ */
+export async function getActiveTripInvite(env: Env, tripId: string, email: string): Promise<TripInviteRow | null> {
+  const row = await env.DB.prepare(
+    `SELECT ${TRIP_INVITE_COLUMNS} FROM trip_invites WHERE trip_id = ? AND email = ? AND revoked_at IS NULL`,
+  )
+    .bind(tripId, normalizeEmail(email))
+    .first<TripInviteRow>()
+  return row ?? null
+}
+
+/** A trip's live invites, oldest first. */
+export async function listActiveTripInvites(env: Env, tripId: string): Promise<TripInviteRow[]> {
+  const res = await env.DB.prepare(
+    `SELECT ${TRIP_INVITE_COLUMNS} FROM trip_invites WHERE trip_id = ? AND revoked_at IS NULL ORDER BY created_at ASC, id ASC`,
+  )
+    .bind(tripId)
+    .all<TripInviteRow>()
+  return res.results ?? []
+}
+
+/**
+ * Revokes one invite, scoped to its trip. Revoking an already-revoked invite
+ * keeps its first revocation time and still counts as found.
+ * @returns True when the trip has an invite with that id
+ */
+export async function revokeTripInvite(env: Env, tripId: string, inviteId: string, revokedAt: number): Promise<boolean> {
+  const res = await env.DB.prepare(
+    'UPDATE trip_invites SET revoked_at = COALESCE(revoked_at, ?) WHERE id = ? AND trip_id = ?',
+  )
+    .bind(revokedAt, inviteId, tripId)
+    .run()
+  return (res.meta?.changes ?? 0) > 0
+}
+
+/** Records the first acceptance of an invite; later calls change nothing. */
+export async function markTripInviteAccepted(env: Env, inviteId: string, userId: string, acceptedAt: number): Promise<void> {
+  await env.DB.prepare(
+    'UPDATE trip_invites SET accepted_user_id = ?, accepted_at = ? WHERE id = ? AND accepted_at IS NULL',
+  )
+    .bind(userId, acceptedAt, inviteId)
+    .run()
+}
+
+/** Adds a user to a trip as a contributor. Idempotent: an existing membership is left as it is. */
+export async function addTripMember(env: Env, row: { trip_id: string; user_id: string; created_at: number }): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO trip_members (trip_id, user_id, role, created_at) VALUES (?, ?, 'contributor', ?)
+     ON CONFLICT (trip_id, user_id) DO NOTHING`,
+  )
+    .bind(row.trip_id, row.user_id, row.created_at)
+    .run()
+}
+
+/** Deletes every invite for a trip. */
+export async function deleteTripInvitesForTrip(env: Env, tripId: string): Promise<void> {
+  await env.DB.prepare('DELETE FROM trip_invites WHERE trip_id = ?').bind(tripId).run()
+}
+
+/** Deletes every membership of a trip. */
+export async function deleteTripMembersForTrip(env: Env, tripId: string): Promise<void> {
+  await env.DB.prepare('DELETE FROM trip_members WHERE trip_id = ?').bind(tripId).run()
+}

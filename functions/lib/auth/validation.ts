@@ -71,6 +71,11 @@ export const codeRequestSchema = z.object({
   email,
 })
 
+/** Body of POST /api/trips/:id/invites. */
+export const tripInviteSchema = z.object({
+  email,
+})
+
 /** Shown for every code failure: wrong, expired, used, locked or malformed. */
 export const CODE_FAILED_MESSAGE = "That code didn't work. Check it or request a new one."
 

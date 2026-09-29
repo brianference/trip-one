@@ -1,12 +1,7 @@
 import type { Env } from '../../../lib/db'
-import {
-  getTrip,
-  getActiveRecapLinkForTrip,
-  createRecapLinkIfNoneActive,
-  revokeRecapLinksForTrip,
-} from '../../../lib/db'
+import { getTrip, revokeRecapLinksForTrip } from '../../../lib/db'
 import { isRateLimited } from '../../../lib/rateLimitGuard'
-import { generateRecapToken } from '../../../lib/recapAccess'
+import { ensureActiveRecapLink } from '../../../lib/recapAccess'
 import { DEMO_TRIP_ID_SET } from '../../../../src/lib/api/demoIds'
 import { logger } from '../../../../src/lib/logger'
 import { z } from 'zod'
@@ -69,19 +64,7 @@ export async function onRequestPost(context: LinkContext): Promise<Response> {
 
   try {
     if (!(await getTrip(env, tripId))) return json({ error: NOT_FOUND_MESSAGE }, 404)
-    const existing = await getActiveRecapLinkForTrip(env, tripId)
-    if (existing) return json({ token: existing.token }, 200)
-
-    await createRecapLinkIfNoneActive(env, {
-      token: generateRecapToken(),
-      trip_id: tripId,
-      created_at: new Date().toISOString(),
-    })
-    // Read back rather than trusting the insert: if a concurrent request won
-    // the race, its token is the one that is active.
-    const active = await getActiveRecapLinkForTrip(env, tripId)
-    if (!active) throw new Error('recap link missing after create')
-    return json({ token: active.token }, 200)
+    return json({ token: await ensureActiveRecapLink(env, tripId) }, 200)
   } catch (err) {
     logger.error('recap link create failed', err)
     return json({ error: SERVER_ERROR_MESSAGE }, 500)
