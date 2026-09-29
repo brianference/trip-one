@@ -3,6 +3,7 @@ import { getTrip, updateTrip, deleteTripOwnedBy } from '../../lib/db'
 import { isRateLimited } from '../../lib/rateLimitGuard'
 import { getAuthedUser, type AuthEnv } from '../../lib/auth/session'
 import { itineraryItemSchema } from '../../../src/lib/validation/schemas'
+import { ensureStopIds } from '../../../src/lib/itinerary/stopIds'
 import { logger } from '../../../src/lib/logger'
 import { z } from 'zod'
 
@@ -68,8 +69,16 @@ export async function onRequestPatch({
     return json({ error: RATE_LIMIT_MESSAGE }, 429)
   }
 
+  // Backstop for any write path that doesn't go through the client store
+  // (e.g. createTripForDestination, which PATCHes a freshly-planned
+  // itinerary directly): every stop must have a stable id before it lands
+  // in D1, so a later feature can attach an uploaded photo to it by id.
+  const patch = parsed.data.itinerary
+    ? { ...parsed.data, itinerary: ensureStopIds(parsed.data.itinerary) }
+    : parsed.data
+
   try {
-    const updated = await updateTrip(env, params.id, parsed.data)
+    const updated = await updateTrip(env, params.id, patch)
     return json(updated, 200)
   } catch (err) {
     logger.error('trip update failed', err)

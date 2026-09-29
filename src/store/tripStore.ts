@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { ItineraryItem } from '../lib/validation/schemas'
+import { ensureStopIds } from '../lib/itinerary/stopIds'
 
 export type DesignStyle = 'bento' | 'chronicle' | 'field-guide' | 'liquid-glass' | 'trail-ledger'
 
@@ -54,8 +55,9 @@ export const useTripStore = create<TripState>((set) => ({
   startDate: null,
   saveError: false,
   focusPlace: null,
-  setTrip: (tripId, locationSlug, itinerary, designStyle) => set({ tripId, locationSlug, itinerary, designStyle }),
-  addItem: (item) => set((s) => ({ itinerary: [...s.itinerary, item] })),
+  setTrip: (tripId, locationSlug, itinerary, designStyle) =>
+    set({ tripId, locationSlug, itinerary: ensureStopIds(itinerary), designStyle }),
+  addItem: (item) => set((s) => ({ itinerary: ensureStopIds([...s.itinerary, item]) })),
   removeItem: (index) => set((s) => ({ itinerary: s.itinerary.filter((_, i) => i !== index) })),
   reorderItems: (fromIndex, toIndex) =>
     set((s) => {
@@ -67,7 +69,7 @@ export const useTripStore = create<TripState>((set) => ({
   setDesignStyle: (style) => set({ designStyle: style }),
   setTripLengthDays: (days) => set({ tripLengthDays: days }),
   setStartDate: (startDate) => set({ startDate }),
-  setItinerary: (itinerary) => set({ itinerary }),
+  setItinerary: (itinerary) => set({ itinerary: ensureStopIds(itinerary) }),
   setSaveError: (saveError) => set({ saveError }),
   focusOnPlace: (place) => set({ focusPlace: { ...place, nonce: Date.now() } }),
   clearFocusPlace: () => set({ focusPlace: null }),

@@ -48,11 +48,24 @@ describe('useTripData', () => {
       thingsToDo: [],
     })
     vi.spyOn(client, 'fetchExperiences').mockResolvedValue([])
+    // The fixture item has no id, so the load-time self-heal queues a write —
+    // mock it like the other self-heal tests so this one stays about
+    // rehydration, not persistence, and the suite's output stays pristine.
+    vi.spyOn(client, 'updateTrip').mockResolvedValue({
+      id: 't2',
+      locationSlug: 'oslo-norway',
+      itinerary: [],
+      designStyle: 'chronicle',
+    })
 
     renderHook(() => useTripData('t2'))
 
     await waitFor(() => expect(useTripStore.getState().tripId).toBe('t2'))
-    expect(useTripStore.getState().itinerary).toEqual([{ time: '09:00', text: 'Vigeland Park', type: 'option' }])
+    const storeItinerary = useTripStore.getState().itinerary
+    expect(storeItinerary).toHaveLength(1)
+    expect(storeItinerary[0]).toMatchObject({ time: '09:00', text: 'Vigeland Park', type: 'option' })
+    // The loaded item had no id — ensureStopIds must have assigned one.
+    expect(storeItinerary[0].id).toMatch(/^[0-9a-f-]{36}$/)
     expect(useTripStore.getState().tripLengthDays).toBe(3)
   })
 
@@ -179,11 +192,13 @@ describe('useTripData', () => {
     ])
   })
 
-  it('does not persist when the loaded itinerary already has unique stop names', async () => {
+  it('does not persist when the loaded itinerary already has unique stop names and stable ids', async () => {
     vi.spyOn(client, 'getTrip').mockResolvedValue({
       id: 'clean-trip',
       locationSlug: 'lisbon-portugal',
-      itinerary: [{ time: '09:00', text: 'Belem Tower', type: 'option' }],
+      itinerary: [
+        { time: '09:00', text: 'Belem Tower', type: 'option', id: '11111111-1111-4111-8111-111111111111' },
+      ],
       designStyle: 'chronicle',
       tripLengthDays: 2,
     })
@@ -205,7 +220,48 @@ describe('useTripData', () => {
     const { result } = renderHook(() => useTripData('clean-trip'))
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(useTripStore.getState().itinerary).toHaveLength(1)
-    // Self-heal only writes when dups were dropped — clean rows must not PATCH.
+    // Self-heal only writes when dups were dropped or an id was missing —
+    // a clean, already-ided row must not PATCH.
     expect(updateSpy).not.toHaveBeenCalled()
+  })
+
+  it('persists exactly once when loaded items are missing ids (no dedupe involved)', async () => {
+    vi.spyOn(client, 'getTrip').mockResolvedValue({
+      id: 'no-ids-trip',
+      locationSlug: 'lisbon-portugal',
+      itinerary: [
+        { time: '09:00', text: 'Belem Tower', type: 'option' },
+        { time: '11:00', text: 'Jeronimos Monastery', type: 'option' },
+      ],
+      designStyle: 'chronicle',
+      tripLengthDays: 2,
+    })
+    vi.spyOn(client, 'fetchLocation').mockResolvedValue({
+      slug: 'lisbon-portugal',
+      lat: 38.7,
+      lng: -9.1,
+      displayName: 'Lisbon, Portugal',
+      thingsToDo: [],
+    })
+    vi.spyOn(client, 'fetchExperiences').mockResolvedValue([])
+    const updateSpy = vi.spyOn(client, 'updateTrip').mockResolvedValue({
+      id: 'no-ids-trip',
+      locationSlug: 'lisbon-portugal',
+      itinerary: [],
+      designStyle: 'chronicle',
+    })
+
+    const { result } = renderHook(() => useTripData('no-ids-trip'))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    const storeItinerary = useTripStore.getState().itinerary
+    expect(storeItinerary).toHaveLength(2)
+    expect(storeItinerary[0].id).toMatch(/^[0-9a-f-]{36}$/)
+    expect(storeItinerary[1].id).toMatch(/^[0-9a-f-]{36}$/)
+    expect(storeItinerary[0].id).not.toBe(storeItinerary[1].id)
+
+    await waitFor(() => expect(updateSpy).toHaveBeenCalledTimes(1))
+    const persisted = updateSpy.mock.calls[0][1].itinerary as Array<{ id?: string }>
+    expect(persisted.every((i) => typeof i.id === 'string')).toBe(true)
   })
 })

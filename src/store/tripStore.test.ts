@@ -20,7 +20,18 @@ describe('useTripStore', () => {
     useTripStore.getState().addItem({ time: '09:00', text: 'A', type: 'fixed' })
     useTripStore.getState().addItem({ time: '10:00', text: 'B', type: 'fixed' })
     useTripStore.getState().removeItem(0)
-    expect(useTripStore.getState().itinerary).toEqual([{ time: '10:00', text: 'B', type: 'fixed' }])
+    const remaining = useTripStore.getState().itinerary
+    expect(remaining).toHaveLength(1)
+    expect(remaining[0]).toMatchObject({ time: '10:00', text: 'B', type: 'fixed' })
+  })
+
+  it('addItem assigns a stable id, kept unchanged on later addItem calls', () => {
+    useTripStore.getState().addItem({ time: '09:00', text: 'A', type: 'fixed' })
+    const firstId = useTripStore.getState().itinerary[0].id
+    expect(firstId).toMatch(/^[0-9a-f-]{36}$/)
+    useTripStore.getState().addItem({ time: '10:00', text: 'B', type: 'fixed' })
+    expect(useTripStore.getState().itinerary[0].id).toBe(firstId)
+    expect(useTripStore.getState().itinerary[1].id).toMatch(/^[0-9a-f-]{36}$/)
   })
 
   it('reorderItems moves an item from one index to another', () => {

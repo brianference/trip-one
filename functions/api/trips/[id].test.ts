@@ -70,6 +70,34 @@ describe('PATCH /api/trips/:id', () => {
     expect((await res.json()).error).toBe('Something went wrong on our end. Please try again in a moment.')
   })
 
+  it('assigns stable ids to itinerary items that arrive without one, and getTrip returns them', async () => {
+    // Stateful fake: the UPDATE's bound itinerary JSON becomes what the
+    // subsequent internal getTrip (inside updateTrip) reads back, mirroring
+    // a real D1 round-trip.
+    const { env, calls } = fakeD1({
+      first: (sql) => {
+        if (!sql.includes('FROM trips')) return null
+        const update = calls.find((c) => c.sql.includes('UPDATE trips'))
+        return { ...tripRow, itinerary: update ? (update.args[0] as string) : '[]' }
+      },
+    })
+    const request = new Request('https://x/api/trips/abc-123', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        itinerary: [
+          { time: '09:00', text: 'Ueno Park', type: 'option' },
+          { time: '', text: 'Senso-ji', type: 'option', id: '11111111-1111-4111-8111-111111111111' },
+        ],
+      }),
+    })
+    const res = await onRequestPatch({ env, request, params: { id: 'abc-123' } } as never)
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { itinerary: { id?: string; text: string }[] }
+    expect(body.itinerary[0].id).toMatch(/^[0-9a-f-]{4,}-[0-9a-f-]{4,}/)
+    // The id supplied by the client is kept, not replaced.
+    expect(body.itinerary[1].id).toBe('11111111-1111-4111-8111-111111111111')
+  })
+
   it('rate-limits patches past the hourly cap (and does not update the trip)', async () => {
     const { env, calls } = fakeD1({
       first: (sql) => (sql.includes('COUNT(*)') ? { n: 500 } : null),

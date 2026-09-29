@@ -85,6 +85,33 @@ describe('useItineraryActions', () => {
     expect(belem?.category).toBe('tourist_attraction')
   })
 
+  it('assigns a stop id that matches exactly between the store and the persisted payload', async () => {
+    // Regression guard: setItinerary() adds ids to a NEW array when items
+    // arrive without one. If a mutation persisted its own pre-ids local
+    // array instead of the array actually written to the store, the store
+    // and D1 would end up with two different, independently-generated ids
+    // for the same stop — breaking a later photo-by-id attachment on reload.
+    resetStore()
+    const updateSpy = vi.spyOn(client, 'updateTrip').mockResolvedValue({
+      id: 't1',
+      locationSlug: 'lisbon-portugal',
+      itinerary: [],
+      designStyle: 'chronicle',
+    })
+    const { result } = renderHook(() => useItineraryActions('t1'))
+    act(() => {
+      result.current.addFromThingToDo({ name: 'Belem Tower', category: 'tourist_attraction', source: 'places', lat: 38.69, lng: -9.21 })
+    })
+    await waitFor(() => expect(updateSpy).toHaveBeenCalled())
+
+    const storeItem = useTripStore.getState().itinerary.find((i) => i.text === 'Belem Tower')
+    const persisted = updateSpy.mock.calls[0][1].itinerary as Array<{ text: string; id?: string }>
+    const persistedItem = persisted.find((i) => i.text === 'Belem Tower')
+
+    expect(storeItem?.id).toMatch(/^[0-9a-f-]{36}$/)
+    expect(persistedItem?.id).toBe(storeItem?.id)
+  })
+
   it('removes a stop by index', async () => {
     resetStore([
       { time: '09:00', text: 'Keep me', type: 'option' },

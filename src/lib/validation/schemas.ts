@@ -5,6 +5,16 @@ export const locationQuerySchema = z.string().trim().min(1).max(200)
 export const autocompleteQuerySchema = z.string().trim().min(2).max(200)
 
 export const itineraryItemSchema = z.object({
+  /**
+   * Stable identity for this stop, assigned once via `ensureStopIds`
+   * (client-side on every store write, and server-side on PATCH as a
+   * backstop) and never regenerated afterward. Later features (e.g.
+   * attaching uploaded photos to a specific stop) key off this id, so it
+   * must survive reorder, move-to-day, organize, and dedupe. Optional only
+   * because legacy rows saved before this field existed are healed lazily
+   * rather than migrated.
+   */
+  id: z.string().uuid().optional(),
   time: z.string(),
   text: z.string().min(1).max(300),
   type: z.enum(['fixed', 'travel', 'option']),
