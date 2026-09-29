@@ -117,16 +117,6 @@ export function inviteStore(
     if (sql === 'SELECT COUNT(*) AS n FROM trip_invites WHERE trip_id = ? AND revoked_at IS NULL') {
       return { n: invites.filter((i) => i.trip_id === args[0] && i.revoked_at === null).length }
     }
-    const sentSince = (i: TripInviteRow, since: unknown) => i.last_sent_at !== null && i.last_sent_at >= (since as number)
-    if (sql === 'SELECT COUNT(*) AS n FROM trip_invites WHERE trip_id = ? AND last_sent_at >= ?') {
-      return { n: invites.filter((i) => i.trip_id === args[0] && sentSince(i, args[1])).length }
-    }
-    if (sql === 'SELECT COUNT(*) AS n FROM trip_invites WHERE email = ? AND last_sent_at >= ?') {
-      return { n: invites.filter((i) => i.email === args[0] && sentSince(i, args[1])).length }
-    }
-    if (sql === 'SELECT COUNT(*) AS n FROM trip_invites WHERE last_sent_at >= ?') {
-      return { n: invites.filter((i) => sentSince(i, args[0])).length }
-    }
     throw new Error(`inviteStore: unexpected first() SQL: ${sql}`)
   }
 
@@ -195,11 +185,26 @@ export function inviteStore(
       row.accepted_at = acceptedAt
       return 1
     }
-    if (sql === 'UPDATE trip_invites SET last_sent_at = ? WHERE id = ? AND (last_sent_at IS NULL OR last_sent_at <= ?)') {
-      const [nowMs, id, cutoff] = args as [number, string, number]
+    if (sql.startsWith('UPDATE trip_invites SET last_sent_at = ?') && sql.includes('SELECT COUNT(*) FROM trip_invites')) {
+      // Mirrors the claim's WHERE clause; the real-SQLite test in
+      // tripInvites.sqlite.test.ts proves the SQL itself does this.
+      const [nowMs, id, cutoff, tripId, , maxTrip, email, , maxRecipient, , maxGlobal] = args as [
+        number, string, number, string, number, number, string, number, number, number, number,
+      ]
+      const inWindow = (i: TripInviteRow) => i.last_sent_at !== null && i.last_sent_at > cutoff
       const row = invites.find((i) => i.id === id && (i.last_sent_at === null || i.last_sent_at <= cutoff))
       if (!row) return 0
+      if (invites.filter((i) => i.trip_id === tripId && inWindow(i)).length >= maxTrip) return 0
+      if (invites.filter((i) => i.email === email && inWindow(i)).length >= maxRecipient) return 0
+      if (invites.filter(inWindow).length >= maxGlobal) return 0
       row.last_sent_at = nowMs
+      return 1
+    }
+    if (sql === 'UPDATE trip_invites SET last_sent_at = ? WHERE id = ? AND last_sent_at = ?') {
+      const [previous, id, claimedAt] = args as [number | null, string, number]
+      const row = invites.find((i) => i.id === id && i.last_sent_at === claimedAt)
+      if (!row) return 0
+      row.last_sent_at = previous
       return 1
     }
     if (sql.includes('INSERT INTO trip_members') && sql.includes('ON CONFLICT (trip_id, user_id) DO NOTHING')) {

@@ -362,14 +362,17 @@ describe('POST /api/trips/:id/invites', () => {
     })
 
     it.each([
-      ['the app-wide count', 'SELECT COUNT(*) AS n FROM trip_invites WHERE last_sent_at >= ?'],
-      ['the per-recipient count', 'SELECT COUNT(*) AS n FROM trip_invites WHERE email = ? AND last_sent_at >= ?'],
-      ['the per-trip count', 'SELECT COUNT(*) AS n FROM trip_invites WHERE trip_id = ? AND last_sent_at >= ?'],
-      ['the send claim', 'UPDATE trip_invites SET last_sent_at = ?'],
+      ['the claim (which holds every cap)', (sql: string) => sql.startsWith('UPDATE trip_invites SET last_sent_at = ?')],
+      [
+        'the re-read that names a refusal',
+        (sql: string) => sql.includes('FROM trip_invites WHERE id = ? AND trip_id = ?'),
+      ],
     ])('fails closed with 429 and sends nothing when %s cannot be read', async (_label, failing) => {
       const sent = stubMail()
       const errorLog = vi.spyOn(logger, 'error').mockImplementation(() => {})
-      const s = store((sql) => sql.startsWith(failing))
+      const s = store(failing)
+      // A full per-trip cap makes the claim refuse, so the re-read runs too.
+      for (let i = 0; i < MAX_INVITE_SENDS_PER_TRIP; i += 1) seed(s, { last_sent_at: RECENTLY() })
       const res = await invitePost(s, SAM)
       expect(res.status).toBe(429)
       expect(res.headers.get('Cache-Control')).toBe('private, no-store')
@@ -442,17 +445,47 @@ describe('POST /api/trips/:id/invites', () => {
     }
   })
 
-  it('answers 201 emailSent false send_failed when the email cannot be sent', async () => {
-    vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('brevo down'))))
-    const errorLog = vi.spyOn(logger, 'error').mockImplementation(() => {})
-    const warnLog = vi.spyOn(logger, 'warn').mockImplementation(() => {})
-    const s = store()
-    const res = await invitePost(s, SAM)
-    expect(res.status).toBe(201)
-    expect(await res.json()).toMatchObject({ emailSent: false, reason: 'send_failed' })
-    expect(s.invites).toHaveLength(1)
-    expect(errorLog).toHaveBeenCalledWith('email send threw', expect.any(Error))
-    expect(warnLog).toHaveBeenCalledWith('invite email not sent', { inviteId: s.invites[0].id })
+  describe('provider failure', () => {
+    it('answers send_failed and gives the claim back when Brevo is unreachable', async () => {
+      vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('brevo down'))))
+      const errorLog = vi.spyOn(logger, 'error').mockImplementation(() => {})
+      const warnLog = vi.spyOn(logger, 'warn').mockImplementation(() => {})
+      const s = store()
+      const res = await invitePost(s, SAM)
+      expect(res.status).toBe(201)
+      expect(await res.json()).toMatchObject({ emailSent: false, reason: 'send_failed' })
+      expect(rowFor(s, SAM).last_sent_at).toBeNull()
+      expect(errorLog).toHaveBeenCalledWith('email send threw', expect.any(Error))
+      expect(warnLog).toHaveBeenCalledWith('invite email not sent', { inviteId: s.invites[0].id })
+    })
+
+    it('restores the previous send time when Brevo refuses, so a retry sends and the budget is not spent', async () => {
+      const earlier = LONG_AGO()
+      const s = store()
+      seed(s, { email: SAM, last_sent_at: earlier })
+      vi.spyOn(logger, 'error').mockImplementation(() => {})
+      vi.spyOn(logger, 'warn').mockImplementation(() => {})
+      vi.stubGlobal('fetch', vi.fn(async () => new Response('upstream error', { status: 502 })))
+
+      // Outage: every attempt fails, and each gives its claim back.
+      for (let i = 0; i < MAX_INVITE_SENDS_PER_RECIPIENT + 1; i += 1) {
+        expect(await (await invitePost(s, SAM)).json()).toMatchObject({ emailSent: false, reason: 'send_failed' })
+        expect(rowFor(s, SAM).last_sent_at).toBe(earlier)
+      }
+
+      // Provider back: the next attempt sends at once, not 24 hours later.
+      const sent = stubMail()
+      expect(await (await invitePost(s, SAM)).json()).toMatchObject({ emailSent: true })
+      expect(sent).toHaveLength(1)
+    })
+
+    it('keeps the claim when mail is stubbed (no BREVO_API_KEY), since nothing failed', async () => {
+      vi.spyOn(logger, 'info').mockImplementation(() => {})
+      const s = inviteStore({ SITE_URL: MAIL.SITE_URL })
+      const res = await invitePost(s, SAM)
+      expect(await res.json()).toMatchObject({ emailSent: false, reason: 'send_failed' })
+      expect(rowFor(s, SAM).last_sent_at).toEqual(expect.any(Number))
+    })
   })
 
   it('does not mark an invite sent when preparing the email fails, so it can be retried at once', async () => {

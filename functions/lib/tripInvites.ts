@@ -1,11 +1,6 @@
 import { z } from 'zod'
 import type { Env, TripInviteRow, TripRow } from './db'
-import {
-  claimTripInviteSend,
-  countInviteSendsSince,
-  countInviteSendsToEmailSince,
-  countTripInviteSendsSince,
-} from './db'
+import { claimTripInviteSend, getTripInviteById, releaseTripInviteSend } from './db'
 import { isRateLimited } from './rateLimitGuard'
 import { stripTripId } from './recapAccess'
 import { cleanDisplayName } from '../../src/lib/location/displayName'
@@ -33,9 +28,12 @@ export const MAX_INVITE_SENDS_GLOBAL = 300
 
 /**
  * Why an invite was saved but not emailed. `daily_limit` covers the per-trip,
- * per-recipient and app-wide caps alike, so the answer never tells the sender
- * anything about the recipient (whether they have an account, or how many
- * other trips invited them).
+ * per-recipient and app-wide caps alike, and the endpoint never looks up
+ * accounts, so it never reveals whether the recipient has one. It CAN reveal
+ * invite activity: a sender whose own trip is under its cap, on a quiet day
+ * for the app, who gets `daily_limit` learns that the address has already
+ * been sent at least {@link MAX_INVITE_SENDS_PER_RECIPIENT} invites in the
+ * last 24 hours, from any trips.
  */
 export type InviteNotSentReason = 'daily_limit' | 'recently_sent' | 'send_failed'
 
@@ -140,11 +138,20 @@ export function inviteTripName(trip: TripRow, rawDisplayName: string | null): st
  */
 export const INVITE_SUBJECT = "You're invited to add photos on Trip One"
 
+/** The outcome of {@link claimInviteSend}. */
+export type InviteSendDecision =
+  | { send: true; claimedAtMs: number; previousSentAtMs: number | null }
+  | { send: false; reason: InviteNotSentReason }
+
 /**
- * Decides whether an invite may be emailed now, and if so claims the send
- * (stamps `last_sent_at`) so no concurrent request sends it again. Checked in
- * order: no re-send within {@link INVITE_SEND_WINDOW_MS}, then the per-trip,
- * per-recipient and app-wide caps. Every count reads `trip_invites.last_sent_at`.
+ * Decides whether an invite may be emailed now and, if so, claims the send.
+ *
+ * The decision is ONE statement, {@link claimTripInviteSend}: the no-re-send
+ * rule and the per-trip, per-recipient and app-wide caps are all in its WHERE
+ * clause, so a burst of concurrent requests cannot all slip under a cap. When
+ * it changes nothing, the row is read again only to name the reason: sent
+ * within the window means `recently_sent`, otherwise a cap was full, so
+ * `daily_limit`.
  *
  * Throws when the database cannot answer; the caller must then send nothing
  * (fail closed), because a cap it cannot read is a cap it cannot honour.
@@ -152,26 +159,37 @@ export const INVITE_SUBJECT = "You're invited to add photos on Trip One"
  * @param env - Function env (DB)
  * @param invite - The invite as just saved
  * @param nowMs - Current time, epoch ms
- * @returns `{ send: true }` with the send claimed, or `{ send: false, reason }`
  */
-export async function claimInviteSend(
-  env: Env,
-  invite: TripInviteRow,
-  nowMs: number,
-): Promise<{ send: true } | { send: false; reason: InviteNotSentReason }> {
-  const windowStart = nowMs - INVITE_SEND_WINDOW_MS
-  if (invite.last_sent_at !== null && invite.last_sent_at > windowStart) return { send: false, reason: 'recently_sent' }
+export async function claimInviteSend(env: Env, invite: TripInviteRow, nowMs: number): Promise<InviteSendDecision> {
+  const windowStartMs = nowMs - INVITE_SEND_WINDOW_MS
+  const claimed = await claimTripInviteSend(env, {
+    inviteId: invite.id,
+    tripId: invite.trip_id,
+    email: invite.email,
+    nowMs,
+    windowStartMs,
+    maxPerTrip: MAX_INVITE_SENDS_PER_TRIP,
+    maxPerRecipient: MAX_INVITE_SENDS_PER_RECIPIENT,
+    maxGlobal: MAX_INVITE_SENDS_GLOBAL,
+  })
+  if (claimed) return { send: true, claimedAtMs: nowMs, previousSentAtMs: invite.last_sent_at }
 
-  if ((await countTripInviteSendsSince(env, invite.trip_id, windowStart)) >= MAX_INVITE_SENDS_PER_TRIP) {
-    return { send: false, reason: 'daily_limit' }
-  }
-  if ((await countInviteSendsToEmailSince(env, invite.email, windowStart)) >= MAX_INVITE_SENDS_PER_RECIPIENT) {
-    return { send: false, reason: 'daily_limit' }
-  }
-  if ((await countInviteSendsSince(env, windowStart)) >= MAX_INVITE_SENDS_GLOBAL) {
-    return { send: false, reason: 'daily_limit' }
-  }
-  // Lost a race with a concurrent send of this same invite.
-  if (!(await claimTripInviteSend(env, invite.id, nowMs, windowStart))) return { send: false, reason: 'recently_sent' }
-  return { send: true }
+  const current = await getTripInviteById(env, invite.trip_id, invite.id)
+  const sentInWindow = current?.last_sent_at != null && current.last_sent_at > windowStartMs
+  return { send: false, reason: sentInWindow ? 'recently_sent' : 'daily_limit' }
+}
+
+/**
+ * Gives back a claimed send whose email never left, so a provider outage does
+ * not spend the recipient's budget or block a re-send for 24 hours.
+ * @param env - Function env (DB)
+ * @param inviteId - The invite
+ * @param decision - The successful claim being undone
+ */
+export async function releaseInviteSend(
+  env: Env,
+  inviteId: string,
+  decision: { claimedAtMs: number; previousSentAtMs: number | null },
+): Promise<void> {
+  await releaseTripInviteSend(env, inviteId, decision.claimedAtMs, decision.previousSentAtMs)
 }

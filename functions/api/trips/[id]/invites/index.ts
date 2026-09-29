@@ -13,6 +13,7 @@ import { sendEmail, siteOrigin, tripInviteHtml, type MailEnv } from '../../../..
 import { tripInviteSchema, firstIssueMessage } from '../../../../lib/auth/validation'
 import {
   claimInviteSend,
+  releaseInviteSend,
   guardInviteRequest,
   inviteTripName,
   json,
@@ -133,7 +134,16 @@ export async function onRequestPost({ env, request, params }: InviteContext): Pr
   // sendEmail never throws; it reports failure in its result.
   const result = await sendEmail(env, email, INVITE_SUBJECT, tripInviteHtml({ tripName, recapUrl }))
   if (!result.sent) {
-    if (!result.stubbed) logger.warn('invite email not sent', { inviteId: invite.id })
+    if (!result.stubbed) {
+      logger.warn('invite email not sent', { inviteId: invite.id })
+      // The provider refused or was down: give the claim back so the outage
+      // does not spend the recipient's budget or block a retry for 24 hours.
+      try {
+        await releaseInviteSend(env, invite.id, decision)
+      } catch (err) {
+        logger.error('invite send release failed', err)
+      }
+    }
     return json({ invite: toPublicInvite(invite), emailSent: false, reason: 'send_failed' }, 201)
   }
   return json({ invite: toPublicInvite(invite), emailSent: true }, 201)

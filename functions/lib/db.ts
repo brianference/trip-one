@@ -974,44 +974,80 @@ export async function countLiveTripInvites(env: Env, tripId: string): Promise<nu
   return row?.n ?? 0
 }
 
-/** How many of a trip's invites were emailed since `sinceMs` (revoked ones included). */
-export async function countTripInviteSendsSince(env: Env, tripId: string, sinceMs: number): Promise<number> {
-  const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM trip_invites WHERE trip_id = ? AND last_sent_at >= ?')
-    .bind(tripId, sinceMs)
-    .first<{ n: number }>()
-  return row?.n ?? 0
-}
-
-/** How many invites to this address, across every trip, were emailed since `sinceMs`. */
-export async function countInviteSendsToEmailSince(env: Env, email: string, sinceMs: number): Promise<number> {
-  const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM trip_invites WHERE email = ? AND last_sent_at >= ?')
-    .bind(normalizeEmail(email), sinceMs)
-    .first<{ n: number }>()
-  return row?.n ?? 0
-}
-
-/** How many invites, app-wide, were emailed since `sinceMs`. */
-export async function countInviteSendsSince(env: Env, sinceMs: number): Promise<number> {
-  const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM trip_invites WHERE last_sent_at >= ?')
-    .bind(sinceMs)
-    .first<{ n: number }>()
-  return row?.n ?? 0
+/** The limits one invite send is checked against, all over the same window. */
+export interface InviteSendClaim {
+  inviteId: string
+  tripId: string
+  /** Normalized with {@link normalizeEmail}. */
+  email: string
+  nowMs: number
+  /** Start of the counting window; a send after this moment is "within 24 hours". */
+  windowStartMs: number
+  maxPerTrip: number
+  maxPerRecipient: number
+  maxGlobal: number
 }
 
 /**
- * Claims the right to email an invite now: stamps `last_sent_at`, but only if
- * the invite was never sent or its last send is at or before `resendCutoffMs`.
- * The check and the stamp are one statement, so two concurrent requests
- * cannot both send.
+ * Claims the right to email an invite now, stamping `last_sent_at`, in ONE
+ * statement that also enforces every cap. It changes the row only when:
+ * the invite was never sent or last sent at or before the window start; the
+ * trip has sent fewer than `maxPerTrip` invites in the window; the address has
+ * received fewer than `maxPerRecipient` in the window across all trips; and
+ * fewer than `maxGlobal` went out app-wide in the window.
+ *
+ * D1 runs each statement on its own, one at a time, so the counts and the
+ * stamp cannot interleave with another claim: of two concurrent claims that
+ * both fit under a cap's last slot, only the first changes a row. Counting
+ * rows beforehand is only ever advisory; this statement is what enforces.
+ *
  * @returns True when this caller may send
  */
-export async function claimTripInviteSend(env: Env, inviteId: string, nowMs: number, resendCutoffMs: number): Promise<boolean> {
+export async function claimTripInviteSend(env: Env, claim: InviteSendClaim): Promise<boolean> {
   const res = await env.DB.prepare(
-    'UPDATE trip_invites SET last_sent_at = ? WHERE id = ? AND (last_sent_at IS NULL OR last_sent_at <= ?)',
+    `UPDATE trip_invites SET last_sent_at = ?
+     WHERE id = ?
+       AND (last_sent_at IS NULL OR last_sent_at <= ?)
+       AND (SELECT COUNT(*) FROM trip_invites WHERE trip_id = ? AND last_sent_at > ?) < ?
+       AND (SELECT COUNT(*) FROM trip_invites WHERE email = ? AND last_sent_at > ?) < ?
+       AND (SELECT COUNT(*) FROM trip_invites WHERE last_sent_at > ?) < ?`,
   )
-    .bind(nowMs, inviteId, resendCutoffMs)
+    .bind(
+      claim.nowMs,
+      claim.inviteId,
+      claim.windowStartMs,
+      claim.tripId,
+      claim.windowStartMs,
+      claim.maxPerTrip,
+      normalizeEmail(claim.email),
+      claim.windowStartMs,
+      claim.maxPerRecipient,
+      claim.windowStartMs,
+      claim.maxGlobal,
+    )
     .run()
   return (res.meta?.changes ?? 0) > 0
+}
+
+/**
+ * Undoes a claim whose email never left (the provider refused or was down),
+ * putting `last_sent_at` back to what it was, so an outage neither spends the
+ * recipient's daily budget nor blocks a re-send for 24 hours. Only undoes this
+ * caller's own stamp (`last_sent_at = claimedAtMs`).
+ * @param env - D1 env
+ * @param inviteId - The invite
+ * @param claimedAtMs - The `nowMs` the claim stamped
+ * @param previousMs - `last_sent_at` before the claim (null if never sent)
+ */
+export async function releaseTripInviteSend(
+  env: Env,
+  inviteId: string,
+  claimedAtMs: number,
+  previousMs: number | null,
+): Promise<void> {
+  await env.DB.prepare('UPDATE trip_invites SET last_sent_at = ? WHERE id = ? AND last_sent_at = ?')
+    .bind(previousMs, inviteId, claimedAtMs)
+    .run()
 }
 
 /** A trip's live invites, oldest first. */
