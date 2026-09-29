@@ -1,0 +1,47 @@
+[
+  {
+    "query": "Tokyo, Japan",
+    "raw": "Tokyo, Japan",
+    "clean": "Tokyo, Japan"
+  },
+  {
+    "query": "Barcelona, Spain",
+    "raw": "Barcelona, Barcelonès, Barcelona, Catalonia, Spain",
+    "clean": "Barcelona, Spain"
+  },
+  {
+    "query": "Marrakesh, Morocco",
+    "raw": "Marrakesh, Pachalik de Marrakech, Marrakesh Prefecture, Marrakech-Safi, Morocco",
+    "clean": "Marrakesh, Morocco"
+  },
+  {
+    "query": "Miami, Florida",
+    "raw": "Miami, Miami-Dade County, Florida, United States",
+    "clean": "Miami, Florida"
+  },
+  {
+    "query": "Dublin, Ireland",
+    "raw": "Dublin, County Dublin, Leinster, Ireland",
+    "clean": "Dublin, Ireland"
+  },
+  {
+    "query": "Ljubljana, Slovenia",
+    "raw": "Ljubljana, Upravna Enota Ljubljana, 1000, Slovenia",
+    "clean": "Ljubljana, Slovenia"
+  },
+  {
+    "query": "Nicosia, Cyprus",
+    "raw": "Nicosia, Nicosia Muncipality, Nicosia District, Cyprus, 1107, Cyprus",
+    "clean": "Nicosia, Cyprus"
+  },
+  {
+    "query": "Hanoi, Vietnam",
+    "raw": "Hà Nội, Vietnam",
+    "clean": "Hà Nội, Vietnam"
+  },
+  {
+    "query": "Valletta, Malta",
+    "raw": "Valletta, Port Region, Malta",
+    "clean": "Valletta, Malta"
+  }
+]

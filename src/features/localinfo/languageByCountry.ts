@@ -57,6 +57,21 @@ const LANGUAGE_BY_COUNTRY: Record<string, string> = {
   hungary: 'hungarian',
   romania: 'romanian',
   croatia: 'croatian',
+  cyprus: 'greek',
+  luxembourg: 'french',
+}
+
+/**
+ * Extract the trailing (country, or for US places the state) segment from a
+ * cleaned location display name, lowercased for lookup-table matching. Shared
+ * by every country-keyed lookup in this feature (language, currency,
+ * destination facts) so the segment-parsing rule lives in exactly one place.
+ * @param displayName - Full location display name, e.g. "Kyoto, Japan"
+ * @returns The lowercased trailing segment, or an empty string if `displayName` has no segments
+ */
+export function countryForDisplayName(displayName: string): string {
+  const segments = displayName.split(',').map((segment) => segment.trim().toLowerCase())
+  return segments[segments.length - 1] ?? ''
 }
 
 /**
@@ -67,7 +82,5 @@ const LANGUAGE_BY_COUNTRY: Record<string, string> = {
  * the country isn't recognized or its language is English (no phrasebook needed)
  */
 export function languageForDisplayName(displayName: string): string | null {
-  const segments = displayName.split(',').map((segment) => segment.trim().toLowerCase())
-  const country = segments[segments.length - 1] ?? ''
-  return LANGUAGE_BY_COUNTRY[country] ?? null
+  return LANGUAGE_BY_COUNTRY[countryForDisplayName(displayName)] ?? null
 }
