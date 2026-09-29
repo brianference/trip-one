@@ -92,7 +92,8 @@ export async function onRequestGet({
  * member at all. The uploader is also in the DELETE's WHERE clause.
  *
  * The R2 object goes first, then the row, as on the owner route: if the object
- * delete fails the row stays, so the photo is still visible and deletable.
+ * delete fails the row stays, so the photo is still visible and deletable. If
+ * the uploader-guarded row DELETE removes nothing, it logs and answers 500.
  *
  * @param context - Request context with `env`, `request` and `params`
  * @returns 200 `{ ok: true }`, or `{ error }` with 401, 403, 404, 429 or 500
@@ -124,7 +125,12 @@ export async function onRequestDelete({
     if (row.uploader_user_id !== access.user.id) return json({ error: CONTRIBUTOR_FORBIDDEN_MESSAGE }, 403)
 
     await env.PHOTOS.delete(row.r2_key)
-    await deletePhotoRowUploadedBy(env, access.trip.id, row.id, access.user.id)
+    if (!(await deletePhotoRowUploadedBy(env, access.trip.id, row.id, access.user.id))) {
+      // The row was read above, so a guarded DELETE that matched nothing means
+      // it changed underneath this request; never report a delete that did not happen.
+      logger.error('recap photo row delete removed nothing', { photoId: row.id })
+      return json({ error: SERVER_ERROR_MESSAGE }, 500)
+    }
     return json({ ok: true }, 200)
   } catch (err) {
     logger.error('recap photo delete failed', err)

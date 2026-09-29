@@ -334,28 +334,33 @@ export async function insertRequestLog(env: Env, ipHash: string, endpoint: strin
 }
 
 /**
- * Deletes every request_log row older than `beforeIso`, reading only the rows
- * it deletes.
+ * Most request_log rows one purge deletes. D1 counts each deleted row, plus
+ * one per index on the table, as a row written, and Workers Free allows
+ * 100,000 rows written a day (developers.cloudflare.com/d1/platform/pricing/),
+ * so one purge must never spend a large share of that. The purge runs on about
+ * one in every REQUEST_LOG_PURGE_ONE_IN allowed requests, so a backlog drains
+ * over a few later purges.
+ */
+export const REQUEST_LOG_PURGE_BATCH = 1000
+
+/**
+ * Deletes the oldest request_log rows created before `beforeIso`, at most
+ * {@link REQUEST_LOG_PURGE_BATCH} of them per call.
  *
- * Rows are appended with an autoincrement id and the current time, so the old
- * rows are a prefix of the table in id order. The first row at or after the
- * cutoff is found by walking the primary key from the start (it stops at the
- * first match), and everything before it goes, by primary-key range. No index
- * on created_at is needed, so inserts (every rate-limited request) do not pay
- * for one more index write. When no row is that recent, every row goes.
+ * The subquery walks the primary key from the start and stops after the batch,
+ * and old rows are (almost) a prefix of the table in id order, so it reads
+ * little more than the rows it deletes. No index on created_at is needed, so
+ * inserts (every rate-limited request) do not pay for one more index write.
  *
  * @param env - D1 env
  * @param beforeIso - ISO-8601 cutoff; rows created before it are deleted
- * @returns How many rows were deleted
+ * @returns How many rows were deleted (at most REQUEST_LOG_PURGE_BATCH)
  */
 export async function purgeRequestLogBefore(env: Env, beforeIso: string): Promise<number> {
   const res = await env.DB.prepare(
-    `DELETE FROM request_log WHERE id < COALESCE(
-       (SELECT id FROM request_log WHERE created_at >= ? ORDER BY id LIMIT 1),
-       (SELECT COALESCE(MAX(id), 0) + 1 FROM request_log)
-     )`,
+    'DELETE FROM request_log WHERE id IN (SELECT id FROM request_log WHERE created_at < ? ORDER BY id LIMIT ?)',
   )
-    .bind(beforeIso)
+    .bind(beforeIso, REQUEST_LOG_PURGE_BATCH)
     .run()
   return res.meta?.changes ?? 0
 }
@@ -1202,23 +1207,56 @@ export async function removeTripMember(env: Env, tripId: string, userId: string)
   await env.DB.prepare('DELETE FROM trip_members WHERE trip_id = ? AND user_id = ?').bind(tripId, userId).run()
 }
 
-/** Records the first acceptance of an invite; later calls change nothing. */
-export async function markTripInviteAccepted(env: Env, inviteId: string, userId: string, acceptedAt: number): Promise<void> {
-  await env.DB.prepare(
-    'UPDATE trip_invites SET accepted_user_id = ?, accepted_at = ? WHERE id = ? AND accepted_at IS NULL',
+/**
+ * Claims an invite's acceptance for `userId`, in one statement that also
+ * checks the invite is still live (`revoked_at IS NULL`), so an invite revoked
+ * after the caller read it can never be accepted. The first acceptance time
+ * and user are kept: joining again matches (the same user) and changes
+ * nothing, while an invite already accepted by another account does not match.
+ * @param env - D1 env
+ * @param inviteId - The invite
+ * @param userId - The joining user
+ * @param acceptedAt - Epoch ms, used only if the invite was not yet accepted
+ * @returns True when the invite is live and now accepted by this user
+ */
+export async function markTripInviteAccepted(env: Env, inviteId: string, userId: string, acceptedAt: number): Promise<boolean> {
+  const res = await env.DB.prepare(
+    `UPDATE trip_invites
+     SET accepted_user_id = CASE WHEN accepted_at IS NULL THEN ? ELSE accepted_user_id END,
+         accepted_at = COALESCE(accepted_at, ?)
+     WHERE id = ? AND revoked_at IS NULL AND (accepted_at IS NULL OR accepted_user_id = ?)`,
   )
-    .bind(userId, acceptedAt, inviteId)
+    .bind(userId, acceptedAt, inviteId, userId)
     .run()
+  return (res.meta?.changes ?? 0) > 0
 }
 
-/** Adds a user to a trip as a contributor. Idempotent: an existing membership is left as it is. */
-export async function addTripMember(env: Env, row: { trip_id: string; user_id: string; created_at: number }): Promise<void> {
-  await env.DB.prepare(
-    `INSERT INTO trip_members (trip_id, user_id, role, created_at) VALUES (?, ?, 'contributor', ?)
-     ON CONFLICT (trip_id, user_id) DO NOTHING`,
+/**
+ * Adds a user to a trip as a contributor, ONLY while `inviteId` is a live
+ * invite to that trip accepted by that user; the check and the insert are one
+ * statement, so an invite revoked at any point before it leaves no member.
+ * An existing membership is kept as it is (the no-op update still reports
+ * the row, so a repeat join also answers true).
+ * @param env - D1 env
+ * @param row - The membership, and the accepted invite that grants it
+ * @returns True when the user is a member through that live invite
+ */
+export async function addTripMemberForInvite(
+  env: Env,
+  row: { trip_id: string; user_id: string; created_at: number; invite_id: string },
+): Promise<boolean> {
+  const res = await env.DB.prepare(
+    `INSERT INTO trip_members (trip_id, user_id, role, created_at)
+     SELECT ?, ?, 'contributor', ?
+     WHERE EXISTS (
+       SELECT 1 FROM trip_invites
+       WHERE id = ? AND trip_id = ? AND accepted_user_id = ? AND revoked_at IS NULL
+     )
+     ON CONFLICT (trip_id, user_id) DO UPDATE SET role = trip_members.role`,
   )
-    .bind(row.trip_id, row.user_id, row.created_at)
+    .bind(row.trip_id, row.user_id, row.created_at, row.invite_id, row.trip_id, row.user_id)
     .run()
+  return (res.meta?.changes ?? 0) > 0
 }
 
 /** True when the user is a member (contributor) of the trip. */

@@ -1,10 +1,13 @@
 // @vitest-environment node
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { isRateLimited, REQUEST_LOG_PURGE_ONE_IN, REQUEST_LOG_RETENTION_MS } from './rateLimitGuard'
-import { purgeRequestLogBefore } from './db'
+import { purgeRequestLogBefore, REQUEST_LOG_PURGE_BATCH } from './db'
 import { fakeD1 } from './testD1'
 import { sqliteD1 } from './testSqliteD1'
 import { logger } from '../../src/lib/logger'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 function envWithCount(count: number) {
   return fakeD1({ first: (sql) => (sql.includes('COUNT(*)') ? { n: count } : null) })
@@ -113,12 +116,57 @@ describe('request_log purge', () => {
     expect(await purgeRequestLogBefore(db.env, new Date().toISOString())).toBe(0)
   })
 
+  // D1 counts every deleted row (plus one per index) against the Workers Free
+  // limit of 100,000 rows written a day
+  // (developers.cloudflare.com/d1/platform/pricing/), so one purge must stay bounded.
+  it('purgeRequestLogBefore removes at most 1000 old rows per call, oldest first, and never a fresh one', async () => {
+    const db = sqliteD1()
+    const now = Date.now()
+    const oldIso = new Date(now - 3 * 60 * 60 * 1000).toISOString()
+    const freshIso = new Date(now - 10 * 60 * 1000).toISOString()
+    const oldCount = 1250
+    const freshCount = 5
+    for (let i = 0; i < oldCount; i += 1) {
+      db.exec('INSERT INTO request_log (ip_hash, endpoint, created_at) VALUES (?, ?, ?)', `old-${i}`, 'x', oldIso)
+    }
+    for (let i = 0; i < freshCount; i += 1) {
+      db.exec('INSERT INTO request_log (ip_hash, endpoint, created_at) VALUES (?, ?, ?)', `fresh-${i}`, 'x', freshIso)
+    }
+    // One more old row AFTER the fresh ones (clock skew between isolates):
+    // the cutoff decides, not the position in the table.
+    db.exec('INSERT INTO request_log (ip_hash, endpoint, created_at) VALUES (?, ?, ?)', 'old-late', 'x', oldIso)
+    const cutoff = new Date(now - REQUEST_LOG_RETENTION_MS).toISOString()
+
+    const batch = 1000
+    expect(await purgeRequestLogBefore(db.env, cutoff)).toBe(batch)
+    const left = db.rows<{ ip_hash: string }>('SELECT ip_hash FROM request_log ORDER BY id').map((r) => r.ip_hash)
+    expect(left.filter((h) => h.startsWith('fresh-'))).toHaveLength(freshCount)
+    expect(left.filter((h) => h.startsWith('old-'))).toHaveLength(oldCount + 1 - batch)
+    // Oldest first: the first 1000 by id went.
+    expect(left[0]).toBe(`old-${batch}`)
+
+    // Later calls finish the job, still leaving every fresh row.
+    expect(await purgeRequestLogBefore(db.env, cutoff)).toBe(oldCount + 1 - batch)
+    expect(await purgeRequestLogBefore(db.env, cutoff)).toBe(0)
+    expect(db.rows<{ ip_hash: string }>('SELECT ip_hash FROM request_log ORDER BY id').map((r) => r.ip_hash)).toEqual(
+      Array.from({ length: freshCount }, (_, i) => `fresh-${i}`),
+    )
+    expect(REQUEST_LOG_PURGE_BATCH).toBe(batch)
+  })
+
   it('the per-endpoint count uses the (ip_hash, endpoint, created_at) index from 0008', () => {
     const db = sqliteD1()
     const plan = db.rows<{ detail: string }>(
       "EXPLAIN QUERY PLAN SELECT COUNT(*) AS n FROM request_log WHERE ip_hash = 'a' AND endpoint = 'b' AND created_at >= 'c'",
     )
     expect(plan.map((p) => p.detail).join(' ')).toContain('request_log_ip_endpoint_created_idx')
+  })
+
+  it('d1/schema.sql matches the post-0008 schema: it never creates the dropped (ip_hash, created_at) index', () => {
+    const schema = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'd1', 'schema.sql'), 'utf8')
+    expect(schema).not.toMatch(/create\s+index[^;]*request_log_ip_hash_created_at_idx/i)
+    // The table itself is still there.
+    expect(schema).toMatch(/create table if not exists request_log\b/i)
   })
 
   it('0008 drops the old (ip_hash, created_at) index, and the count without an endpoint still uses an index', () => {

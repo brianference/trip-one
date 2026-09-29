@@ -1,6 +1,6 @@
 import type { Env } from '../../../lib/db'
 import {
-  addTripMember,
+  addTripMemberForInvite,
   getActiveRecapLinkByToken,
   getActiveTripInvite,
   getTrip,
@@ -88,9 +88,22 @@ export async function onRequestPost({
     const invite = await getActiveTripInvite(env, link.trip_id, normalizeEmail(user.email))
     if (!invite) return json({ error: JOIN_FORBIDDEN_MESSAGE }, 403)
 
+    // Claim the acceptance first, then add the member only through that live,
+    // accepted invite. The owner can revoke at any moment; each step re-checks
+    // `revoked_at IS NULL` in its own statement, so a revoke before either
+    // one leaves no member and gets the revoked-invite answer. A revoke after
+    // both removes the membership itself.
     const now = Date.now()
-    await addTripMember(env, { trip_id: link.trip_id, user_id: user.id, created_at: now })
-    await markTripInviteAccepted(env, invite.id, user.id, now)
+    if (!(await markTripInviteAccepted(env, invite.id, user.id, now))) {
+      return json({ error: JOIN_FORBIDDEN_MESSAGE }, 403)
+    }
+    const member = await addTripMemberForInvite(env, {
+      trip_id: link.trip_id,
+      user_id: user.id,
+      created_at: now,
+      invite_id: invite.id,
+    })
+    if (!member) return json({ error: JOIN_FORBIDDEN_MESSAGE }, 403)
     return json({ joined: true }, 200)
   } catch (err) {
     logger.error('recap join failed', err)

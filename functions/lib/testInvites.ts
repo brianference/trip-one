@@ -139,11 +139,12 @@ export function inviteStore(
     if (sql.startsWith('DELETE FROM request_log')) {
       // The rate limiter's occasional purge (purgeRequestLogBefore); the real
       // SQL is proven against SQLite in rateLimitGuard.test.ts.
-      const [before] = args as [string]
-      const keep = requestLog.filter((r) => r.createdAt >= before)
-      const removed = requestLog.length - keep.length
+      // Oldest first, at most `limit` rows, as the bounded DELETE does.
+      const [before, limit] = args as [string, number]
+      const doomed = new Set(requestLog.filter((r) => r.createdAt < before).slice(0, limit))
+      const keep = requestLog.filter((r) => !doomed.has(r))
       requestLog.splice(0, requestLog.length, ...keep)
-      return removed
+      return doomed.size
     }
     if (sql.startsWith('INSERT INTO request_log')) {
       const [ipHash, endpoint, createdAt] = args as [string, string, string]
@@ -212,12 +213,22 @@ export function inviteStore(
       members.splice(0, members.length, ...keep)
       return removed
     }
-    if (sql === 'UPDATE trip_invites SET accepted_user_id = ?, accepted_at = ? WHERE id = ? AND accepted_at IS NULL') {
-      const [userId, acceptedAt, id] = args as [string, number, string]
-      const row = invites.find((i) => i.id === id && i.accepted_at === null)
+    if (
+      sql.startsWith('UPDATE trip_invites') &&
+      sql.includes('accepted_at = COALESCE(accepted_at, ?)') &&
+      sql.includes('WHERE id = ? AND revoked_at IS NULL AND (accepted_at IS NULL OR accepted_user_id = ?)')
+    ) {
+      // Mirrors markTripInviteAccepted; the real-SQLite join tests in
+      // contributors.test.ts prove the SQL itself.
+      const [userId, acceptedAt, id, sameUser] = args as [string, number, string, string]
+      const row = invites.find(
+        (i) => i.id === id && i.revoked_at === null && (i.accepted_at === null || i.accepted_user_id === sameUser),
+      )
       if (!row) return 0
-      row.accepted_user_id = userId
-      row.accepted_at = acceptedAt
+      if (row.accepted_at === null) {
+        row.accepted_user_id = userId
+        row.accepted_at = acceptedAt
+      }
       return 1
     }
     if (sql.startsWith('UPDATE trip_invites SET last_sent_at = ?') && sql.includes('SELECT COUNT(*) FROM trip_invites')) {
@@ -242,10 +253,23 @@ export function inviteStore(
       row.last_sent_at = previous
       return 1
     }
-    if (sql.includes('INSERT INTO trip_members') && sql.includes('ON CONFLICT (trip_id, user_id) DO NOTHING')) {
-      const [tripId, userId, createdAt] = args as [string, string, number]
-      if (members.some((m) => m.trip_id === tripId && m.user_id === userId)) return 0
-      members.push({ trip_id: tripId, user_id: userId, role: 'contributor', created_at: createdAt })
+    if (
+      sql.includes('INSERT INTO trip_members') &&
+      sql.includes('WHERE id = ? AND trip_id = ? AND accepted_user_id = ? AND revoked_at IS NULL') &&
+      sql.includes('ON CONFLICT (trip_id, user_id) DO UPDATE SET role = trip_members.role')
+    ) {
+      // Mirrors addTripMemberForInvite: only through a live invite this user
+      // accepted; an existing membership is kept and still reported.
+      const [tripId, userId, createdAt, inviteId, inviteTripId, inviteUserId] = args as [
+        string, string, number, string, string, string,
+      ]
+      const live = invites.some(
+        (i) => i.id === inviteId && i.trip_id === inviteTripId && i.accepted_user_id === inviteUserId && i.revoked_at === null,
+      )
+      if (!live) return 0
+      if (!members.some((m) => m.trip_id === tripId && m.user_id === userId)) {
+        members.push({ trip_id: tripId, user_id: userId, role: 'contributor', created_at: createdAt })
+      }
       return 1
     }
     throw new Error(`inviteStore: unexpected run() SQL: ${sql}`)

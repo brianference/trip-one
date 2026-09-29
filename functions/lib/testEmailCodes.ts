@@ -98,11 +98,12 @@ export function codeStore(extraEnv: Record<string, unknown> = {}): CodeStore {
     if (sql.startsWith('DELETE FROM request_log')) {
       // The rate limiter's occasional purge (purgeRequestLogBefore); the real
       // SQL is proven against SQLite in rateLimitGuard.test.ts.
-      const [before] = args as [string]
-      const keep = requestLog.filter((r) => r.createdAt >= before)
-      const removed = requestLog.length - keep.length
+      // Oldest first, at most `limit` rows, as the bounded DELETE does.
+      const [before, limit] = args as [string, number]
+      const doomed = new Set(requestLog.filter((r) => r.createdAt < before).slice(0, limit))
+      const keep = requestLog.filter((r) => !doomed.has(r))
       requestLog.splice(0, requestLog.length, ...keep)
-      return removed
+      return doomed.size
     }
     if (sql.startsWith('INSERT INTO request_log')) {
       const [ipHash, endpoint, createdAt] = args as [string, string, string]

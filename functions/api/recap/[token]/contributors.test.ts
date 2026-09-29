@@ -328,6 +328,41 @@ describe('DELETE /api/recap/:token/photos/:photoId', () => {
     expect(photoIds(w)).not.toContain(JO_PHOTO)
   })
 
+  it('answers 500 with the fixed body, and logs, when the uploader-guarded row delete removes nothing', async () => {
+    const w = contributorWorld()
+    const error = vi.spyOn(logger, 'error').mockImplementation(() => {})
+    // The row vanishes between the read and the guarded DELETE (a second tab
+    // deleting the same photo), so the DELETE matches no row.
+    const realPrepare = w.env.DB.prepare.bind(w.env.DB)
+    const env = {
+      ...w.env,
+      DB: {
+        ...w.env.DB,
+        prepare(sql: string) {
+          if (sql.startsWith('DELETE FROM trip_photos')) w.exec('DELETE FROM trip_photos WHERE id = ?', SAM_PHOTO)
+          return realPrepare(sql)
+        },
+      },
+    } as typeof w.env
+    const res = await deletePhoto({
+      env,
+      request: new Request(`https://trip-one.pages.dev/api/recap/${ACTIVE_TOKEN}/photos/${SAM_PHOTO}`, {
+        method: 'DELETE',
+        headers: headers(await cookieFor(SAM.id)),
+      }),
+      params: { token: ACTIVE_TOKEN, photoId: SAM_PHOTO },
+    })
+    const body = await read(res)
+    expect(body).toMatchObject({
+      status: 500,
+      cache: 'private, no-store',
+      body: { error: 'Something went wrong on our end. Please try again in a moment.' },
+    })
+    expect(body.text).not.toContain(SAM_PHOTO)
+    expect(body.text).not.toContain(SAM.id)
+    expect(error).toHaveBeenCalledWith('recap photo row delete removed nothing', { photoId: SAM_PHOTO })
+  })
+
   it('answers 401 signed out and deletes nothing', async () => {
     const w = contributorWorld()
     const res = await read(await remove(w, ACTIVE_TOKEN, SAM_PHOTO))
@@ -508,6 +543,115 @@ describe('owner removes a member by revoking their accepted invite', () => {
     })
     expect(res.status).toBe(403)
     expect(w.rows('SELECT user_id FROM trip_members WHERE trip_id = ? AND user_id = ?', TRIP_ID, SAM.id)).toEqual([])
+  })
+
+  /**
+   * A world where SAM holds a PENDING invite to TRIP_ID and is not yet a
+   * member, with a hook that runs `during` just before the first statement
+   * whose SQL `trigger` matches is prepared (or, with `after`, just after its
+   * first() resolves).
+   */
+  function joinRaceWorld(trigger: (sql: string) => boolean, during: (w: ContributorWorld) => void, after = false) {
+    const w = contributorWorld()
+    w.exec('DELETE FROM trip_members WHERE trip_id = ? AND user_id = ?', TRIP_ID, SAM.id)
+    w.exec(
+      `INSERT INTO trip_invites (id, trip_id, email, created_at, accepted_user_id, accepted_at, revoked_at, last_sent_at)
+       VALUES (?, ?, ?, 1790000000000, NULL, NULL, NULL, 1790000000000)`,
+      SAM_INVITE,
+      TRIP_ID,
+      SAM.email,
+    )
+    let fired = false
+    const realPrepare = w.env.DB.prepare.bind(w.env.DB)
+    const env = {
+      ...w.env,
+      DB: {
+        ...w.env.DB,
+        prepare(sql: string) {
+          const stmt = realPrepare(sql)
+          if (fired || !trigger(sql)) return stmt
+          fired = true
+          if (!after) {
+            during(w)
+            return stmt
+          }
+          const realFirst = stmt.first.bind(stmt)
+          return Object.assign(stmt, {
+            async first<T>() {
+              const row = await realFirst<T>()
+              during(w)
+              return row
+            },
+          })
+        },
+      },
+    } as typeof w.env
+    return { w, env, wasFired: () => fired }
+  }
+
+  /** POSTs a join as SAM through `env`. */
+  async function joinAsSam(env: ContributorWorld['env']) {
+    return joinTrip({
+      env,
+      request: new Request(`https://x/api/recap/${ACTIVE_TOKEN}/join`, { method: 'POST', headers: headers(await cookieFor(SAM.id)) }),
+      params: { token: ACTIVE_TOKEN },
+    })
+  }
+
+  /** The join answer for an invite that was already revoked before the request. */
+  async function revokedInviteJoinResponse(): Promise<{ status: number; text: string }> {
+    const { w, env } = joinRaceWorld(() => false, () => {})
+    w.exec('UPDATE trip_invites SET revoked_at = 1790000000900 WHERE id = ?', SAM_INVITE)
+    const res = await joinAsSam(env)
+    return { status: res.status, text: (await read(res)).text }
+  }
+
+  it('an invite revoked between the join’s read and its acceptance admits nobody, with the revoked-invite answer', async () => {
+    const { w, env, wasFired } = joinRaceWorld(
+      (sql) => sql.includes('FROM trip_invites WHERE trip_id = ? AND email = ? AND revoked_at IS NULL'),
+      (world) => world.exec('UPDATE trip_invites SET revoked_at = 1790000000900 WHERE id = ?', SAM_INVITE),
+      true,
+    )
+    const res = await joinAsSam(env)
+    expect(wasFired()).toBe(true)
+    const got = { status: res.status, text: (await read(res)).text }
+    expect(got).toEqual(await revokedInviteJoinResponse())
+    expect(got.status).toBe(403)
+    expect(w.rows('SELECT user_id FROM trip_members WHERE trip_id = ? AND user_id = ?', TRIP_ID, SAM.id)).toEqual([])
+    expect(w.rows('SELECT accepted_at FROM trip_invites WHERE id = ?', SAM_INVITE)).toEqual([{ accepted_at: null }])
+  })
+
+  it('an invite revoked (with the membership removed) just before the member row is written admits nobody', async () => {
+    const { w, env, wasFired } = joinRaceWorld(
+      (sql) => sql.includes('INSERT INTO trip_members'),
+      // What the owner's revoke does, for a pending or an accepted invite.
+      (world) => {
+        world.exec('UPDATE trip_invites SET revoked_at = 1790000000900 WHERE id = ?', SAM_INVITE)
+        world.exec('DELETE FROM trip_members WHERE trip_id = ? AND user_id = ?', TRIP_ID, SAM.id)
+      },
+    )
+    const res = await joinAsSam(env)
+    expect(wasFired()).toBe(true)
+    const got = { status: res.status, text: (await read(res)).text }
+    expect(got).toEqual(await revokedInviteJoinResponse())
+    expect(w.rows('SELECT user_id FROM trip_members WHERE trip_id = ? AND user_id = ?', TRIP_ID, SAM.id)).toEqual([])
+  })
+
+  it('on real SQLite, joining admits the invitee once and a second join changes nothing', async () => {
+    const { w, env } = joinRaceWorld(() => false, () => {})
+    const first = await joinAsSam(env)
+    expect((await read(first)).body).toEqual({ joined: true })
+    const [accepted] = w.rows<{ accepted_user_id: string; accepted_at: number }>(
+      'SELECT accepted_user_id, accepted_at FROM trip_invites WHERE id = ?',
+      SAM_INVITE,
+    )
+    expect(accepted.accepted_user_id).toBe(SAM.id)
+    const second = await joinAsSam(env)
+    expect((await read(second)).body).toEqual({ joined: true })
+    expect(w.rows('SELECT accepted_user_id, accepted_at FROM trip_invites WHERE id = ?', SAM_INVITE)).toEqual([accepted])
+    expect(w.rows('SELECT user_id, role FROM trip_members WHERE trip_id = ? AND user_id = ?', TRIP_ID, SAM.id)).toEqual([
+      { user_id: SAM.id, role: 'contributor' },
+    ])
   })
 
   it('on real SQLite, re-inviting clears the old acceptance; re-inviting a live invite keeps it', async () => {
