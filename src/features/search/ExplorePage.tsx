@@ -175,7 +175,7 @@ export function ExplorePage() {
                     <h2 className="font-[family-name:var(--font-display)] text-lg font-semibold leading-snug group-hover:text-[var(--accent-text)]">
                       {d.name}
                     </h2>
-                    <p className="text-sm opacity-60">{d.country}</p>
+                    <p className="text-sm opacity-75">{d.country}</p>
                     <p className="mt-2 text-sm opacity-80">{d.blurb}</p>
                   </div>
                 </a>
