@@ -183,4 +183,97 @@ describe('InvitePeople', () => {
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Remove invite to joined@example.com' })).toBeNull()
   })
+
+  describe('focus management', () => {
+    it('opening the inline confirm focuses Cancel', async () => {
+      const invites = [{ id: 'i1', email: 'a@example.com', createdAt: 1, acceptedAt: null }]
+      stubFetch({ [`GET /api/trips/${TRIP_ID}/invites`]: { status: 200, body: { invites } } })
+      render(<InvitePeople tripId={TRIP_ID} />)
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Remove invite to a@example.com' }))
+
+      expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus()
+    })
+
+    it('cancelling returns focus to that row’s Remove button', async () => {
+      const invites = [{ id: 'i1', email: 'a@example.com', createdAt: 1, acceptedAt: null }]
+      stubFetch({ [`GET /api/trips/${TRIP_ID}/invites`]: { status: 200, body: { invites } } })
+      render(<InvitePeople tripId={TRIP_ID} />)
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Remove invite to a@example.com' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+      expect(screen.getByRole('button', { name: 'Remove invite to a@example.com' })).toHaveFocus()
+    })
+
+    it('removing the only pending invite moves focus to the email input', async () => {
+      const invites = [{ id: 'i1', email: 'a@example.com', createdAt: 1, acceptedAt: null }]
+      stubFetch({
+        [`GET /api/trips/${TRIP_ID}/invites`]: { status: 200, body: { invites } },
+        [`DELETE /api/trips/${TRIP_ID}/invites/i1`]: { status: 200, body: { ok: true } },
+      })
+      render(<InvitePeople tripId={TRIP_ID} />)
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Remove invite to a@example.com' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+
+      await waitFor(() => expect(screen.queryByText('a@example.com')).toBeNull())
+      expect(screen.getByRole('textbox', { name: 'Email' })).toHaveFocus()
+    })
+
+    it('removing the first of two pending invites moves focus to the next row’s Remove button', async () => {
+      const invites = [
+        { id: 'i1', email: 'a@example.com', createdAt: 1, acceptedAt: null },
+        { id: 'i2', email: 'b@example.com', createdAt: 2, acceptedAt: null },
+      ]
+      stubFetch({
+        [`GET /api/trips/${TRIP_ID}/invites`]: { status: 200, body: { invites } },
+        [`DELETE /api/trips/${TRIP_ID}/invites/i1`]: { status: 200, body: { ok: true } },
+      })
+      render(<InvitePeople tripId={TRIP_ID} />)
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Remove invite to a@example.com' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+
+      await waitFor(() => expect(screen.queryByText('a@example.com')).toBeNull())
+      expect(screen.getByRole('button', { name: 'Remove invite to b@example.com' })).toHaveFocus()
+    })
+
+    it('removing the last of two pending invites moves focus to the remaining row’s Remove button', async () => {
+      const invites = [
+        { id: 'i1', email: 'a@example.com', createdAt: 1, acceptedAt: null },
+        { id: 'i2', email: 'b@example.com', createdAt: 2, acceptedAt: null },
+      ]
+      stubFetch({
+        [`GET /api/trips/${TRIP_ID}/invites`]: { status: 200, body: { invites } },
+        [`DELETE /api/trips/${TRIP_ID}/invites/i2`]: { status: 200, body: { ok: true } },
+      })
+      render(<InvitePeople tripId={TRIP_ID} />)
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Remove invite to b@example.com' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+
+      await waitFor(() => expect(screen.queryByText('b@example.com')).toBeNull())
+      expect(screen.getByRole('button', { name: 'Remove invite to a@example.com' })).toHaveFocus()
+    })
+
+    it('an alreadyJoined response keeps the row, drops the Remove control, and focuses the Joined label', async () => {
+      const invites = [{ id: 'i1', email: 'a@example.com', createdAt: 1, acceptedAt: null }]
+      stubFetch({
+        [`GET /api/trips/${TRIP_ID}/invites`]: { status: 200, body: { invites } },
+        [`DELETE /api/trips/${TRIP_ID}/invites/i1`]: { status: 200, body: { ok: true, alreadyJoined: true } },
+      })
+      render(<InvitePeople tripId={TRIP_ID} />)
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Remove invite to a@example.com' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+
+      const badge = await screen.findByText('Joined — can’t be removed')
+      expect(badge).toHaveFocus()
+      expect(screen.queryByRole('button', { name: 'Remove invite to a@example.com' })).toBeNull()
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'That person already joined, so they were kept on the list instead of removed.',
+      )
+    })
+  })
 })

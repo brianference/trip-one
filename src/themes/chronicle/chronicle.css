@@ -701,7 +701,11 @@
 
 .chronicle-invite-remove-btn {
   margin-top: var(--chronicle-space-xs);
-  min-height: 32px;
+  /* 44px touch target (global constraint), kept visually compact by staying
+     a small pill: the extra height is padding, not a bigger typeface. */
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
   padding: 0 var(--chronicle-space-sm);
   border: 1px solid var(--chronicle-border-hairline);
   border-radius: var(--chronicle-radius-pill);
@@ -739,7 +743,11 @@
 
 .chronicle-invite-row-confirm-yes,
 .chronicle-invite-row-confirm-no {
-  min-height: 32px;
+  /* 44px touch target (global constraint), kept visually compact by staying
+     a small pill: the extra height is padding, not a bigger typeface. */
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
   padding: 0 var(--chronicle-space-sm);
   border-radius: var(--chronicle-radius-pill);
   font-family: var(--chronicle-font-mono);
