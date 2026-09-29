@@ -17,6 +17,7 @@ import {
   updateTrip,
   type Env,
 } from './db'
+import { fakeR2 } from './testD1'
 
 /**
  * A statement-level fake of the D1 binding: it captures the SQL and bound args
@@ -58,7 +59,7 @@ function makeDB(firstResults: unknown[] = []): { env: Env; calls: Captured[] } {
       return stmt
     },
   }
-  return { env: { DB: db as unknown as Env['DB'], RATE_LIMIT_SALT: 'salt' }, calls }
+  return { env: { DB: db as unknown as Env['DB'], RATE_LIMIT_SALT: 'salt', PHOTOS: fakeR2().bucket }, calls }
 }
 
 describe('getLocationBySlug', () => {

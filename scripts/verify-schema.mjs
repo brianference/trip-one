@@ -19,6 +19,8 @@ const EXPECTED_TABLES = [
   'password_resets',
   'contact_messages',
   'fx_rates',
+  'trip_photos',
+  'trip_recap_links',
 ]
 
 /**

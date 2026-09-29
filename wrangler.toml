@@ -11,6 +11,14 @@ binding = "DB"
 database_name = "trip-one-db"
 database_id = "e419a900-cfb3-47f2-a49a-f505dd80e4e8"
 
+# Private R2 bucket for traveler-uploaded stop photos, bound as `env.PHOTOS`.
+# Objects are never public: every read goes through /api/trips/:id/photos/:photoId,
+# which serves them with the content type recorded in D1. Local `wrangler pages
+# dev` simulates the bucket under .wrangler/ (no network, no token).
+[[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "trip-one-photos"
+
 # Plain-text configuration. NOTE: [vars] is replace-not-merge: any var missing
 # from this block is dropped from the deployment. BREVO_API_KEY is a secret
 # set via `wrangler pages secret put` and must NOT appear in this file.

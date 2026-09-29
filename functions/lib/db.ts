@@ -1,8 +1,8 @@
-// Import ONLY the D1 type (module-scoped) rather than a global
+// Import ONLY the D1 and R2 types (module-scoped) rather than a global
 // `/// <reference types="@cloudflare/workers-types" />`: the global form
 // replaces the DOM `Response`/`fetch` types across the whole compilation and
 // breaks every `res.json()` call in the app.
-import type { D1Database } from '@cloudflare/workers-types'
+import type { D1Database, R2Bucket } from '@cloudflare/workers-types'
 
 /**
  * Data layer for trip-one, backed by Cloudflare D1 (SQLite).
@@ -21,6 +21,8 @@ import type { D1Database } from '@cloudflare/workers-types'
 export interface Env {
   DB: D1Database
   RATE_LIMIT_SALT: string
+  /** Private R2 bucket holding traveler-uploaded stop photos. Never served directly. */
+  PHOTOS: R2Bucket
 }
 
 export interface LocationRow {
@@ -618,4 +620,97 @@ export async function claimTripForUser(env: Env, tripId: string, userId: string)
     .bind(userId, tripId)
     .run()
   return (res.meta?.changes ?? 0) > 0
+}
+
+/**
+ * True when the trip exists and belongs to this user. Used where work must
+ * happen BEFORE the ownership-checked delete (removing the trip's photos), so
+ * a stranger can never trigger that work against someone else's trip.
+ */
+export async function isTripOwnedBy(env: Env, tripId: string, userId: string): Promise<boolean> {
+  const row = await env.DB.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?')
+    .bind(tripId, userId)
+    .first<{ id: string }>()
+  return row != null
+}
+
+// --- trip photos ---
+
+/** A row in `trip_photos`. The bytes live in R2 under `r2_key`. */
+export interface PhotoRow {
+  id: string
+  trip_id: string
+  /** The itinerary item's stable `id` this photo is attached to. */
+  stop_id: string
+  /** Always `trips/<trip_id>/<id>`; never derived from client input. */
+  r2_key: string
+  /** The SNIFFED type, which is what the photo is served back as. */
+  content_type: string
+  width: number
+  height: number
+  bytes: number
+  created_at: string
+}
+
+/** Every photo on a trip, oldest first. */
+export async function listPhotosForTrip(env: Env, tripId: string): Promise<PhotoRow[]> {
+  const res = await env.DB.prepare('SELECT * FROM trip_photos WHERE trip_id = ? ORDER BY created_at ASC')
+    .bind(tripId)
+    .all<PhotoRow>()
+  return res.results ?? []
+}
+
+/** How many photos a trip holds in total. */
+export async function countPhotosForTrip(env: Env, tripId: string): Promise<number> {
+  const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM trip_photos WHERE trip_id = ?')
+    .bind(tripId)
+    .first<{ n: number }>()
+  return row?.n ?? 0
+}
+
+/** How many photos one stop of a trip holds. */
+export async function countPhotosForStop(env: Env, tripId: string, stopId: string): Promise<number> {
+  const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM trip_photos WHERE trip_id = ? AND stop_id = ?')
+    .bind(tripId, stopId)
+    .first<{ n: number }>()
+  return row?.n ?? 0
+}
+
+/** Records an uploaded photo whose bytes are already in R2. */
+export async function insertPhoto(env: Env, row: PhotoRow): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO trip_photos (id, trip_id, stop_id, r2_key, content_type, width, height, bytes, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(row.id, row.trip_id, row.stop_id, row.r2_key, row.content_type, row.width, row.height, row.bytes, row.created_at)
+    .run()
+}
+
+/**
+ * Looks up a photo by id, but only within the given trip. The trip is part of
+ * the WHERE clause so a photo id from another trip is indistinguishable from
+ * one that does not exist.
+ */
+export async function getPhotoForTrip(env: Env, tripId: string, photoId: string): Promise<PhotoRow | null> {
+  const row = await env.DB.prepare('SELECT * FROM trip_photos WHERE id = ? AND trip_id = ?')
+    .bind(photoId, tripId)
+    .first<PhotoRow>()
+  return row ?? null
+}
+
+/** Deletes one photo row, scoped to its trip. */
+export async function deletePhotoRow(env: Env, tripId: string, photoId: string): Promise<void> {
+  await env.DB.prepare('DELETE FROM trip_photos WHERE id = ? AND trip_id = ?').bind(photoId, tripId).run()
+}
+
+/** Deletes every photo row on a trip (the caller removes the R2 objects first). */
+export async function deletePhotosForTrip(env: Env, tripId: string): Promise<void> {
+  await env.DB.prepare('DELETE FROM trip_photos WHERE trip_id = ?').bind(tripId).run()
+}
+
+// --- trip recap links ---
+
+/** Deletes every recap share link for a trip. */
+export async function deleteRecapLinksForTrip(env: Env, tripId: string): Promise<void> {
+  await env.DB.prepare('DELETE FROM trip_recap_links WHERE trip_id = ?').bind(tripId).run()
 }

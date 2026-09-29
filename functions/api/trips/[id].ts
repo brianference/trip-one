@@ -1,5 +1,13 @@
 import type { Env } from '../../lib/db'
-import { getTrip, updateTrip, deleteTripOwnedBy } from '../../lib/db'
+import {
+  getTrip,
+  updateTrip,
+  deleteTripOwnedBy,
+  isTripOwnedBy,
+  listPhotosForTrip,
+  deletePhotosForTrip,
+  deleteRecapLinksForTrip,
+} from '../../lib/db'
 import { isRateLimited } from '../../lib/rateLimitGuard'
 import { getAuthedUser, type AuthEnv } from '../../lib/auth/session'
 import { itineraryItemSchema } from '../../../src/lib/validation/schemas'
@@ -11,6 +19,13 @@ import { z } from 'zod'
 const PATCH_TRIPS_PER_HOUR = 300
 /** Per-IP hourly cap on owned-trip deletes. */
 const DELETE_TRIPS_PER_HOUR = 60
+/**
+ * Most keys one R2 `delete()` call accepts ("Up to 1000 keys may be deleted
+ * per call", developers.cloudflare.com/r2/api/workers/workers-api-reference,
+ * read 2026-09-29). A trip is capped at 300 photos, but concurrent uploads can
+ * overshoot a count check, so deletes are batched rather than assumed to fit.
+ */
+const R2_DELETE_BATCH_SIZE = 1000
 
 const RATE_LIMIT_MESSAGE =
   'You’ve made a lot of requests in a short time. Please wait a few minutes and try again.'
@@ -98,6 +113,13 @@ export async function onRequestPatch({
  * A trip that does not exist and a trip belonging to someone else both answer
  * 404, so this cannot be used to discover which trip ids are real. Anonymous
  * trips have no owner and so can never be deleted through this route.
+ *
+ * The trip's photos and recap links go first, in this order: R2 objects, then
+ * photo rows, then recap links, then the trip. Objects before rows, because a
+ * row is the only record of where an object lives; if the R2 delete fails the
+ * whole request fails with every row intact and can simply be retried. Because
+ * that cleanup has to run before the ownership-checked delete, ownership is
+ * checked up front as well, so a stranger can never trigger it.
  */
 export async function onRequestDelete({
   env,
@@ -119,6 +141,16 @@ export async function onRequestDelete({
   }
 
   try {
+    if (!(await isTripOwnedBy(env, id, user.id))) {
+      return json({ error: 'We couldn’t find that trip. It may have already been deleted.' }, 404)
+    }
+    const photos = await listPhotosForTrip(env, id)
+    for (let start = 0; start < photos.length; start += R2_DELETE_BATCH_SIZE) {
+      await env.PHOTOS.delete(photos.slice(start, start + R2_DELETE_BATCH_SIZE).map((photo) => photo.r2_key))
+    }
+    await deletePhotosForTrip(env, id)
+    await deleteRecapLinksForTrip(env, id)
+
     const deleted = await deleteTripOwnedBy(env, id, user.id)
     if (!deleted) return json({ error: 'We couldn’t find that trip. It may have already been deleted.' }, 404)
     return json({ ok: true }, 200)
