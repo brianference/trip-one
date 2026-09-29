@@ -63,7 +63,7 @@ async function expectForbidden(s: InviteStore, res: Response): Promise<void> {
 }
 
 describe('POST /api/recap/:token/join', () => {
-  it('adds an invited, verified user as a member and returns the trip id, uncached', async () => {
+  it('adds an invited, verified user as a member and answers {joined:true} with no trip id, uncached', async () => {
     const s = inviteStore()
     invite(s)
     const cookie = await signedInAs(s, SAM)
@@ -71,7 +71,7 @@ describe('POST /api/recap/:token/join', () => {
 
     expect(res.status).toBe(200)
     expect(res.headers.get('Cache-Control')).toBe('private, no-store')
-    expect(await res.json()).toEqual({ tripId: TRIP_ID })
+    expect(JSON.parse(await bodyWithoutTripIds(res))).toEqual({ joined: true })
     expect(s.members).toEqual([{ trip_id: TRIP_ID, user_id: SAM.id, role: 'contributor', created_at: expect.any(Number) }])
     expect(s.invites[0].accepted_user_id).toBe(SAM.id)
     expect(s.invites[0].accepted_at).toEqual(expect.any(Number))
@@ -86,7 +86,7 @@ describe('POST /api/recap/:token/join', () => {
     const second = await post(s, ACTIVE_TOKEN, cookie)
 
     expect(second.status).toBe(200)
-    expect(await second.json()).toEqual(await first.json())
+    expect(await bodyWithoutTripIds(second)).toBe(await bodyWithoutTripIds(first))
     expect(s.members).toHaveLength(1)
     expect(s.invites[0].accepted_at).toBe(acceptedAt)
   })
@@ -97,7 +97,7 @@ describe('POST /api/recap/:token/join', () => {
     const cookie = await signedInAs(s, { ...SAM, email: 'Sam@Example.COM' })
     const res = await post(s, ACTIVE_TOKEN, cookie)
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ tripId: TRIP_ID })
+    expect(JSON.parse(await bodyWithoutTripIds(res))).toEqual({ joined: true })
   })
 
   it('answers 401 "Sign in first" when signed out, and joins nobody', async () => {

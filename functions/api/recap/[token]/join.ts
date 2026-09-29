@@ -29,8 +29,7 @@ const SERVER_ERROR_MESSAGE = 'Something went wrong on our end. Please try again 
 
 /**
  * JSON response with no-store on every status: Pages Functions responses do
- * not get `_headers`, and the success body is an edit capability that must
- * never sit in a shared cache.
+ * not get `_headers`, and every answer depends on who is signed in.
  * @param body - Serialized as the response body
  * @param status - HTTP status
  */
@@ -44,18 +43,22 @@ function json(body: unknown, status: number): Response {
 /**
  * POST /api/recap/:token/join
  *
- * Turns an invite into trip membership. This is the ONLY response that can
- * give a recap viewer the trip id, and the trip id grants edit access, so it
- * answers with it only when every check passes: the token names an active
- * recap of a trip that still exists (else the recap GET's exact 404), the
- * caller is signed in (else 401), their account email is verified and a live
- * invite for that email exists on THIS trip (else the fixed 403).
+ * Turns an invite into trip membership, when every check passes: the token
+ * names an active recap of a trip that still exists (else the recap GET's
+ * exact 404), the caller is signed in (else 401), their account email is
+ * verified and a live invite for that email exists on THIS trip (else the
+ * fixed 403).
+ *
+ * It never answers with the trip id: the trip URL grants edit access, and a
+ * member may only add and remove their own photos, which they do through the
+ * recap-token endpoints (POST /api/recap/:token/photos and
+ * DELETE /api/recap/:token/photos/:photoId).
  *
  * Idempotent: joining again answers the same and changes nothing; the first
  * acceptance time is kept.
  *
  * @param context - Request context with `env`, `request` and `params.token`
- * @returns 200 `{ tripId }`, or `{ error }` with 401, 403, 404, 429 or 500
+ * @returns 200 `{ joined: true }`, or `{ error }` with 401, 403, 404, 429 or 500
  */
 export async function onRequestPost({
   env,
@@ -88,7 +91,7 @@ export async function onRequestPost({
     const now = Date.now()
     await addTripMember(env, { trip_id: link.trip_id, user_id: user.id, created_at: now })
     await markTripInviteAccepted(env, invite.id, user.id, now)
-    return json({ tripId: link.trip_id }, 200)
+    return json({ joined: true }, 200)
   } catch (err) {
     logger.error('recap join failed', err)
     return json({ error: SERVER_ERROR_MESSAGE }, 500)
