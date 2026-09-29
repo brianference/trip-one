@@ -13,3 +13,7 @@ create index if not exists trip_members_user_idx on trip_members (user_id);
 -- AND created_at >= ?. The older (ip_hash, created_at) index made D1 read
 -- every row this IP logged in the hour on any endpoint to filter by endpoint.
 create index if not exists request_log_ip_endpoint_created_idx on request_log (ip_hash, endpoint, created_at);
+-- The new index replaces the old one: every lookup starts with ip_hash, which
+-- the new index also leads with, and each extra index on request_log costs one
+-- more written row per rate-limited request against the D1 daily write limit.
+drop index if exists request_log_ip_hash_created_at_idx;

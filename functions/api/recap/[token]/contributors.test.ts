@@ -11,7 +11,9 @@ import { onRequestGet as getMyTrips } from '../../my-trips'
 import { recapTokenSchema } from '../../../lib/recapAccess'
 import { CONTRIBUTOR_FORBIDDEN_MESSAGE } from '../../../lib/recapMember'
 import { MAX_PHOTOS_PER_STOP } from '../../../lib/photoUpload'
-import { deletePhotoRowUploadedBy } from '../../../lib/db'
+import { deletePhotoRowUploadedBy, upsertTripInvite } from '../../../lib/db'
+import { onRequestDelete as revokeInvite } from '../../trips/[id]/invites/[inviteId]'
+import { onRequestPost as joinTrip } from './join'
 import type { RecapPayload } from '../../../../src/features/recap/types'
 import { logger } from '../../../../src/lib/logger'
 import {
@@ -439,5 +441,86 @@ describe('GET /api/my-trips joined', () => {
     const body = (await (await myTrips(w, OWNER.id)).json()) as { trips: unknown[]; joined: unknown[] }
     expect(body.joined).toEqual([])
     expect(body.trips).toHaveLength(2)
+  })
+})
+
+describe('owner removes a member by revoking their accepted invite', () => {
+  const SAM_INVITE = 'b7000000-0000-4000-8000-0000000000c1'
+
+  /** Records SAM's invite on TRIP_ID as accepted, as a real join would have. */
+  function acceptedInviteForSam(w: ContributorWorld): void {
+    w.exec(
+      `INSERT INTO trip_invites (id, trip_id, email, created_at, accepted_user_id, accepted_at, revoked_at, last_sent_at)
+       VALUES (?, ?, ?, 1790000000000, ?, 1790000000500, NULL, 1790000000000)`,
+      SAM_INVITE,
+      TRIP_ID,
+      SAM.email,
+      SAM.id,
+    )
+  }
+
+  /** The owner's DELETE /api/trips/:id/invites/:inviteId (the trip link is the capability). */
+  function revoke(w: ContributorWorld) {
+    return revokeInvite({
+      env: w.env,
+      request: new Request(`https://x/api/trips/${TRIP_ID}/invites/${SAM_INVITE}`, { method: 'DELETE', headers: headers() }),
+      params: { id: TRIP_ID, inviteId: SAM_INVITE },
+    })
+  }
+
+  it('withdraws every contributor right while keeping the photos they already added', async () => {
+    const w = contributorWorld()
+    acceptedInviteForSam(w)
+    const cookie = await cookieFor(SAM.id)
+    // Before: SAM is a member and can act.
+    expect((await read(await me(w, ACTIVE_TOKEN, cookie))).body).toEqual({ member: true, userId: SAM.id })
+
+    const res = await revoke(w)
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ ok: true, removedMember: true })
+    expect(w.rows('SELECT user_id FROM trip_members WHERE trip_id = ? AND user_id = ?', TRIP_ID, SAM.id)).toEqual([])
+    expect(w.rows<{ revoked_at: number | null }>('SELECT revoked_at FROM trip_invites WHERE id = ?', SAM_INVITE)[0].revoked_at).not.toBeNull()
+
+    // After: upload and delete of their own photo are both 403 with the not-member body.
+    const up = await read(await upload(w, ACTIVE_TOKEN, { cookie }))
+    expect(up).toMatchObject({ status: 403, body: FORBIDDEN })
+    const del = await read(await remove(w, ACTIVE_TOKEN, SAM_PHOTO, cookie))
+    expect(del).toMatchObject({ status: 403, body: FORBIDDEN })
+    // Their photo stays, unmarked; they are no longer a member and no longer listed as joined.
+    expect(photoIds(w)).toContain(SAM_PHOTO)
+    expect(w.r2.objects.has(`trips/${TRIP_ID}/${SAM_PHOTO}`)).toBe(true)
+    expect((await read(await me(w, ACTIVE_TOKEN, cookie))).body).toEqual({ member: false, userId: SAM.id })
+    expect((await recap(w, ACTIVE_TOKEN, cookie)).photos.some((p) => 'mine' in p)).toBe(false)
+    const mine = (await (await getMyTrips({ env: w.env, request: new Request('https://x/api/my-trips', { headers: headers(cookie) }) })).json()) as { joined: unknown[] }
+    expect(mine.joined).toEqual([])
+    // Other members are unaffected.
+    expect((await read(await upload(w, ACTIVE_TOKEN, { cookie: await cookieFor(JO.id) }))).status).toBe(201)
+  })
+
+  it('the revoked invite cannot be used to join again', async () => {
+    const w = contributorWorld()
+    acceptedInviteForSam(w)
+    await revoke(w)
+    const res = await joinTrip({
+      env: w.env,
+      request: new Request(`https://x/api/recap/${ACTIVE_TOKEN}/join`, { method: 'POST', headers: headers(await cookieFor(SAM.id)) }),
+      params: { token: ACTIVE_TOKEN },
+    })
+    expect(res.status).toBe(403)
+    expect(w.rows('SELECT user_id FROM trip_members WHERE trip_id = ? AND user_id = ?', TRIP_ID, SAM.id)).toEqual([])
+  })
+
+  it('on real SQLite, re-inviting clears the old acceptance; re-inviting a live invite keeps it', async () => {
+    const w = contributorWorld()
+    acceptedInviteForSam(w)
+    await upsertTripInvite(w.env, { id: 'b7000000-0000-4000-8000-0000000000c9', trip_id: TRIP_ID, email: SAM.email, created_at: 1 })
+    expect(w.rows('SELECT accepted_user_id, revoked_at FROM trip_invites WHERE id = ?', SAM_INVITE)).toEqual([
+      { accepted_user_id: SAM.id, revoked_at: null },
+    ])
+    await revoke(w)
+    await upsertTripInvite(w.env, { id: 'b7000000-0000-4000-8000-0000000000c9', trip_id: TRIP_ID, email: SAM.email, created_at: 1 })
+    expect(w.rows('SELECT accepted_user_id, accepted_at, revoked_at FROM trip_invites WHERE id = ?', SAM_INVITE)).toEqual([
+      { accepted_user_id: null, accepted_at: null, revoked_at: null },
+    ])
   })
 })

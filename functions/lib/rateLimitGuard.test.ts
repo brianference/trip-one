@@ -120,4 +120,16 @@ describe('request_log purge', () => {
     )
     expect(plan.map((p) => p.detail).join(' ')).toContain('request_log_ip_endpoint_created_idx')
   })
+
+  it('0008 drops the old (ip_hash, created_at) index, and the count without an endpoint still uses an index', () => {
+    const db = sqliteD1()
+    const indexes = db.rows<{ name: string }>("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'request_log'")
+    expect(indexes.map((i) => i.name)).not.toContain('request_log_ip_hash_created_at_idx')
+    const plan = db.rows<{ detail: string }>(
+      "EXPLAIN QUERY PLAN SELECT COUNT(*) AS n FROM request_log WHERE ip_hash = 'a' AND created_at >= 'c'",
+    )
+    const detail = plan.map((p) => p.detail).join(' ')
+    expect(detail).toContain('USING COVERING INDEX request_log_ip_endpoint_created_idx (ip_hash=?)')
+    expect(detail).not.toMatch(/\bSCAN request_log\b/)
+  })
 })

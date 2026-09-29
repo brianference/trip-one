@@ -156,10 +156,19 @@ export function inviteStore(
       links.push({ token, trip_id: tripId, created_at: createdAt, revoked_at: null })
       return 1
     }
-    if (sql.includes('INSERT INTO trip_invites') && sql.includes('ON CONFLICT (trip_id, email) DO UPDATE SET revoked_at = NULL')) {
+    if (
+      sql.includes('INSERT INTO trip_invites') &&
+      sql.includes('ON CONFLICT (trip_id, email) DO UPDATE SET') &&
+      sql.includes('accepted_user_id = CASE WHEN revoked_at IS NULL THEN accepted_user_id ELSE NULL END')
+    ) {
+      // Mirrors the upsert; the real-SQLite test in contributors.test.ts proves the SQL.
       const [id, tripId, email, createdAt] = args as [string, string, string, number]
       const existing = invites.find((i) => i.trip_id === tripId && i.email === email)
       if (existing) {
+        if (existing.revoked_at !== null) {
+          existing.accepted_user_id = null
+          existing.accepted_at = null
+        }
         existing.revoked_at = null
         return 1
       }
@@ -185,6 +194,23 @@ export function inviteStore(
       if (!row) return 0
       row.revoked_at = row.revoked_at ?? revokedAt
       return 1
+    }
+    if (
+      sql ===
+      'UPDATE trip_invites SET revoked_at = COALESCE(revoked_at, ?) WHERE id = ? AND trip_id = ? AND accepted_at IS NOT NULL'
+    ) {
+      const [revokedAt, id, tripId] = args as [number, string, string]
+      const row = invites.find((i) => i.id === id && i.trip_id === tripId && i.accepted_at !== null)
+      if (!row) return 0
+      row.revoked_at = row.revoked_at ?? revokedAt
+      return 1
+    }
+    if (sql === 'DELETE FROM trip_members WHERE trip_id = ? AND user_id = ?') {
+      const [tripId, userId] = args as [string, string]
+      const keep = members.filter((m) => !(m.trip_id === tripId && m.user_id === userId))
+      const removed = members.length - keep.length
+      members.splice(0, members.length, ...keep)
+      return removed
     }
     if (sql === 'UPDATE trip_invites SET accepted_user_id = ?, accepted_at = ? WHERE id = ? AND accepted_at IS NULL') {
       const [userId, acceptedAt, id] = args as [string, number, string]

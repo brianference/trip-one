@@ -600,19 +600,47 @@ describe('DELETE /api/trips/:id/invites/:inviteId', () => {
     expect(s.invites[0].revoked_at).toBe(revokedAt)
   })
 
-  it('does not revoke an accepted invite: keeps it listed, keeps the member, and says alreadyJoined', async () => {
+  it('revokes an accepted invite AND removes that member from this trip only, answering removedMember', async () => {
     const s = store()
     const invite = seed(s, { email: SAM, accepted_at: 7, accepted_user_id: 'u-sam' })
     s.members.push({ trip_id: TRIP_ID, user_id: 'u-sam', role: 'contributor', created_at: 7 })
+    s.members.push({ trip_id: OTHER_TRIP_ID, user_id: 'u-sam', role: 'contributor', created_at: 8 })
+    s.members.push({ trip_id: TRIP_ID, user_id: 'u-jo', role: 'contributor', created_at: 9 })
 
     const res = await inviteDelete(s, invite.id)
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ ok: true, alreadyJoined: true })
-    expect(s.invites[0].revoked_at).toBeNull()
-    expect(s.members).toEqual([{ trip_id: TRIP_ID, user_id: 'u-sam', role: 'contributor', created_at: 7 }])
-    expect(await (await inviteList(s)).json()).toEqual({
-      invites: [{ id: invite.id, email: SAM, createdAt: invite.created_at, acceptedAt: 7 }],
-    })
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store')
+    expect(await res.json()).toEqual({ ok: true, removedMember: true })
+    expect(s.invites[0].revoked_at).toEqual(expect.any(Number))
+    expect(s.members).toEqual([
+      { trip_id: OTHER_TRIP_ID, user_id: 'u-sam', role: 'contributor', created_at: 8 },
+      { trip_id: TRIP_ID, user_id: 'u-jo', role: 'contributor', created_at: 9 },
+    ])
+    expect(await (await inviteList(s)).json()).toEqual({ invites: [] })
+
+    // Repeating it answers the same and keeps the first revocation time.
+    const revokedAt = s.invites[0].revoked_at
+    expect(await (await inviteDelete(s, invite.id)).json()).toEqual({ ok: true, removedMember: true })
+    expect(s.invites[0].revoked_at).toBe(revokedAt)
+  })
+
+  it('a pending revoke never touches memberships and never says removedMember', async () => {
+    const s = store()
+    const invite = seed(s, { email: SAM })
+    s.members.push({ trip_id: TRIP_ID, user_id: 'u-jo', role: 'contributor', created_at: 9 })
+    expect(await (await inviteDelete(s, invite.id)).json()).toEqual({ ok: true })
+    expect(s.members).toHaveLength(1)
+  })
+
+  it('re-inviting a removed person makes the invite pending again (acceptance cleared)', async () => {
+    stubMail()
+    const s = store()
+    const invite = seed(s, { email: SAM, accepted_at: 7, accepted_user_id: 'u-sam' })
+    s.members.push({ trip_id: TRIP_ID, user_id: 'u-sam', role: 'contributor', created_at: 7 })
+    await inviteDelete(s, invite.id)
+    expect((await invitePost(s, SAM)).status).toBe(201)
+    expect(s.invites[0]).toMatchObject({ id: invite.id, revoked_at: null, accepted_at: null, accepted_user_id: null })
+    expect(s.members.some((m) => m.user_id === 'u-sam')).toBe(false)
   })
 
   it('answers 404 for an invite on another trip and leaves it live', async () => {
@@ -623,12 +651,16 @@ describe('DELETE /api/trips/:id/invites/:inviteId', () => {
     expect(s.invites[0].revoked_at).toBeNull()
   })
 
-  it('answers 404 for an accepted invite on another trip, without saying alreadyJoined', async () => {
+  it('answers 404 for an accepted invite on another trip, and removes nobody', async () => {
     const s = store()
     const invite = seed(s, { email: SAM, trip_id: OTHER_TRIP_ID, accepted_at: 7, accepted_user_id: 'u-sam' })
+    s.members.push({ trip_id: OTHER_TRIP_ID, user_id: 'u-sam', role: 'contributor', created_at: 7 })
+    s.members.push({ trip_id: TRIP_ID, user_id: 'u-sam', role: 'contributor', created_at: 7 })
     const res = await inviteDelete(s, invite.id, TRIP_ID)
     expect(res.status).toBe(404)
-    expect(await res.json()).not.toHaveProperty('alreadyJoined')
+    expect(await res.json()).not.toHaveProperty('removedMember')
+    expect(s.members).toHaveLength(2)
+    expect(s.invites[0].revoked_at).toBeNull()
   })
 
   it('answers 404 for an unknown or malformed invite id, and for an unknown trip', async () => {

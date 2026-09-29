@@ -1011,6 +1011,10 @@ const TRIP_INVITE_COLUMNS = 'id, trip_id, email, created_at, accepted_user_id, a
  * unique (trip_id, email) index makes this one statement, so two concurrent
  * invites for the same address cannot both insert. The caller reads the row
  * back with {@link getTripInviteByEmail}.
+ *
+ * Bringing back a REVOKED invite also clears its acceptance: a person removed
+ * from the trip is pending again until they join again, rather than being
+ * listed as joined while having no membership. A live invite is left as is.
  */
 export async function upsertTripInvite(
   env: Env,
@@ -1019,7 +1023,10 @@ export async function upsertTripInvite(
   await env.DB.prepare(
     `INSERT INTO trip_invites (id, trip_id, email, created_at, accepted_user_id, accepted_at, revoked_at, last_sent_at)
      VALUES (?, ?, ?, ?, NULL, NULL, NULL, NULL)
-     ON CONFLICT (trip_id, email) DO UPDATE SET revoked_at = NULL`,
+     ON CONFLICT (trip_id, email) DO UPDATE SET
+       accepted_user_id = CASE WHEN revoked_at IS NULL THEN accepted_user_id ELSE NULL END,
+       accepted_at = CASE WHEN revoked_at IS NULL THEN accepted_at ELSE NULL END,
+       revoked_at = NULL`,
   )
     .bind(row.id, row.trip_id, normalizeEmail(row.email), row.created_at)
     .run()
@@ -1149,11 +1156,11 @@ export async function listActiveTripInvites(env: Env, tripId: string): Promise<T
 }
 
 /**
- * Revokes one PENDING invite, scoped to its trip. An accepted invite is never
- * revoked (`accepted_at IS NULL` in the same statement): its person has
- * already joined, and revoking the invite would not remove the membership, so
- * it would only hide them from the owner. Revoking an already-revoked invite keeps its
- * first revocation time and still counts as done.
+ * Revokes one PENDING invite, scoped to its trip (`accepted_at IS NULL` in the
+ * same statement; an accepted invite goes through
+ * {@link revokeAcceptedTripInvite}, which also removes the membership).
+ * Revoking an already-revoked invite keeps its first revocation time and
+ * still counts as done.
  * @returns True when the trip has a pending invite with that id
  */
 export async function revokeTripInvite(env: Env, tripId: string, inviteId: string, revokedAt: number): Promise<boolean> {
@@ -1163,6 +1170,36 @@ export async function revokeTripInvite(env: Env, tripId: string, inviteId: strin
     .bind(revokedAt, inviteId, tripId)
     .run()
   return (res.meta?.changes ?? 0) > 0
+}
+
+/**
+ * Revokes an ACCEPTED invite, scoped to its trip, keeping the first revocation
+ * time. The caller then removes the membership with {@link removeTripMember};
+ * revoking first means a failure between the two leaves no live invite the
+ * person could use to join again, and a retry finishes the job.
+ * @returns True when the trip has an accepted invite with that id
+ */
+export async function revokeAcceptedTripInvite(
+  env: Env,
+  tripId: string,
+  inviteId: string,
+  revokedAt: number,
+): Promise<boolean> {
+  const res = await env.DB.prepare(
+    'UPDATE trip_invites SET revoked_at = COALESCE(revoked_at, ?) WHERE id = ? AND trip_id = ? AND accepted_at IS NOT NULL',
+  )
+    .bind(revokedAt, inviteId, tripId)
+    .run()
+  return (res.meta?.changes ?? 0) > 0
+}
+
+/**
+ * Removes one person's membership of one trip. Contributors never hold the
+ * trip link, so this fully withdraws their access; their uploaded photos stay.
+ * Idempotent.
+ */
+export async function removeTripMember(env: Env, tripId: string, userId: string): Promise<void> {
+  await env.DB.prepare('DELETE FROM trip_members WHERE trip_id = ? AND user_id = ?').bind(tripId, userId).run()
 }
 
 /** Records the first acceptance of an invite; later calls change nothing. */

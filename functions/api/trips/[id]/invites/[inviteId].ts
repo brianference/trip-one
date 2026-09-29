@@ -1,5 +1,5 @@
 import type { Env } from '../../../../lib/db'
-import { getTrip, getTripInviteById, revokeTripInvite } from '../../../../lib/db'
+import { getTrip, getTripInviteById, removeTripMember, revokeAcceptedTripInvite, revokeTripInvite } from '../../../../lib/db'
 import {
   guardInviteRequest,
   json,
@@ -18,13 +18,15 @@ import { logger } from '../../../../../src/lib/logger'
  * first revocation time. An invite on another trip answers 404, like an
  * unknown one.
  *
- * An ACCEPTED invite is not revoked: its person has already joined, and
- * revoking the invite would not remove the membership, so it would only hide
- * them from the owner. The invite and the membership stay, and the
- * response says `alreadyJoined: true`.
+ * Revoking an ACCEPTED invite removes the person from the trip: the invite is
+ * revoked and their trip_members row deleted, which fully withdraws access
+ * (contributors never hold the trip link; every contributor endpoint checks
+ * membership). Photos they already uploaded stay, and the owner can delete
+ * them. The answer then says `removedMember: true`. Repeating it answers the
+ * same and changes nothing more.
  *
  * @param context - Request context with `env`, `request`, `params.id` and `params.inviteId`
- * @returns 200 `{ ok: true }` or `{ ok: true, alreadyJoined: true }`, or
+ * @returns 200 `{ ok: true }` (pending) or `{ ok: true, removedMember: true }` (accepted), or
  *   `{ error }` with 403 (demo trip), 404, 429 or 500
  */
 export async function onRequestDelete({
@@ -48,8 +50,12 @@ export async function onRequestDelete({
     if (await revokeTripInvite(env, tripId, inviteId.data, Date.now())) return json({ ok: true }, 200)
     // Nothing revoked: either no such invite on this trip, or it was accepted.
     const invite = await getTripInviteById(env, tripId, inviteId.data)
-    if (invite && invite.accepted_at !== null) return json({ ok: true, alreadyJoined: true }, 200)
-    return json({ error: INVITE_NOT_FOUND_MESSAGE }, 404)
+    if (!invite || invite.accepted_at === null || invite.accepted_user_id === null) {
+      return json({ error: INVITE_NOT_FOUND_MESSAGE }, 404)
+    }
+    await revokeAcceptedTripInvite(env, tripId, invite.id, Date.now())
+    await removeTripMember(env, tripId, invite.accepted_user_id)
+    return json({ ok: true, removedMember: true }, 200)
   } catch (err) {
     logger.error('invite revoke failed', err)
     return json({ error: SERVER_ERROR_MESSAGE }, 500)
