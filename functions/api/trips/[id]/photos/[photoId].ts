@@ -1,6 +1,7 @@
 import type { Env } from '../../../../lib/db'
 import { getPhotoForTrip, deletePhotoRow } from '../../../../lib/db'
 import { isRateLimited } from '../../../../lib/rateLimitGuard'
+import { photoBytesResponse } from '../../../../lib/photoResponse'
 import { logger } from '../../../../../src/lib/logger'
 import { z } from 'zod'
 
@@ -61,23 +62,12 @@ export async function onRequestGet({
   try {
     const row = await getPhotoForTrip(env, parsed.data.id, parsed.data.photoId)
     if (!row) return json({ error: NOT_FOUND_MESSAGE }, 404)
-    const obj = await env.PHOTOS.get(row.r2_key)
-    if (!obj) {
+    const res = await photoBytesResponse(env, row, PHOTO_CACHE_CONTROL)
+    if (!res) {
       logger.warn('photo row has no R2 object', { photoId: row.id })
       return json({ error: NOT_FOUND_MESSAGE }, 404)
     }
-    // The workers-types ReadableStream and the DOM one this file is typed
-    // against are the same object at runtime but distinct types to tsc.
-    return new Response(obj.body as unknown as BodyInit, {
-      status: 200,
-      headers: {
-        'Content-Type': row.content_type,
-        'Cache-Control': PHOTO_CACHE_CONTROL,
-        // Belt and braces: the type is already a sniffed image type, and this
-        // stops any browser second-guessing it.
-        'X-Content-Type-Options': 'nosniff',
-      },
-    })
+    return res
   } catch (err) {
     logger.error('photo read failed', err)
     return json({ error: SERVER_ERROR_MESSAGE }, 500)

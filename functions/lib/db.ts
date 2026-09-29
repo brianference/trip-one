@@ -380,6 +380,8 @@ export async function getTrip(env: Env, id: string): Promise<TripRow | null> {
     created_at: row.created_at as string,
     trip_length_days: (row.trip_length_days as number | null) ?? null,
     start_date: (row.start_date as string | null) ?? null,
+    // title only; user_id is deliberately not mapped here.
+    title: (row.title as string | null) ?? null,
   }
 }
 
@@ -709,6 +711,64 @@ export async function deletePhotosForTrip(env: Env, tripId: string): Promise<voi
 }
 
 // --- trip recap links ---
+
+/** A row in `trip_recap_links`. A link is active while `revoked_at` is null. */
+export interface RecapLinkRow {
+  token: string
+  trip_id: string
+  created_at: string
+  revoked_at: string | null
+}
+
+/**
+ * The trip's active (unrevoked) recap link, or null. If concurrent creates
+ * ever left more than one, the oldest wins so every caller sees the same one.
+ */
+export async function getActiveRecapLinkForTrip(env: Env, tripId: string): Promise<RecapLinkRow | null> {
+  const row = await env.DB.prepare(
+    `SELECT token, trip_id, created_at, revoked_at FROM trip_recap_links
+     WHERE trip_id = ? AND revoked_at IS NULL
+     ORDER BY created_at ASC, token ASC LIMIT 1`,
+  )
+    .bind(tripId)
+    .first<RecapLinkRow>()
+  return row ?? null
+}
+
+/**
+ * Inserts a recap link, but only when the trip has no active one. The check
+ * and the insert are one statement, so two concurrent creates cannot both
+ * succeed; the caller reads the active link back afterwards.
+ */
+export async function createRecapLinkIfNoneActive(
+  env: Env,
+  row: { token: string; trip_id: string; created_at: string },
+): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO trip_recap_links (token, trip_id, created_at, revoked_at)
+     SELECT ?, ?, ?, NULL
+     WHERE NOT EXISTS (SELECT 1 FROM trip_recap_links WHERE trip_id = ? AND revoked_at IS NULL)`,
+  )
+    .bind(row.token, row.trip_id, row.created_at, row.trip_id)
+    .run()
+}
+
+/** Looks up an ACTIVE recap link by its token; a revoked or unknown token gives null. */
+export async function getActiveRecapLinkByToken(env: Env, token: string): Promise<RecapLinkRow | null> {
+  const row = await env.DB.prepare(
+    'SELECT token, trip_id, created_at, revoked_at FROM trip_recap_links WHERE token = ? AND revoked_at IS NULL',
+  )
+    .bind(token)
+    .first<RecapLinkRow>()
+  return row ?? null
+}
+
+/** Revokes every active recap link on a trip. Idempotent. */
+export async function revokeRecapLinksForTrip(env: Env, tripId: string, revokedAt: string): Promise<void> {
+  await env.DB.prepare('UPDATE trip_recap_links SET revoked_at = ? WHERE trip_id = ? AND revoked_at IS NULL')
+    .bind(revokedAt, tripId)
+    .run()
+}
 
 /** Deletes every recap share link for a trip. */
 export async function deleteRecapLinksForTrip(env: Env, tripId: string): Promise<void> {
