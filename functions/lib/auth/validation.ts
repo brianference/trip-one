@@ -67,12 +67,34 @@ export const contactSchema = z.object({
   website: z.string().max(200).optional(),
 })
 
+export const codeRequestSchema = z.object({
+  email,
+})
+
+/** Shown for every code failure: wrong, expired, used, locked or malformed. */
+export const CODE_FAILED_MESSAGE = "That code didn't work. Check it or request a new one."
+
+/** Trip ids are UUIDs; this only caps junk input. */
+const MAX_TRIP_ID_LENGTH = 100
+
+export const codeVerifySchema = z.object({
+  email,
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, CODE_FAILED_MESSAGE),
+  /** Optional anonymous trip to claim on sign-in, same as login. */
+  claimTripId: z.string().max(MAX_TRIP_ID_LENGTH).optional(),
+})
+
 export type RegisterInput = z.infer<typeof registerSchema>
 export type LoginInput = z.infer<typeof loginSchema>
 export type ConfirmInput = z.infer<typeof confirmSchema>
 export type ResetRequestInput = z.infer<typeof resetRequestSchema>
 export type ResetInput = z.infer<typeof resetSchema>
 export type ContactInput = z.infer<typeof contactSchema>
+export type CodeRequestInput = z.infer<typeof codeRequestSchema>
+export type CodeVerifyInput = z.infer<typeof codeVerifySchema>
 
 /**
  * Turns a Zod error into one short, user-facing message.

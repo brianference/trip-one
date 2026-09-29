@@ -766,3 +766,92 @@ export async function revokeRecapLinksForTrip(env: Env, tripId: string, revokedA
 export async function deleteRecapLinksForTrip(env: Env, tripId: string): Promise<void> {
   await env.DB.prepare('DELETE FROM trip_recap_links WHERE trip_id = ?').bind(tripId).run()
 }
+
+// --- email sign-in codes ---
+
+/** A row in `email_codes`. Only the hash of `email:code` is stored, never the code. */
+export interface EmailCodeRow {
+  id: string
+  email: string
+  code_hash: string
+  expires_at: number
+  attempts: number
+  used_at: number | null
+  created_at: number
+}
+
+/**
+ * How many codes were issued to this email since `sinceMs`, used or not. The
+ * per-email hourly cap counts these, which is why superseded codes are expired
+ * rather than deleted.
+ */
+export async function countEmailCodesSince(env: Env, email: string, sinceMs: number): Promise<number> {
+  const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM email_codes WHERE email = ? AND created_at >= ?')
+    .bind(email, sinceMs)
+    .first<{ n: number }>()
+  return row?.n ?? 0
+}
+
+/** Removes this email's code rows created before `beforeMs` (outside the counting window). */
+export async function deleteEmailCodesCreatedBefore(env: Env, email: string, beforeMs: number): Promise<void> {
+  await env.DB.prepare('DELETE FROM email_codes WHERE email = ? AND created_at < ?').bind(email, beforeMs).run()
+}
+
+/**
+ * Expires every live, unused code for this email so only the next one issued
+ * can work. The rows stay so the hourly cap still counts them.
+ */
+export async function expireActiveEmailCodes(env: Env, email: string, nowMs: number): Promise<void> {
+  await env.DB.prepare('UPDATE email_codes SET expires_at = ? WHERE email = ? AND used_at IS NULL AND expires_at > ?')
+    .bind(nowMs, email, nowMs)
+    .run()
+}
+
+/** Inserts a hashed sign-in code. */
+export async function insertEmailCode(
+  env: Env,
+  row: { id: string; email: string; code_hash: string; expires_at: number; created_at: number },
+): Promise<void> {
+  await env.DB.prepare(
+    'INSERT INTO email_codes (id, email, code_hash, expires_at, attempts, used_at, created_at) VALUES (?, ?, ?, ?, 0, NULL, ?)',
+  )
+    .bind(row.id, row.email, row.code_hash, row.expires_at, row.created_at)
+    .run()
+}
+
+/** The newest unused, unexpired code for this email, or null. */
+export async function getActiveEmailCode(env: Env, email: string, nowMs: number): Promise<EmailCodeRow | null> {
+  const row = await env.DB.prepare(
+    `SELECT id, email, code_hash, expires_at, attempts, used_at, created_at FROM email_codes
+     WHERE email = ? AND used_at IS NULL AND expires_at > ?
+     ORDER BY created_at DESC LIMIT 1`,
+  )
+    .bind(email, nowMs)
+    .first<EmailCodeRow>()
+  return row ?? null
+}
+
+/**
+ * Spends one attempt on a code, but only while it has attempts left and is
+ * unused. The check and the increment are one statement, so parallel guesses
+ * cannot slip past the cap. Returns false when no attempt was available.
+ */
+export async function takeEmailCodeAttempt(env: Env, id: string, maxAttempts: number): Promise<boolean> {
+  const res = await env.DB.prepare(
+    'UPDATE email_codes SET attempts = attempts + 1 WHERE id = ? AND used_at IS NULL AND attempts < ?',
+  )
+    .bind(id, maxAttempts)
+    .run()
+  return (res.meta?.changes ?? 0) > 0
+}
+
+/**
+ * Marks a code used. Only the first caller wins (`used_at IS NULL` in the same
+ * statement), which is what makes a code one-time under concurrent verifies.
+ */
+export async function markEmailCodeUsed(env: Env, id: string, usedAtMs: number): Promise<boolean> {
+  const res = await env.DB.prepare('UPDATE email_codes SET used_at = ? WHERE id = ? AND used_at IS NULL')
+    .bind(usedAtMs, id)
+    .run()
+  return (res.meta?.changes ?? 0) > 0
+}
