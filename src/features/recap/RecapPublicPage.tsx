@@ -6,6 +6,7 @@ import { logger } from '../../lib/logger'
 import type { RecapPayload } from './types'
 import { RecapView, NEXT_TRIP_LINK_TEXT } from './RecapView'
 import { TripSkeleton } from '../trip/components/TripSkeleton'
+import { AddPhotosBanner } from './AddPhotosBanner'
 
 /** Shown for an unknown, revoked or malformed token (the server answers all of them with the same 404). */
 export const RECAP_INACTIVE_MESSAGE = 'This recap link isn’t active anymore.'
@@ -33,6 +34,15 @@ async function loadRecap(token: string): Promise<LoadState> {
   const body = (await res.json().catch(() => ({}))) as RecapPayload & { error?: unknown }
   if (!res.ok) return { kind: 'failed', message: typeof body.error === 'string' ? body.error : LOAD_ERROR_MESSAGE }
   return { kind: 'ready', payload: body }
+}
+
+/**
+ * "the Anaheim, California trip" or "the “Autumn in Oslo” trip": the trip as
+ * the join sheet's sentences name it.
+ * @param payload - The loaded recap
+ */
+function tripPhrase(payload: RecapPayload): string {
+  return payload.title ? `the “${payload.title}” trip` : `the ${payload.displayName} trip`
 }
 
 /**
@@ -94,6 +104,7 @@ export function RecapPublicPage() {
             payload={state.payload}
             photoUrl={(photoId) => `/api/recap/${encodeURIComponent(token)}/photos/${encodeURIComponent(photoId)}`}
             variant="public"
+            belowHeader={<AddPhotosBanner token={token} tripPhrase={tripPhrase(state.payload)} />}
           />
         )}
       </div>

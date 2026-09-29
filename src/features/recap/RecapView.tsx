@@ -22,6 +22,8 @@ interface Props {
   variant: 'owner' | 'public'
   /** Rendered beside the heading (the owner's Share button). */
   headerAction?: ReactNode
+  /** Rendered directly under the header (the public recap's "Were you on this trip?" banner). */
+  belowHeader?: ReactNode
 }
 
 /**
@@ -50,7 +52,7 @@ function formatDateRange(startDate: string | null, lengthDays: number): string |
  * starting playback pauses slideshow autoplay, and starting slideshow
  * autoplay sends the map a pause request.
  */
-export function RecapView({ payload, photoUrl, variant, headerAction }: Props) {
+export function RecapView({ payload, photoUrl, variant, headerAction, belowHeader }: Props) {
   const reducedMotion = usePrefersReducedMotion()
   const headingId = useId()
   const photosHeadingId = useId()
@@ -96,6 +98,8 @@ export function RecapView({ payload, photoUrl, variant, headerAction }: Props) {
         </div>
         {headerAction}
       </header>
+
+      {belowHeader}
 
       {recap.route.length > 0 && (
         <section className="chronicle-recap-section" aria-label="Map walkthrough">

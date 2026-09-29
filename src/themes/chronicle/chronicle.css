@@ -766,6 +766,404 @@
   color: var(--chronicle-text-secondary);
 }
 
+/* ---------- Public recap: "Were you on this trip?" banner + join sheet ----------
+   Styled per docs/design/photo-controls-option-a.html sections 5-8. The
+   banner and the "Add photos" / "Go to the trip" buttons carry the photo
+   accent; Continue and Verify code are the pine primary, as in the design. */
+.chronicle-recap-join-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* Tucked under the title as in the design (18px there): the negative top
+     margin cancels the recap column's flex gap, leaving the h1's own bottom
+     margin. Below, the recap's usual gap separates it from the map. */
+  margin: calc(-1 * var(--chronicle-space-xl)) 0 0;
+  padding: 18px;
+  border-radius: var(--radius-card);
+  background: var(--photo-tint-bg);
+  color: var(--photo-tint-text);
+}
+
+.chronicle-recap-join-banner-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chronicle-recap-join-banner-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.35);
+  color: var(--photo-tint-icon);
+}
+
+.chronicle-recap-join-banner-title {
+  margin: 0;
+  font-family: var(--chronicle-font-display);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--photo-tint-text);
+}
+
+.chronicle-recap-join-banner-text,
+.chronicle-recap-join-banner-error {
+  margin: 0;
+  font-family: var(--chronicle-font-body);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--photo-tint-text);
+}
+
+.chronicle-recap-join-banner-error {
+  font-weight: 600;
+}
+
+.chronicle-recap-join-banner-btn,
+.chronicle-join-photo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 20px;
+  border: none;
+  border-radius: var(--chronicle-radius-pill);
+  background: var(--accent-photo);
+  color: var(--on-accent-photo);
+  font-family: var(--chronicle-font-body);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.chronicle-recap-join-banner-btn {
+  align-self: flex-start;
+}
+
+.chronicle-recap-join-banner-btn:hover,
+.chronicle-join-photo-btn:hover {
+  background: var(--accent-photo-hover);
+  color: var(--on-accent-photo);
+}
+
+.chronicle-recap-join-banner-btn[aria-disabled='true'] {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+.chronicle-join-photo-btn {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* The sheet is portalled to <body>, outside .chronicle-page, so it brings
+   its own focus ring: the dusk ring the design draws on the active code box. */
+.chronicle-join-sheet :focus-visible,
+.chronicle-recap-join-banner-btn:focus-visible {
+  outline: 2px solid var(--color-dusk-600);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+.chronicle-join-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgb(20 18 15 / 0.55);
+}
+
+.chronicle-join-sheet {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 480px;
+  max-height: 88dvh;
+  overflow-y: auto;
+  padding: 18px 18px 22px;
+  border-radius: 20px 20px 0 0;
+  background: var(--surface);
+  color: var(--page-fg);
+  font-family: var(--chronicle-font-body);
+  box-shadow: 0 -8px 28px -10px rgb(20 18 15 / 0.35);
+}
+
+.chronicle-join-grab {
+  width: 36px;
+  height: 4px;
+  margin: 0 auto 14px;
+  border-radius: 2px;
+  background: var(--hairline);
+}
+
+.chronicle-join-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--chronicle-text-secondary);
+  cursor: pointer;
+}
+
+.chronicle-join-close:hover {
+  background: var(--surface-muted);
+}
+
+.chronicle-join-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.chronicle-join-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--hairline);
+}
+
+.chronicle-join-dot--active {
+  width: 20px;
+  border-radius: 4px;
+  background: var(--color-dusk-700);
+}
+
+.chronicle-join-dot--done {
+  background: var(--accent-text);
+}
+
+.chronicle-join-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-join-note svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.chronicle-join-title {
+  margin: 0 0 6px;
+  font-family: var(--chronicle-font-display);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--page-fg);
+}
+
+.chronicle-join-sheet .chronicle-join-title:focus,
+.chronicle-join-sheet .chronicle-join-title:focus-visible {
+  outline: none;
+}
+
+.chronicle-join-sub {
+  margin: 0 0 20px;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-join-body {
+  margin: 0 0 22px;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-join-field {
+  margin-bottom: 14px;
+}
+
+.chronicle-join-label {
+  display: block;
+  margin-bottom: 6px;
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-join-input-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--surface-muted);
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-join-input-box:focus-within {
+  border-color: var(--color-dusk-600);
+}
+
+.chronicle-join-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--page-fg);
+  font-family: var(--chronicle-font-body);
+  font-size: 16px;
+}
+
+.chronicle-join-input::placeholder {
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-join-sheet .chronicle-join-input:focus-visible {
+  outline: none;
+}
+
+.chronicle-join-primary,
+.chronicle-join-outline {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  border-radius: var(--chronicle-radius-pill);
+  font-family: var(--chronicle-font-body);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chronicle-join-primary {
+  margin-bottom: 10px;
+  border: none;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.chronicle-join-primary:hover {
+  background: var(--color-primary-hover);
+}
+
+.chronicle-join-outline {
+  margin-bottom: 4px;
+  border: 1.5px solid var(--accent-text);
+  background: transparent;
+  color: var(--accent-text);
+}
+
+.chronicle-join-primary:disabled,
+.chronicle-join-outline:disabled {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+.chronicle-join-link {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--chronicle-font-body);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.chronicle-join-link:disabled {
+  color: var(--chronicle-text-secondary);
+  text-decoration: none;
+  cursor: default;
+}
+
+.chronicle-join-error {
+  margin: -4px 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--chronicle-danger-text);
+}
+
+.chronicle-join-code-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 18px 0 16px;
+}
+
+.chronicle-join-code-box {
+  flex: 0 1 44px;
+  min-width: 36px;
+  height: 54px;
+  box-sizing: border-box;
+  padding: 0;
+  border: 1.5px solid var(--hairline);
+  border-radius: 10px;
+  background: var(--surface-muted);
+  color: var(--page-fg);
+  font-family: var(--chronicle-font-display);
+  font-size: 20px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.chronicle-join-code-box--filled {
+  border-color: var(--accent-text);
+}
+
+.chronicle-join-sheet .chronicle-join-code-box:focus,
+.chronicle-join-sheet .chronicle-join-code-box:focus-visible {
+  border-color: var(--color-dusk-600);
+  outline: 2px solid var(--color-dusk-600);
+  outline-offset: 2px;
+}
+
+.chronicle-join-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--accent-text);
+  border-radius: 50%;
+  background: var(--surface-muted);
+  color: var(--accent-text);
+}
+
 /* Overview entry points */
 .chronicle-preview-card.chronicle-recap-over-card {
   display: flex;

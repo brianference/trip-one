@@ -16,6 +16,10 @@ interface AuthState {
   logout: () => Promise<void>
   /** Re-reads `/api/auth/me` so a just-confirmed address shows as confirmed. */
   refresh: () => Promise<void>
+  /** Emails a one-time 6-digit sign-in code. The server answers the same for every address. */
+  requestCode: (email: string) => Promise<void>
+  /** Signs in with an emailed code (creating the account on first use); the user comes back verified. */
+  verifyCode: (email: string, code: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -128,9 +132,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const requestCode = useCallback<AuthState['requestCode']>(async (email) => {
+    await postJson('/api/auth/code/request', { email }, 'Could not send a code. Please try again.')
+  }, [])
+
+  const verifyCode = useCallback<AuthState['verifyCode']>(async (email, code) => {
+    const res = await postJson('/api/auth/code/verify', { email, code }, 'Could not sign you in.')
+    // The verify response is the fresh `/me` payload (same shape, now verified),
+    // so it refreshes the user without a second round trip.
+    const body = (await res.json()) as { user: AuthUser }
+    setUser(asUser(body.user))
+  }, [])
+
   const value = useMemo(
-    () => ({ user, loading, register, login, logout, refresh }),
-    [user, loading, register, login, logout, refresh],
+    () => ({ user, loading, register, login, logout, refresh, requestCode, verifyCode }),
+    [user, loading, register, login, logout, refresh, requestCode, verifyCode],
   )
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

@@ -184,6 +184,13 @@
     --accent-photo: var(--color-dusk-700);
     --accent-photo-hover: color-mix(in oklab, var(--color-dusk-700) 85%, black);
     --on-accent-photo: #ffffff;
+
+    /* The public recap's "Were you on this trip?" banner: a dusk-tinted card
+       whose text and icon are darkened dusk. Values from the approved design
+       (docs/design/photo-controls-option-a.html, .theme-light). */
+    --photo-tint-bg: #fbe6d3;
+    --photo-tint-text: #7a3811;
+    --photo-tint-icon: var(--color-dusk-700);
   }
 
   /* Dark applies ONLY when the visitor asks for it via the toggle
@@ -210,6 +217,9 @@
       --accent-photo: var(--color-dusk-700);
       --accent-photo-hover: color-mix(in oklab, var(--color-dusk-700) 85%, black);
       --on-accent-photo: #ffffff;
+      --photo-tint-bg: #3a2415;
+      --photo-tint-text: #f3c9a4;
+      --photo-tint-icon: #f0a877;
     }
   }
 
@@ -231,6 +241,11 @@
     --accent-photo: var(--color-dusk-700);
     --accent-photo-hover: color-mix(in oklab, var(--color-dusk-700) 85%, black);
     --on-accent-photo: #ffffff;
+
+    /* The recap banner's tint, dark values from the design's .theme-dark. */
+    --photo-tint-bg: #3a2415;
+    --photo-tint-text: #f3c9a4;
+    --photo-tint-icon: #f0a877;
   }
 
   html {
