@@ -2,6 +2,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   CODE_TTL_MS,
+  DAY_MS,
+  MAX_CODES_PER_EMAIL_PER_DAY,
   MAX_CODE_ATTEMPTS,
   MAX_CODES_PER_EMAIL_PER_HOUR,
   UNBIASED_LIMIT,
@@ -13,6 +15,7 @@ import {
 } from './emailCode'
 import { sha256hex } from './tokens'
 import { codeStore } from '../testEmailCodes'
+import { getActiveEmailCode } from '../db'
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -113,9 +116,50 @@ describe('issueEmailCode', () => {
     expect(store.codes).toHaveLength(MAX_CODES_PER_EMAIL_PER_HOUR)
     // Other addresses are unaffected.
     expect(await issueEmailCode(store.fake.env, BLAIR, now + 10)).not.toBeNull()
-    // Once the first codes leave the rolling hour, a new one is allowed and the old rows are purged.
+    // Once the first codes leave the rolling hour, a new one is allowed; the rows stay for the daily cap.
     expect(await issueEmailCode(store.fake.env, ALEX, now + HOUR_MS + 5)).not.toBeNull()
+    expect(store.codes.filter((c) => c.email === ALEX)).toHaveLength(MAX_CODES_PER_EMAIL_PER_HOUR + 1)
+  })
+
+  it('issues at most 10 codes per email per 24 hours, even when each hour is under its cap', async () => {
+    const store = codeStore()
+    const start = Date.now() - DAY_MS
+    // Five codes in each of two separate hours: under the hourly cap both times.
+    for (let hour = 0; hour < 2; hour += 1) {
+      for (let i = 0; i < MAX_CODES_PER_EMAIL_PER_HOUR; i += 1) {
+        expect(await issueEmailCode(store.fake.env, ALEX, start + hour * 2 * HOUR_MS + i)).not.toBeNull()
+      }
+    }
+    // A later hour with nothing issued in it is still refused by the daily cap.
+    expect(await issueEmailCode(store.fake.env, ALEX, start + 5 * HOUR_MS)).toBeNull()
+    expect(store.codes).toHaveLength(MAX_CODES_PER_EMAIL_PER_DAY)
+    // Once the first codes are more than 24 hours old, a new one is allowed.
+    expect(await issueEmailCode(store.fake.env, ALEX, start + DAY_MS + 10)).not.toBeNull()
+  })
+
+  it('purges code rows older than 24 hours for every email, and keeps younger ones', async () => {
+    const store = codeStore()
+    const now = Date.now()
+    const base = { code_hash: 'h', expires_at: 0, attempts: 0, used_at: null }
+    store.codes.push({ ...base, id: 'old-other', email: BLAIR, created_at: now - DAY_MS - 1 })
+    store.codes.push({ ...base, id: 'young-other', email: BLAIR, created_at: now - DAY_MS + 60_000 })
+    await issueEmailCode(store.fake.env, ALEX, now)
+    expect(store.codes.map((c) => c.id)).not.toContain('old-other')
+    expect(store.codes.map((c) => c.id)).toContain('young-other')
     expect(store.codes.filter((c) => c.email === ALEX)).toHaveLength(1)
+  })
+})
+
+describe('getActiveEmailCode', () => {
+  it('breaks a created_at tie by id, so the same row is always picked', async () => {
+    const store = codeStore()
+    const now = Date.now()
+    const base = { email: ALEX, code_hash: 'h', expires_at: now + CODE_TTL_MS, attempts: 0, used_at: null, created_at: now }
+    store.codes.push({ ...base, id: 'aaaa' }, { ...base, id: 'bbbb' })
+    expect((await getActiveEmailCode(store.fake.env, ALEX, now))?.id).toBe('bbbb')
+    store.codes.reverse()
+    expect((await getActiveEmailCode(store.fake.env, ALEX, now))?.id).toBe('bbbb')
+    expect(store.fake.calls.some((c) => c.sql.includes('ORDER BY created_at DESC, id DESC'))).toBe(true)
   })
 })
 

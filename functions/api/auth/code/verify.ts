@@ -2,8 +2,9 @@ import {
   claimTripForUser,
   createUser,
   getUserByEmail,
-  markEmailVerified,
+  getUserById,
   normalizeEmail,
+  secureUnverifiedUser,
   type Env,
   type UserRow,
 } from '../../../lib/db'
@@ -35,31 +36,54 @@ function json(body: unknown, status: number, headers: Record<string, string> = {
 }
 
 /**
- * The account for a verified email, created on first sign-in.
+ * A password hash nobody can match: PBKDF2 of a random 32-byte secret that is
+ * thrown away. The person can set a real password later through reset.
+ * @param env - Auth env (optional pepper)
+ */
+function unusablePasswordHash(env: AuthEnv): Promise<string> {
+  return hashPassword(randomToken(UNUSABLE_SECRET_BYTES), env.PASSWORD_PEPPER)
+}
+
+/**
+ * The account for an email whose owner just proved control of it with a code.
  *
- * A new account gets a password hash of a random 32-byte secret that is
- * thrown away, so no password can ever match it; the person can set one later
- * through password reset. If two first sign-ins race, the unique email index
- * rejects the loser's insert and the winner's row is read back.
+ * - No account: one is created, verified in the same insert, with an unusable
+ *   password. If two first sign-ins race, the unique email index rejects the
+ *   loser's insert and the winner's row is used.
+ * - Unverified account: it was registered with a password by someone who never
+ *   proved they own the address, possibly an attacker pre-registering it. Its
+ *   password is replaced with an unusable one and every existing session is
+ *   revoked (token version bump) before the owner is signed in, so whoever
+ *   registered it keeps nothing.
+ * - Verified account: returned unchanged; its password and sessions stay valid.
  *
  * @param env - Auth env (DB, optional pepper)
  * @param email - The verified, normalized address
+ * @returns The user row as it is after any takeover, with the current token version
  */
-async function findOrCreateUser(env: AuthEnv, email: string): Promise<UserRow> {
-  const existing = await getUserByEmail(env, email)
-  if (existing) return existing
-  const localPart = email.slice(0, email.indexOf('@')).slice(0, MAX_DISPLAY_NAME_LENGTH)
-  try {
-    return await createUser(env, {
-      email,
-      password_hash: await hashPassword(randomToken(UNUSABLE_SECRET_BYTES), env.PASSWORD_PEPPER),
-      display_name: localPart || null,
-    })
-  } catch (err) {
-    const raced = await getUserByEmail(env, email)
-    if (raced) return raced
-    throw err
+async function signInUser(env: AuthEnv, email: string): Promise<UserRow> {
+  let user = await getUserByEmail(env, email)
+  if (!user) {
+    const localPart = email.slice(0, email.indexOf('@')).slice(0, MAX_DISPLAY_NAME_LENGTH)
+    try {
+      return await createUser(env, {
+        email,
+        password_hash: await unusablePasswordHash(env),
+        display_name: localPart || null,
+        email_verified: true,
+      })
+    } catch (err) {
+      user = await getUserByEmail(env, email)
+      if (!user) throw err
+    }
   }
+  if (user.email_verified === 1) return user
+
+  await secureUnverifiedUser(env, user.id, await unusablePasswordHash(env))
+  // Read back so the session is signed with the bumped token version.
+  const secured = await getUserById(env, user.id)
+  if (!secured) throw new Error('user vanished during code sign-in')
+  return secured
 }
 
 /**
@@ -92,8 +116,7 @@ export async function onRequestPost({ env, request }: { env: AuthEnv; request: R
       return json({ error: CODE_FAILED_MESSAGE }, 400)
     }
 
-    const user = await findOrCreateUser(env, email)
-    if (user.email_verified !== 1) await markEmailVerified(env as Env, user.id)
+    const user = await signInUser(env, email)
 
     const claimTripId = parsed.data.claimTripId ? parsed.data.claimTripId : null
     if (claimTripId) await claimTripForUser(env as Env, claimTripId, user.id)

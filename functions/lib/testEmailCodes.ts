@@ -40,11 +40,15 @@ export function codeStore(extraEnv: Record<string, unknown> = {}): CodeStore {
       const [email, since] = args as [string, number]
       return { n: codes.filter((c) => c.email === email && c.created_at >= since).length }
     }
-    if (sql.includes('FROM email_codes') && sql.includes('WHERE email = ? AND used_at IS NULL AND expires_at > ?')) {
+    if (
+      sql.includes('FROM email_codes') &&
+      sql.includes('WHERE email = ? AND used_at IS NULL AND expires_at > ?') &&
+      sql.includes('ORDER BY created_at DESC, id DESC LIMIT 1')
+    ) {
       const [email, now] = args as [string, number]
       const live = codes
         .filter((c) => c.email === email && c.used_at === null && c.expires_at > now)
-        .sort((a, b) => b.created_at - a.created_at)
+        .sort((a, b) => b.created_at - a.created_at || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0))
       return live[0] ? { ...live[0] } : null
     }
     if (sql === 'SELECT * FROM users WHERE email = ?') return users.find((u) => u.email === args[0]) ?? null
@@ -58,9 +62,9 @@ export function codeStore(extraEnv: Record<string, unknown> = {}): CodeStore {
       requestLog.push({ ipHash, endpoint, createdAt })
       return 1
     }
-    if (sql === 'DELETE FROM email_codes WHERE email = ? AND created_at < ?') {
-      const [email, before] = args as [string, number]
-      const keep = codes.filter((c) => !(c.email === email && c.created_at < before))
+    if (sql === 'DELETE FROM email_codes WHERE created_at < ?') {
+      const [before] = args as [number]
+      const keep = codes.filter((c) => c.created_at >= before)
       const removed = codes.length - keep.length
       codes.splice(0, codes.length, ...keep)
       return removed
@@ -91,7 +95,14 @@ export function codeStore(extraEnv: Record<string, unknown> = {}): CodeStore {
       return 1
     }
     if (sql.startsWith('INSERT INTO users')) {
-      const [id, email, passwordHash, displayName, createdAt] = args as [string, string, string, string | null, string]
+      const [id, email, passwordHash, displayName, createdAt, emailVerified] = args as [
+        string,
+        string,
+        string,
+        string | null,
+        string,
+        number,
+      ]
       if (users.some((u) => u.email === email)) throw new Error('UNIQUE constraint failed: users.email')
       users.push({
         id,
@@ -100,8 +111,20 @@ export function codeStore(extraEnv: Record<string, unknown> = {}): CodeStore {
         display_name: displayName,
         created_at: createdAt,
         token_version: 0,
-        email_verified: 0,
+        email_verified: emailVerified,
       })
+      return 1
+    }
+    if (
+      sql ===
+      'UPDATE users SET password_hash = ?, token_version = token_version + 1, email_verified = 1 WHERE id = ? AND email_verified = 0'
+    ) {
+      const [passwordHash, id] = args as [string, string]
+      const row = users.find((u) => u.id === id && u.email_verified === 0)
+      if (!row) return 0
+      row.password_hash = passwordHash
+      row.token_version += 1
+      row.email_verified = 1
       return 1
     }
     if (sql === 'UPDATE users SET email_verified = 1 WHERE id = ?') {

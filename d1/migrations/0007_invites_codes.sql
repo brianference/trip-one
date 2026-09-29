@@ -4,7 +4,7 @@
 -- `email + ':' + code` is stored, so a dump of this table is not a set of live
 -- codes, and the hash binds each code to the address it was sent to.
 -- `attempts` caps guessing per code; rows are kept (not deleted) when a newer
--- code supersedes them, so the per-email hourly cap can count them.
+-- code supersedes them, so the per-email hourly and daily caps can count them.
 create table if not exists email_codes (
   id text primary key,
   email text not null,
@@ -15,6 +15,8 @@ create table if not exists email_codes (
   created_at integer not null
 );
 create index if not exists email_codes_email_idx on email_codes (email);
+-- The request path purges rows older than 24 hours for every email by created_at.
+create index if not exists email_codes_created_at_idx on email_codes (created_at);
 
 -- An invitation for one email address to add photos to one trip.
 create table if not exists trip_invites (

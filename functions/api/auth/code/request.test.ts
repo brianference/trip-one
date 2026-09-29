@@ -3,7 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { onRequestPost } from './request'
 import { codeStore } from '../../../lib/testEmailCodes'
 import { sha256hex } from '../../../lib/auth/tokens'
-import { MAX_CODES_PER_EMAIL_PER_HOUR } from '../../../lib/auth/emailCode'
+import { MAX_CODES_PER_EMAIL_PER_DAY, MAX_CODES_PER_EMAIL_PER_HOUR } from '../../../lib/auth/emailCode'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -101,6 +101,29 @@ describe('POST /api/auth/code/request', () => {
     expect(new Set(responses)).toEqual(new Set([JSON.stringify({ ok: true })]))
     expect(sent).toHaveLength(MAX_CODES_PER_EMAIL_PER_HOUR)
     expect(store.codes).toHaveLength(MAX_CODES_PER_EMAIL_PER_HOUR)
+  })
+
+  it('stops sending after 10 codes per email in 24 hours but still answers {ok:true}', async () => {
+    const sent = stubMail()
+    const store = codeStore(MAIL)
+    // Ten codes issued between 2 and 12 hours ago: none in the last hour, so only the daily cap applies.
+    const now = Date.now()
+    for (let i = 0; i < MAX_CODES_PER_EMAIL_PER_DAY; i += 1) {
+      store.codes.push({
+        id: `earlier-${i}`,
+        email: 'alex@example.com',
+        code_hash: 'h',
+        expires_at: 0,
+        attempts: 0,
+        used_at: null,
+        created_at: now - (2 + i) * 60 * 60 * 1000,
+      })
+    }
+    const res = await onRequestPost({ env: store.fake.env, request: post({ email: 'alex@example.com' }) })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ ok: true })
+    expect(sent).toHaveLength(0)
+    expect(store.codes).toHaveLength(MAX_CODES_PER_EMAIL_PER_DAY)
   })
 
   it('limits one IP to 10 requests an hour across emails', async () => {

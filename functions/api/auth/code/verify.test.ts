@@ -1,10 +1,16 @@
 // @vitest-environment node
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { onRequestPost } from './verify'
+import { onRequestPost as register } from '../register'
 import { codeStore, type CodeStore } from '../../../lib/testEmailCodes'
 import { CODE_TTL_MS, MAX_CODE_ATTEMPTS, issueEmailCode } from '../../../lib/auth/emailCode'
 import { getAuthedUser, SESSION_COOKIE } from '../../../lib/auth/session'
-import { verifyPassword } from '../../../lib/auth/password'
+import { signToken } from '../../../lib/auth/jwt'
+import { hashPassword, verifyPassword } from '../../../lib/auth/password'
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 /** Synthetic signing secret for tests only. */
 const SECRET = 'test-signing-secret-at-least-32-chars'
@@ -81,25 +87,86 @@ describe('POST /api/auth/code/verify', () => {
     expect(b.user.id).toBe(a.user.id)
   })
 
-  it('signs in an existing password account and marks its email verified', async () => {
+  it('takes over an unverified account: the pre-registered password and session stop working', async () => {
     const s = store()
+    // Someone registers the address first, through the real endpoint, with a password they chose.
+    // Its confirmation-mail step has no table in this fake and logs an error; silence it.
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const attackerPassword = 'attacker-chosen-password'
+    const reg = await register({
+      env: s.fake.env,
+      request: new Request('https://trip-one.pages.dev/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': '198.51.100.66' },
+        body: JSON.stringify({ email: ALEX, password: attackerPassword }),
+      }),
+    })
+    expect(reg.status).toBe(201)
+    const attackerCookie = `${SESSION_COOKIE}=${sessionToken(reg)}`
+    const before = await getAuthedUser(s.fake.env, new Request('https://x/', { headers: { Cookie: attackerCookie } }))
+    expect(before?.emailVerified).toBe(false)
+    const userId = s.users[0].id
+
+    // The real owner signs in by code.
+    const res = await verify(s, { email: ALEX, code: await issueEmailCode(s.fake.env, ALEX) })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ user: { id: userId, email: ALEX, displayName: null, emailVerified: true } })
+    expect(s.users).toHaveLength(1)
+    expect(s.users[0].email_verified).toBe(1)
+
+    // (a) The pre-registered password no longer works.
+    expect(await verifyPassword(attackerPassword, s.users[0].password_hash)).toBe(false)
+    // (b) The session minted before the code sign-in is dead.
+    expect(await getAuthedUser(s.fake.env, new Request('https://x/', { headers: { Cookie: attackerCookie } }))).toBeNull()
+    // The owner's new session works and is verified.
+    const owner = await getAuthedUser(
+      s.fake.env,
+      new Request('https://x/', { headers: { Cookie: `${SESSION_COOKIE}=${sessionToken(res)}` } }),
+    )
+    expect(owner?.id).toBe(userId)
+    expect(owner?.emailVerified).toBe(true)
+  })
+
+  it('leaves an already-verified account alone: same password hash, existing sessions still valid', async () => {
+    const s = store()
+    const password = 'owner-real-password'
+    const hash = await hashPassword(password)
     s.users.push({
       id: 'existing-user',
       email: ALEX,
-      password_hash: 'pbkdf2$sha256$1$AA==$AA==',
+      password_hash: hash,
       display_name: 'Alex R',
       created_at: 't',
       token_version: 3,
-      email_verified: 0,
+      email_verified: 1,
     })
+    const oldToken = await signToken('existing-user', 3, SECRET)
+
     const res = await verify(s, { email: ALEX, code: await issueEmailCode(s.fake.env, ALEX) })
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({
       user: { id: 'existing-user', email: ALEX, displayName: 'Alex R', emailVerified: true },
     })
-    expect(s.users).toHaveLength(1)
-    expect(s.users[0].email_verified).toBe(1)
-    expect(s.users[0].password_hash).toBe('pbkdf2$sha256$1$AA==$AA==')
+    expect(s.users[0].password_hash).toBe(hash)
+    expect(s.users[0].token_version).toBe(3)
+    expect(await verifyPassword(password, s.users[0].password_hash)).toBe(true)
+    const old = await getAuthedUser(
+      s.fake.env,
+      new Request('https://x/', { headers: { Cookie: `${SESSION_COOKIE}=${oldToken}` } }),
+    )
+    expect(old?.id).toBe('existing-user')
+    expect(s.fake.calls.some((c) => c.sql.startsWith('UPDATE users'))).toBe(false)
+  })
+
+  it('creates a new account already verified in the single insert, with no follow-up update', async () => {
+    const s = store()
+    const res = await verify(s, { email: ALEX, code: await issueEmailCode(s.fake.env, ALEX) })
+    expect(res.status).toBe(200)
+    const inserts = s.fake.calls.filter((c) => c.sql.startsWith('INSERT INTO users'))
+    expect(inserts).toHaveLength(1)
+    expect(inserts[0].sql).toContain('email_verified')
+    expect(inserts[0].args[5]).toBe(1)
+    expect(s.fake.calls.some((c) => c.sql.startsWith('UPDATE users'))).toBe(false)
   })
 
   it('rejects a wrong code with the generic message and counts the attempt', async () => {

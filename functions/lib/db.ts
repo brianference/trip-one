@@ -429,19 +429,23 @@ export function normalizeEmail(email: string): string {
 
 /**
  * Creates a user. The caller must have already validated and hashed.
+ *
+ * `email_verified` is set in the same insert, so an account created by a
+ * proof of the address (an emailed code) is never briefly unverified.
  * @throws If the email is already registered (SQLite unique constraint)
  */
 export async function createUser(
   env: Env,
-  row: { email: string; password_hash: string; display_name?: string | null },
+  row: { email: string; password_hash: string; display_name?: string | null; email_verified?: boolean },
 ): Promise<UserRow> {
   const id = crypto.randomUUID()
   const created_at = nowIso()
   const email = normalizeEmail(row.email)
+  const emailVerified = row.email_verified ? 1 : 0
   await env.DB.prepare(
-    'INSERT INTO users (id, email, password_hash, display_name, created_at, token_version) VALUES (?, ?, ?, ?, ?, 0)',
+    'INSERT INTO users (id, email, password_hash, display_name, created_at, token_version, email_verified) VALUES (?, ?, ?, ?, ?, 0, ?)',
   )
-    .bind(id, email, row.password_hash, row.display_name ?? null, created_at)
+    .bind(id, email, row.password_hash, row.display_name ?? null, created_at, emailVerified)
     .run()
   return {
     id,
@@ -450,7 +454,7 @@ export async function createUser(
     display_name: row.display_name ?? null,
     created_at,
     token_version: 0,
-    email_verified: 0,
+    email_verified: emailVerified,
   }
 }
 
@@ -495,6 +499,28 @@ export async function resetUserPassword(env: Env, id: string, passwordHash: stri
   await env.DB.prepare('UPDATE users SET password_hash = ?, token_version = token_version + 1 WHERE id = ?')
     .bind(passwordHash, id)
     .run()
+}
+
+/**
+ * Takes over an UNVERIFIED account for the person who just proved they own its
+ * address: replaces the password hash, drops every existing session (token
+ * version bump) and marks the email verified, in one statement. Anyone who
+ * registered the address first, without owning it, loses both the password
+ * and the session. An already-verified account is left untouched (the
+ * `email_verified = 0` guard), and false is returned for it.
+ *
+ * @param env - D1 env
+ * @param id - The user id
+ * @param passwordHash - Already hashed (an unusable one for code sign-in)
+ * @returns true when the account was unverified and has been secured
+ */
+export async function secureUnverifiedUser(env: Env, id: string, passwordHash: string): Promise<boolean> {
+  const res = await env.DB.prepare(
+    'UPDATE users SET password_hash = ?, token_version = token_version + 1, email_verified = 1 WHERE id = ? AND email_verified = 0',
+  )
+    .bind(passwordHash, id)
+    .run()
+  return (res.meta?.changes ?? 0) > 0
 }
 
 /** Marks the address confirmed. Idempotent. */
@@ -792,9 +818,13 @@ export async function countEmailCodesSince(env: Env, email: string, sinceMs: num
   return row?.n ?? 0
 }
 
-/** Removes this email's code rows created before `beforeMs` (outside the counting window). */
-export async function deleteEmailCodesCreatedBefore(env: Env, email: string, beforeMs: number): Promise<void> {
-  await env.DB.prepare('DELETE FROM email_codes WHERE email = ? AND created_at < ?').bind(email, beforeMs).run()
+/**
+ * Removes every code row, for any email, created before `beforeMs`. Called with
+ * the start of the longest counting window (24 hours), so it never drops a row
+ * a cap still needs, and keeps the table bounded.
+ */
+export async function deleteEmailCodesCreatedBefore(env: Env, beforeMs: number): Promise<void> {
+  await env.DB.prepare('DELETE FROM email_codes WHERE created_at < ?').bind(beforeMs).run()
 }
 
 /**
@@ -819,12 +849,12 @@ export async function insertEmailCode(
     .run()
 }
 
-/** The newest unused, unexpired code for this email, or null. */
+/** The newest unused, unexpired code for this email, or null. `id` breaks created_at ties so the pick is deterministic. */
 export async function getActiveEmailCode(env: Env, email: string, nowMs: number): Promise<EmailCodeRow | null> {
   const row = await env.DB.prepare(
     `SELECT id, email, code_hash, expires_at, attempts, used_at, created_at FROM email_codes
      WHERE email = ? AND used_at IS NULL AND expires_at > ?
-     ORDER BY created_at DESC LIMIT 1`,
+     ORDER BY created_at DESC, id DESC LIMIT 1`,
   )
     .bind(email, nowMs)
     .first<EmailCodeRow>()

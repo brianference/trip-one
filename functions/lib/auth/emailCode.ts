@@ -7,7 +7,8 @@
  * - each code allows {@link MAX_CODE_ATTEMPTS} guesses, then it is dead even
  *   for the right value;
  * - only {@link MAX_CODES_PER_EMAIL_PER_HOUR} codes are issued per email per
- *   hour, so one address gets at most 25 guesses an hour (1 in 40,000);
+ *   hour and {@link MAX_CODES_PER_EMAIL_PER_DAY} per day, so one address gets
+ *   at most 25 guesses an hour and 50 a day (1 in 20,000 per day);
  * - a code lives {@link CODE_TTL_MS} and works once.
  *
  * The database stores only sha256(`email:code`). Binding the email into the
@@ -46,8 +47,12 @@ export const CODE_TTL_MS = 10 * 60 * 1000
 export const MAX_CODE_ATTEMPTS = 5
 /** Codes issued per email per rolling hour. */
 export const MAX_CODES_PER_EMAIL_PER_HOUR = 5
-/** The rolling window for the per-email cap. */
+/** Codes issued per email per rolling 24 hours. */
+export const MAX_CODES_PER_EMAIL_PER_DAY = 10
+/** The rolling window for the hourly cap. */
 const HOUR_MS = 60 * 60 * 1000
+/** The rolling window for the daily cap; also how long code rows are kept. */
+export const DAY_MS = 24 * HOUR_MS
 
 /**
  * A uniformly random 6-digit code (leading zeros kept) from
@@ -90,7 +95,8 @@ export function constantTimeEqual(a: string, b: string): boolean {
  * Issues a new code for an email, invalidating any earlier unused one.
  *
  * Returns null, and stores nothing, when the email has already had
- * {@link MAX_CODES_PER_EMAIL_PER_HOUR} codes this hour. The caller must answer
+ * {@link MAX_CODES_PER_EMAIL_PER_HOUR} codes this hour or
+ * {@link MAX_CODES_PER_EMAIL_PER_DAY} in 24 hours. The caller must answer
  * exactly as it does on success so the cap is not observable.
  *
  * @param env - D1 env
@@ -100,13 +106,17 @@ export function constantTimeEqual(a: string, b: string): boolean {
  */
 export async function issueEmailCode(env: Env, email: string, nowMs: number = Date.now()): Promise<string | null> {
   const normalized = normalizeEmail(email)
-  const windowStart = nowMs - HOUR_MS
-  if ((await countEmailCodesSince(env, normalized, windowStart)) >= MAX_CODES_PER_EMAIL_PER_HOUR) return null
+  const dayStart = nowMs - DAY_MS
 
-  // Rows older than the window no longer count toward the cap; drop them so the
-  // table stays bounded. Newer superseded rows are expired, not deleted, because
-  // deleting them would reset the count and let the cap be walked around.
-  await deleteEmailCodesCreatedBefore(env, normalized, windowStart)
+  // Rows older than the longest window no longer count toward any cap; drop
+  // them for every email so the table stays bounded. Newer superseded rows are
+  // expired, not deleted, because deleting them would reset the counts and let
+  // the caps be walked around.
+  await deleteEmailCodesCreatedBefore(env, dayStart)
+
+  if ((await countEmailCodesSince(env, normalized, nowMs - HOUR_MS)) >= MAX_CODES_PER_EMAIL_PER_HOUR) return null
+  if ((await countEmailCodesSince(env, normalized, dayStart)) >= MAX_CODES_PER_EMAIL_PER_DAY) return null
+
   await expireActiveEmailCodes(env, normalized, nowMs)
 
   const code = generateCode()
