@@ -8,7 +8,7 @@ import { reorderItinerary } from '../../../lib/itinerary/reorderItinerary'
 import { adjustItineraryForTripLength } from '../../../lib/itinerary/adjustItineraryForTripLength'
 import { planToItinerary } from '../../../lib/itinerary/planToItinerary'
 import { dedupeItinerary } from '../../../lib/itinerary/dedupeItinerary'
-import { ensureStopIds } from '../../../lib/itinerary/stopIds'
+import { ensureStopIds, carryOverStopIds } from '../../../lib/itinerary/stopIds'
 import { logger } from '../../../lib/logger'
 
 /**
@@ -231,12 +231,21 @@ export function useItineraryActions(tripId: string) {
    * chat revision cannot reintroduce a stop already kept from an unmentioned
    * day, or land the same place twice within the plan itself.
    *
+   * `planToItinerary` rebuilds every mentioned day's items from scratch with
+   * no `id` — it only knows real places, not itinerary history — so a stop
+   * that stays on a re-mentioned day (e.g. "add a food stop on day 2") would
+   * otherwise get a brand-new id from `ensureStopIds` even though the
+   * traveler never removed it, silently detaching any photo already
+   * attached to it. `carryOverStopIds` runs first and copies the id from
+   * the matching existing stop (by placeId, else by name) before that can
+   * happen.
+   *
    * @param plan - Day-grouped indices from the planner
    * @param places - The real candidate places the indices refer to
    * @param days - Trip length the plan was built for
    */
   function applyPlan(plan: PlanDay[], places: ThingToDo[], days: number, opts: { merge?: boolean } = {}) {
-    const planned = planToItinerary(plan, places)
+    const planned = carryOverStopIds(itinerary, planToItinerary(plan, places))
     const merged = opts.merge ? mergePreservingUnmentionedDays(itinerary, planned, plan) : planned
     // First occurrence wins — carried-over stops keep their day when the plan
     // also mentions the same place on a revised day.

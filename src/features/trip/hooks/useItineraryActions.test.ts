@@ -250,6 +250,44 @@ describe('useItineraryActions', () => {
     expect(persisted.map((i) => i.text)).not.toContain('Old day-2 stop')
   })
 
+  it('applyPlan carries a stop id forward when a chat revision re-mentions its day', async () => {
+    // Day 2 already has "Belem Tower" with a stable id. A revision that
+    // re-mentions day 2 (e.g. "add a food stop on day 2") rebuilds day 2's
+    // items via planToItinerary, which never sets id — without
+    // carryOverStopIds this would mint a brand-new id for a stop the
+    // traveler never asked to remove, silently detaching any attached photo.
+    resetStore(
+      [{ time: '09:00', text: 'Belem Tower', type: 'option', day: 2, id: '11111111-1111-4111-8111-111111111111' }],
+      2,
+    )
+    const updateSpy = vi.spyOn(client, 'updateTrip').mockResolvedValue({
+      id: 't1',
+      locationSlug: 'lisbon-portugal',
+      itinerary: [],
+      designStyle: 'chronicle',
+    })
+    const places = [
+      { name: 'Belem Tower', category: 'tourist_attraction', source: 'places' as const, lat: 38.69, lng: -9.21 },
+      { name: 'Time Out Market', category: 'restaurant', source: 'places' as const, lat: 38.71, lng: -9.14 },
+    ]
+    const { result } = renderHook(() => useItineraryActions('t1'))
+    act(() => {
+      result.current.applyPlan([{ day: 2, placeIndexes: [0, 1] }], places, 2, { merge: true })
+    })
+    await waitFor(() => expect(updateSpy).toHaveBeenCalled())
+
+    const storeItem = useTripStore.getState().itinerary.find((i) => i.text === 'Belem Tower')
+    const persisted = updateSpy.mock.calls[0][1].itinerary as Array<{ text: string; id?: string }>
+    const persistedBelem = persisted.find((i) => i.text === 'Belem Tower')
+    const persistedMarket = persisted.find((i) => i.text === 'Time Out Market')
+
+    expect(storeItem?.id).toBe('11111111-1111-4111-8111-111111111111')
+    expect(persistedBelem?.id).toBe('11111111-1111-4111-8111-111111111111')
+    // The genuinely new stop still gets its own fresh, distinct id.
+    expect(persistedMarket?.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+    expect(persistedMarket?.id).not.toBe(persistedBelem?.id)
+  })
+
   it('growing the trip cannot introduce a duplicate when candidates list a name twice', async () => {
     resetStore([{ time: '', text: 'Stop A', type: 'option' }])
     const updateSpy = vi.spyOn(client, 'updateTrip').mockResolvedValue({

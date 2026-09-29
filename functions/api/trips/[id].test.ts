@@ -93,7 +93,7 @@ describe('PATCH /api/trips/:id', () => {
     const res = await onRequestPatch({ env, request, params: { id: 'abc-123' } } as never)
     expect(res.status).toBe(200)
     const body = (await res.json()) as { itinerary: { id?: string; text: string }[] }
-    expect(body.itinerary[0].id).toMatch(/^[0-9a-f-]{4,}-[0-9a-f-]{4,}/)
+    expect(body.itinerary[0].id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
     // The id supplied by the client is kept, not replaced.
     expect(body.itinerary[1].id).toBe('11111111-1111-4111-8111-111111111111')
   })
