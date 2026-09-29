@@ -787,7 +787,9 @@ body {
   text-align: left;
   font-family: var(--chronicle-font-body);
   font-size: 12px;
-  color: var(--chronicle-text-tertiary);
+  /* Same AA-contrast fix as .chronicle-section-nav-item — tertiary (58% mix)
+     measured 4.1:1 on white via axe-core; secondary (78% mix) clears it. */
+  color: var(--chronicle-text-secondary);
 }
 
 .chronicle-money-table th,
@@ -1004,8 +1006,14 @@ body {
   padding: 0 var(--chronicle-space-lg);
   border: none;
   border-radius: var(--chronicle-radius-pill);
-  background: var(--chronicle-gold);
-  color: var(--chronicle-text-on-gold);
+  /* Was --chronicle-gold/--chronicle-text-on-gold: gold is THEME-AWARE text
+     colour (pine-300 in dark mode, tuned for text on the dark surface), not a
+     button fill — white text on pine-300 measured 2.29:1 via axe-core in dark
+     mode, below AA. Every other primary action pill in this file already uses
+     teal (the theme-invariant primary) + on-primary white; matching that
+     fixes the contrast and the inconsistency in one move. */
+  background: var(--chronicle-teal);
+  color: var(--color-on-primary);
   font-family: var(--chronicle-font-mono);
   font-weight: 500;
   font-size: 13px;
@@ -1016,7 +1024,7 @@ body {
 }
 
 .chronicle-stop-submit:hover {
-  background: var(--chronicle-gold-hover);
+  background: var(--chronicle-teal-hover);
 }
 
 .chronicle-timeline ol {
@@ -1078,7 +1086,8 @@ body {
   font-family: var(--chronicle-font-body);
   font-style: italic;
   letter-spacing: 0;
-  color: var(--chronicle-text-tertiary);
+  /* Same AA-contrast fix as .chronicle-section-nav-item. */
+  color: var(--chronicle-text-secondary);
 }
 
 .chronicle-entry-text {
@@ -1625,7 +1634,8 @@ body {
   font-family: var(--chronicle-font-body);
   font-size: 12px;
   line-height: 1.4;
-  color: var(--chronicle-text-tertiary);
+  /* Same AA-contrast fix as .chronicle-section-nav-item. */
+  color: var(--chronicle-text-secondary);
 }
 
 .chronicle-ttd-card--experience {
@@ -2006,7 +2016,10 @@ body:has(.chronicle-page) label {
   font-size: 10px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--chronicle-text-tertiary);
+  /* `--chronicle-text-tertiary` (58% mix) measured 4.1:1 on white in light
+     mode via axe-core — below the 4.5:1 AA minimum. Secondary (78% mix)
+     clears it in both themes; see the same fix on .chronicle-photo-thumb__confirm. */
+  color: var(--chronicle-text-secondary);
   cursor: pointer;
 }
 
@@ -2720,7 +2733,8 @@ body:has(.chronicle-page) label {
   font-size: 12px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--chronicle-text-tertiary);
+  /* Same AA-contrast fix as .chronicle-section-nav-item above. */
+  color: var(--chronicle-text-secondary);
   text-decoration: none;
 }
 
@@ -2734,7 +2748,8 @@ body:has(.chronicle-page) label {
   font-family: var(--chronicle-font-body);
   font-size: 13px;
   font-style: italic;
-  color: var(--chronicle-text-tertiary);
+  /* Same AA-contrast fix as .chronicle-section-nav-item. */
+  color: var(--chronicle-text-secondary);
 }
 
 /* ---------- Landing page ---------- */
@@ -3896,7 +3911,8 @@ body:has(.chronicle-page) label {
 .chronicle-export-hint {
   font-family: var(--chronicle-font-mono);
   font-size: 11px;
-  color: var(--chronicle-text-tertiary);
+  /* Same AA-contrast fix as .chronicle-section-nav-item. */
+  color: var(--chronicle-text-secondary);
 }
 
 /* Print-only trip title (destination + dates); hidden on screen. */

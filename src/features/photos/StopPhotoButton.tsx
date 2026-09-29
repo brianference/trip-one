@@ -76,6 +76,7 @@ export const StopPhotoButton = forwardRef<
         className="chronicle-visually-hidden"
         onChange={handleChange}
         tabIndex={-1}
+        aria-label={`Choose a photo for ${stopName}`}
       />
       <span role="status" className="chronicle-visually-hidden">
         {status}

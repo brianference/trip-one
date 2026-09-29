@@ -18,6 +18,15 @@ describe('StopPhotoButton', () => {
     expect(input.className).toContain('chronicle-visually-hidden')
   })
 
+  it('gives the hidden file input its own accessible name, distinct from the button\'s', () => {
+    render(<StopPhotoButton stopName="Louvre Museum" uploading={false} onSelect={vi.fn()} />)
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    expect(input).toHaveAttribute('aria-label', 'Choose a photo for Louvre Museum')
+    // The visible button keeps its own distinct accessible name — the two
+    // controls must not collide when queried by accessible name.
+    expect(screen.getByRole('button', { name: 'Add photo to Louvre Museum' })).toBeInTheDocument()
+  })
+
   it('clicking the button opens the hidden file input', () => {
     render(<StopPhotoButton stopName="Louvre Museum" uploading={false} onSelect={vi.fn()} />)
     const input = document.querySelector('input[type="file"]') as HTMLInputElement
