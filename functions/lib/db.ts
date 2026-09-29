@@ -662,14 +662,6 @@ export async function listPhotosForTrip(env: Env, tripId: string): Promise<Photo
   return res.results ?? []
 }
 
-/** How many photos a trip holds in total. */
-export async function countPhotosForTrip(env: Env, tripId: string): Promise<number> {
-  const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM trip_photos WHERE trip_id = ?')
-    .bind(tripId)
-    .first<{ n: number }>()
-  return row?.n ?? 0
-}
-
 /** How many photos one stop of a trip holds. */
 export async function countPhotosForStop(env: Env, tripId: string, stopId: string): Promise<number> {
   const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM trip_photos WHERE trip_id = ? AND stop_id = ?')

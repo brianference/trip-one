@@ -1,5 +1,5 @@
 import type { Env, PhotoRow } from '../../../../lib/db'
-import { getTrip, listPhotosForTrip, countPhotosForStop, countPhotosForTrip, insertPhoto } from '../../../../lib/db'
+import { getTrip, listPhotosForTrip, countPhotosForStop, insertPhoto } from '../../../../lib/db'
 import { isRateLimited } from '../../../../lib/rateLimitGuard'
 import { sniffImageType, SNIFF_BYTES } from '../../../../lib/imageSniff'
 import { DEMO_TRIP_IDS } from '../../../../../src/lib/api/demoIds'
@@ -10,7 +10,7 @@ import { z } from 'zod'
 export const MAX_PHOTO_BYTES = 4 * 1024 * 1024
 /** Most photos one itinerary stop may hold. */
 export const MAX_PHOTOS_PER_STOP = 6
-/** Most photos one trip may hold. */
+/** Most photos one trip may hold on stops still in its itinerary (orphans on removed stops do not count). */
 export const MAX_PHOTOS_PER_TRIP = 300
 /** Smallest and largest pixel dimension the client may report. */
 export const MIN_PHOTO_DIMENSION = 1
@@ -90,14 +90,31 @@ function toPublicPhoto(row: PhotoRow): PublicPhoto {
 }
 
 /**
- * True when the itinerary contains an item whose stable `id` is `stopId`.
+ * The stable stop ids currently in a trip's itinerary. A photo whose stop was
+ * removed from the itinerary (an orphan) is not on any of them: it stays in R2
+ * until the trip is deleted but is neither listed nor counted.
  * @param itinerary - The trip's itinerary as stored
- * @param stopId - The stop the photo is for
+ * @returns Every string `id` found on an itinerary item
  */
-function itineraryHasStop(itinerary: unknown[], stopId: string): boolean {
-  return itinerary.some(
-    (item) => typeof item === 'object' && item !== null && (item as { id?: unknown }).id === stopId,
-  )
+function currentStopIds(itinerary: unknown[]): Set<string> {
+  const ids = new Set<string>()
+  for (const item of itinerary) {
+    if (typeof item !== 'object' || item === null) continue
+    const id = (item as { id?: unknown }).id
+    if (typeof id === 'string') ids.add(id)
+  }
+  return ids
+}
+
+/**
+ * The trip's photos that sit on a stop still in its itinerary, oldest first.
+ * @param env - Worker env with the DB binding
+ * @param tripId - Validated trip id
+ * @param stopIds - The itinerary's current stop ids, from {@link currentStopIds}
+ */
+async function listPhotosOnCurrentStops(env: Env, tripId: string, stopIds: Set<string>): Promise<PhotoRow[]> {
+  const rows = await listPhotosForTrip(env, tripId)
+  return rows.filter((row) => stopIds.has(row.stop_id))
 }
 
 /**
@@ -120,7 +137,8 @@ function checkDeclaredBodySize(request: Request): 'ok' | 'invalid' | 'too-large'
 /**
  * GET /api/trips/:id/photos
  *
- * Lists every photo on a trip in the public shape.
+ * Lists the trip's photos in the public shape, only those on a stop still in
+ * the itinerary (a photo on a removed stop has nowhere to be shown).
  * @param context - Request context with `env`, `request` and `params.id`
  * @returns 200 `{ photos }`, or `{ error }` with 404 (unknown trip), 429 or 500
  */
@@ -143,7 +161,7 @@ export async function onRequestGet({
   try {
     const trip = await getTrip(env, tripId.data)
     if (!trip) return json({ error: NOT_FOUND_MESSAGE }, 404)
-    const rows = await listPhotosForTrip(env, tripId.data)
+    const rows = await listPhotosOnCurrentStops(env, tripId.data, currentStopIds(trip.itinerary))
     return json({ photos: rows.map(toPublicPhoto) }, 200)
   } catch (err) {
     logger.error('photo list failed', err)
@@ -216,12 +234,13 @@ export async function onRequestPost({
   try {
     const trip = await getTrip(env, tripId)
     if (!trip) return json({ error: NOT_FOUND_MESSAGE }, 404)
-    if (!itineraryHasStop(trip.itinerary, stopId)) return json({ error: UNKNOWN_STOP_MESSAGE }, 400)
+    const stopIds = currentStopIds(trip.itinerary)
+    if (!stopIds.has(stopId)) return json({ error: UNKNOWN_STOP_MESSAGE }, 400)
 
     if ((await countPhotosForStop(env, tripId, stopId)) >= MAX_PHOTOS_PER_STOP) {
       return json({ error: STOP_FULL_MESSAGE }, 409)
     }
-    if ((await countPhotosForTrip(env, tripId)) >= MAX_PHOTOS_PER_TRIP) {
+    if ((await listPhotosOnCurrentStops(env, tripId, stopIds)).length >= MAX_PHOTOS_PER_TRIP) {
       return json({ error: TRIP_FULL_MESSAGE }, 409)
     }
 

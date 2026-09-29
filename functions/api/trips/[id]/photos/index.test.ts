@@ -12,6 +12,8 @@ import {
   TRIP_ID,
   OTHER_TRIP_ID,
   STOP_ID,
+  SECOND_STOP_ID,
+  REMOVED_STOP_ID,
   JPEG_BYTES,
   PNG_BYTES,
   HTML_BYTES,
@@ -65,6 +67,18 @@ async function upload(env: ReturnType<typeof photoEnv>['env'], request: Request 
 /** True when any recorded D1 statement inserted a photo row. */
 function inserted(calls: { sql: string }[]): boolean {
   return calls.some((c) => c.sql.includes('INSERT INTO trip_photos'))
+}
+
+/**
+ * `count` photo rows on `stopId`, with distinct uuids starting at `offset`.
+ * @param stopId - The stop every row is on
+ * @param count - How many rows
+ * @param offset - First index used in the ids, so two batches never collide
+ */
+function photoRowsOn(stopId: string, count: number, offset = 0) {
+  return Array.from({ length: count }, (_, index) =>
+    photoRow({ id: `9f000000-0000-4000-8000-${String(offset + index).padStart(12, '0')}`, stop_id: stopId }),
+  )
 }
 
 describe('POST /api/trips/:id/photos', () => {
@@ -246,11 +260,18 @@ describe('POST /api/trips/:id/photos', () => {
     expect(res.status).toBe(201)
   })
 
-  it('rejects the upload with 409 when the trip already has MAX_PHOTOS_PER_TRIP photos', async () => {
-    const { env, r2 } = photoEnv({ tripPhotoCount: MAX_PHOTOS_PER_TRIP })
+  it('rejects the upload with 409 when the trip already has MAX_PHOTOS_PER_TRIP photos on current stops', async () => {
+    const { env, r2 } = photoEnv({ photos: photoRowsOn(SECOND_STOP_ID, MAX_PHOTOS_PER_TRIP) })
     const res = await upload(env, uploadRequest(TRIP_ID))
     expect(res.status).toBe(409)
     expect(r2.objects.size).toBe(0)
+  })
+
+  it('does not count photos on a stop removed from the itinerary toward MAX_PHOTOS_PER_TRIP', async () => {
+    const photos = [...photoRowsOn(SECOND_STOP_ID, MAX_PHOTOS_PER_TRIP - 1), ...photoRowsOn(REMOVED_STOP_ID, 10, 1000)]
+    const { env } = photoEnv({ photos })
+    const res = await upload(env, uploadRequest(TRIP_ID))
+    expect(res.status).toBe(201)
   })
 
   it('rate-limits uploads with 429 and stores nothing', async () => {
@@ -304,6 +325,16 @@ describe('GET /api/trips/:id/photos', () => {
         { id: photoRow().id, stopId: STOP_ID, width: 800, height: 600, createdAt: photoRow().created_at },
       ],
     })
+  })
+
+  it('leaves out a photo whose stop was removed from the itinerary', async () => {
+    const orphan = photoRow({ id: '9f000000-0000-4000-8000-0000000000aa', stop_id: REMOVED_STOP_ID })
+    const kept = photoRow({ id: '9f000000-0000-4000-8000-0000000000bb', stop_id: SECOND_STOP_ID })
+    const { env } = photoEnv({ photos: [photoRow(), orphan, kept] })
+    const res = await onRequestGet({ env, request: new Request('https://x'), params: { id: TRIP_ID } })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { photos: { id: string }[] }
+    expect(body.photos.map((p) => p.id)).toEqual([photoRow().id, kept.id])
   })
 
   it('answers 404 for an unknown trip', async () => {
