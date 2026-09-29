@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { placePhotoUrl, type PlaceDetail } from '../../../lib/api/client'
 import { directionsUrl } from '../../../lib/itinerary/badges'
 import type { PlaceQuery } from './usePlaceDetail'
@@ -67,6 +67,7 @@ export function PlaceDetailPanel({
   planStopId?: string | null
 }) {
   const [pickDay, setPickDay] = useState(defaultDay ?? 1)
+  const addPhotoRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
@@ -237,6 +238,7 @@ export function PlaceDetailPanel({
                 <div className="chronicle-photo-row">
                   {!demoTrip && (
                     <StopPhotoButton
+                      ref={addPhotoRef}
                       stopName={title}
                       uploading={photos.uploading.has(planStopId)}
                       onSelect={(file) => photos.upload(planStopId, file)}
@@ -248,6 +250,7 @@ export function PlaceDetailPanel({
                       stopName={title}
                       photos={photos.byStop.get(planStopId) ?? []}
                       onRemove={photos.remove}
+                      addButtonRef={addPhotoRef}
                     />
                   )}
                 </div>

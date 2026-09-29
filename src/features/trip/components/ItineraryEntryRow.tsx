@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { ItineraryItem } from '../../../lib/validation/schemas'
 import { roleFor, slotLabel, directionsUrl } from '../../../lib/itinerary/badges'
 import { StopPhotoButton } from '../../photos/StopPhotoButton'
@@ -60,6 +60,7 @@ export function ItineraryEntryRow({
   demoTrip: boolean
 }) {
   const [editing, setEditing] = useState(false)
+  const addPhotoRef = useRef<HTMLButtonElement>(null)
   const badge = roleFor(item)
   // Always show something in the time column: the clock time, or a soft
   // time-of-day slot ("Morning", "Evening") derived from the stop's position.
@@ -135,10 +136,16 @@ export function ItineraryEntryRow({
       {item.id && (
         <div className="chronicle-photo-row">
           {!demoTrip && onAddPhoto && (
-            <StopPhotoButton stopName={item.text} uploading={uploadingPhoto} onSelect={onAddPhoto} />
+            <StopPhotoButton ref={addPhotoRef} stopName={item.text} uploading={uploadingPhoto} onSelect={onAddPhoto} />
           )}
           {stopPhotos.length > 0 && (
-            <StopPhotoStrip tripId={tripId} stopName={item.text} photos={stopPhotos} onRemove={onRemovePhoto} />
+            <StopPhotoStrip
+              tripId={tripId}
+              stopName={item.text}
+              photos={stopPhotos}
+              onRemove={onRemovePhoto}
+              addButtonRef={addPhotoRef}
+            />
           )}
         </div>
       )}

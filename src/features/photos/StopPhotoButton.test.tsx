@@ -44,10 +44,32 @@ describe('StopPhotoButton', () => {
     expect(onSelect).not.toHaveBeenCalled()
   })
 
-  it('shows "Uploading…" and disables the button while an upload is in flight', () => {
+  it('shows "Uploading…" while an upload is in flight, but stays focusable (aria-disabled, not disabled)', () => {
     render(<StopPhotoButton stopName="Louvre Museum" uploading={true} onSelect={vi.fn()} />)
     const button = screen.getByRole('button', { name: 'Add photo to Louvre Museum' })
-    expect(button).toBeDisabled()
+    expect(button).not.toBeDisabled()
+    expect(button).toHaveAttribute('aria-disabled', 'true')
     expect(button).toHaveTextContent('Uploading…')
+    button.focus()
+    expect(button).toHaveFocus()
+  })
+
+  it('ignores clicks while an upload is already in flight (does not reopen the file picker)', () => {
+    render(<StopPhotoButton stopName="Louvre Museum" uploading={true} onSelect={vi.fn()} />)
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    const clickSpy = vi.spyOn(input, 'click')
+    fireEvent.click(screen.getByRole('button', { name: 'Add photo to Louvre Museum' }))
+    expect(clickSpy).not.toHaveBeenCalled()
+  })
+
+  it('announces the upload state through a visually hidden status region', () => {
+    const { rerender } = render(<StopPhotoButton stopName="Louvre Museum" uploading={false} onSelect={vi.fn()} />)
+    expect(screen.getByRole('status')).toHaveTextContent('')
+
+    rerender(<StopPhotoButton stopName="Louvre Museum" uploading={true} onSelect={vi.fn()} />)
+    expect(screen.getByRole('status')).toHaveTextContent('Uploading photo to Louvre Museum…')
+
+    rerender(<StopPhotoButton stopName="Louvre Museum" uploading={false} onSelect={vi.fn()} />)
+    expect(screen.getByRole('status')).toHaveTextContent('Photo added to Louvre Museum')
   })
 })
