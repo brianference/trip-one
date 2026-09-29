@@ -1,7 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { placePhotoUrl, type PlaceDetail } from '../../../lib/api/client'
 import { directionsUrl } from '../../../lib/itinerary/badges'
 import type { PlaceQuery } from './usePlaceDetail'
+import { StopPhotoButton } from '../../photos/StopPhotoButton'
+import { StopPhotoStrip } from '../../photos/StopPhotoStrip'
+import type { UseTripPhotosResult } from '../../photos/useTripPhotos'
 
 const PRICE = ['Free', '$', '$$', '$$$', '$$$$']
 
@@ -34,6 +37,10 @@ export function PlaceDetailPanel({
   onPlanDay,
   onAddToDay,
   onRemoveFromPlan,
+  tripId,
+  demoTrip,
+  photos,
+  planStopId,
 }: {
   query: PlaceQuery
   detail: PlaceDetail | null
@@ -50,8 +57,17 @@ export function PlaceDetailPanel({
   onAddToDay?: (day: number) => void
   /** Remove this place from the plan. */
   onRemoveFromPlan?: () => void
+  /** The current trip, for building photo thumbnail URLs. Required to show photo controls. */
+  tripId?: string
+  /** True on read-only demo trips — hides the add-photo button. */
+  demoTrip?: boolean
+  /** The trip's photos, grouped by stop, plus the actions the add/remove controls call. */
+  photos?: UseTripPhotosResult
+  /** This place's itinerary stop id when it's already on the plan (else null/undefined) — drives whether photo controls show at all. */
+  planStopId?: string | null
 }) {
   const [pickDay, setPickDay] = useState(defaultDay ?? 1)
+  const addPhotoRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
@@ -211,6 +227,38 @@ export function PlaceDetailPanel({
                     </cite>
                   </blockquote>
                 ))}
+              </div>
+            )}
+
+            {/* Only shown once this place is on the plan (has a stable stop id) and the
+                page wired up photo state — a place not yet added has nowhere to attach a photo. */}
+            {planStopId && tripId && photos && (
+              <div className="space-y-2 pt-1">
+                <h3 className="font-[family-name:var(--font-display)] text-base font-semibold">Your photos</h3>
+                <div className="chronicle-photo-row">
+                  {!demoTrip && (
+                    <StopPhotoButton
+                      ref={addPhotoRef}
+                      stopName={title}
+                      uploading={photos.uploading.has(planStopId)}
+                      onSelect={(file) => photos.upload(planStopId, file)}
+                    />
+                  )}
+                  {(photos.byStop.get(planStopId)?.length ?? 0) > 0 && (
+                    <StopPhotoStrip
+                      tripId={tripId}
+                      stopName={title}
+                      photos={photos.byStop.get(planStopId) ?? []}
+                      onRemove={photos.remove}
+                      addButtonRef={addPhotoRef}
+                    />
+                  )}
+                </div>
+                {photos.error && (
+                  <p role="alert" className="text-sm text-danger-500">
+                    {photos.error}
+                  </p>
+                )}
               </div>
             )}
           </div>

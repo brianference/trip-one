@@ -17,6 +17,7 @@ import {
   updateTrip,
   type Env,
 } from './db'
+import { fakeR2 } from './testD1'
 
 /**
  * A statement-level fake of the D1 binding: it captures the SQL and bound args
@@ -58,7 +59,7 @@ function makeDB(firstResults: unknown[] = []): { env: Env; calls: Captured[] } {
       return stmt
     },
   }
-  return { env: { DB: db as unknown as Env['DB'], RATE_LIMIT_SALT: 'salt' }, calls }
+  return { env: { DB: db as unknown as Env['DB'], RATE_LIMIT_SALT: 'salt', PHOTOS: fakeR2().bucket }, calls }
 }
 
 describe('getLocationBySlug', () => {
@@ -239,6 +240,20 @@ describe('trips', () => {
     const trip = await getTrip(env, 't1')
     expect(trip?.itinerary).toEqual([{ day: 1 }])
     expect(trip?.trip_length_days).toBe(3)
+  })
+
+  it('maps the title but never the owner', async () => {
+    const { env } = makeDB([
+      { id: 't1', location_slug: 's', itinerary: '[]', design_style: 'chronicle', created_at: 't', title: 'Dublin weekend', user_id: 'u1' },
+    ])
+    const trip = await getTrip(env, 't1')
+    expect(trip?.title).toBe('Dublin weekend')
+    expect(trip).not.toHaveProperty('user_id')
+  })
+
+  it('maps a missing title to null', async () => {
+    const { env } = makeDB([{ id: 't1', location_slug: 's', itinerary: '[]', design_style: 'chronicle', created_at: 't' }])
+    expect((await getTrip(env, 't1'))?.title).toBeNull()
   })
 
   it('updates only the columns named in the patch', async () => {

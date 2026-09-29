@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import type { LocationResult, Trip, PlanDay } from '../../../lib/api/client'
 import type { ThingToDo } from '../../../lib/api/client'
@@ -114,6 +114,23 @@ export function TripChatDock({
     return () => document.body.classList.remove('trip-chat-open')
   }, [open])
 
+  // The dock stays mounted off-canvas (translateX(-100%)) while closed, for
+  // its slide transition — but that alone leaves its close button, starters
+  // and composer reachable by Tab even though `aria-hidden="true"` marks the
+  // whole <aside> hidden from screen readers (axe-core's aria-hidden-focus
+  // rule). `inert` is set here as a real DOM attribute — imperatively, via a
+  // ref, because React's JSX typings for this React/`@types/react` version
+  // don't include `inert` as a prop — which removes its subtree from both
+  // focus order and the accessibility tree while collapsed, and restores it
+  // the moment the dock opens.
+  const dockRef = useRef<HTMLElement>(null)
+  useLayoutEffect(() => {
+    const el = dockRef.current
+    if (!el) return
+    if (open) el.removeAttribute('inert')
+    else el.setAttribute('inert', '')
+  }, [open])
+
   async function handleRelocate(destination: string, interests: string) {
     // The chat's relocate path has no intent-extraction step, so no profile
     // fields — discovery still works from `destination` + `interests`, just
@@ -161,7 +178,7 @@ export function TripChatDock({
           <span aria-hidden="true">✨</span> Plan by chat
         </button>
       )}
-      <aside className={`chronicle-chat-dock${open ? ' chronicle-chat-dock--open' : ''}`} aria-hidden={!open}>
+      <aside ref={dockRef} className={`chronicle-chat-dock${open ? ' chronicle-chat-dock--open' : ''}`} aria-hidden={!open}>
         <TripChatPanel
           messages={chat.messages}
           isThinking={chat.isThinking}

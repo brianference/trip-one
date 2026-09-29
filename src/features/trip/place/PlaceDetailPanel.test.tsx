@@ -3,6 +3,12 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { PlaceDetailPanel } from './PlaceDetailPanel'
 import type { PlaceDetail } from '../../../lib/api/client'
 import type { PlaceQuery } from './usePlaceDetail'
+import type { UseTripPhotosResult } from '../../photos/useTripPhotos'
+
+/** A stub `useTripPhotos` result for panel tests that exercise photo controls. */
+function stubPhotos(overrides: Partial<UseTripPhotosResult> = {}): UseTripPhotosResult {
+  return { byStop: new Map(), upload: vi.fn(), remove: vi.fn(), uploading: new Set(), error: null, ...overrides }
+}
 
 const query: PlaceQuery = { label: 'Sushi Ota', placeId: 'abc' }
 
@@ -115,5 +121,78 @@ describe('PlaceDetailPanel', () => {
     // Body still shows the known label so the panel is not empty.
     expect(screen.getByRole('heading', { name: 'Sushi Ota' })).toBeInTheDocument()
     expect(screen.getByText(/full details aren’t available/i)).toBeInTheDocument()
+  })
+
+  it('shows no photo controls when the place is not on the plan', () => {
+    render(
+      <PlaceDetailPanel
+        query={query}
+        detail={detail}
+        loading={false}
+        error={null}
+        onClose={vi.fn()}
+        tripId="trip-1"
+        photos={stubPhotos()}
+        planStopId={null}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: /add photo to/i })).not.toBeInTheDocument()
+  })
+
+  it('shows the add-photo button and existing thumbnails when the place is on the plan', () => {
+    const photo = { id: 'p1', stopId: 'stop-1', width: 1600, height: 1200, createdAt: '2026-09-29T00:00:00.000Z' }
+    render(
+      <PlaceDetailPanel
+        query={query}
+        detail={detail}
+        loading={false}
+        error={null}
+        onClose={vi.fn()}
+        tripId="trip-1"
+        photos={stubPhotos({ byStop: new Map([['stop-1', [photo]]]) })}
+        planStopId="stop-1"
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Add photo to Sushi Ota' })).toBeInTheDocument()
+    expect(screen.getByAltText('Photo 1 of 1 at Sushi Ota')).toBeInTheDocument()
+  })
+
+  it('hides the add-photo button on a demo trip but still shows existing photos', () => {
+    const photo = { id: 'p1', stopId: 'stop-1', width: 1600, height: 1200, createdAt: '2026-09-29T00:00:00.000Z' }
+    render(
+      <PlaceDetailPanel
+        query={query}
+        detail={detail}
+        loading={false}
+        error={null}
+        onClose={vi.fn()}
+        tripId="trip-1"
+        demoTrip
+        photos={stubPhotos({ byStop: new Map([['stop-1', [photo]]]) })}
+        planStopId="stop-1"
+      />,
+    )
+    expect(screen.queryByRole('button', { name: /add photo to/i })).not.toBeInTheDocument()
+    expect(screen.getByAltText('Photo 1 of 1 at Sushi Ota')).toBeInTheDocument()
+  })
+
+  it('uploads the chosen file for the on-plan stop', () => {
+    const upload = vi.fn()
+    render(
+      <PlaceDetailPanel
+        query={query}
+        detail={detail}
+        loading={false}
+        error={null}
+        onClose={vi.fn()}
+        tripId="trip-1"
+        photos={stubPhotos({ upload })}
+        planStopId="stop-1"
+      />,
+    )
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    const file = new File(['bytes'], 'photo.jpg', { type: 'image/jpeg' })
+    fireEvent.change(input, { target: { files: [file] } })
+    expect(upload).toHaveBeenCalledWith('stop-1', file)
   })
 })

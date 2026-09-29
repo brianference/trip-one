@@ -8,6 +8,7 @@ import { reorderItinerary } from '../../../lib/itinerary/reorderItinerary'
 import { adjustItineraryForTripLength } from '../../../lib/itinerary/adjustItineraryForTripLength'
 import { planToItinerary } from '../../../lib/itinerary/planToItinerary'
 import { dedupeItinerary } from '../../../lib/itinerary/dedupeItinerary'
+import { ensureStopIds, carryOverStopIds } from '../../../lib/itinerary/stopIds'
 import { logger } from '../../../lib/logger'
 
 /**
@@ -28,9 +29,17 @@ function persist(tripId: string, patch: { itinerary?: ItineraryItem[]; tripLengt
  *
  * Dedupes before organize so addStop / addFromThingToDo cannot reintroduce
  * the exact-name pairs that drifted into the Tokyo demo row.
+ *
+ * Ids are assigned here — before both the store write and the persisted
+ * payload — rather than left to `setItinerary`'s own `ensureStopIds` pass.
+ * `setItinerary` returns a NEW array when it has to add ids, so if this
+ * function persisted its own local `organized` array instead, the store and
+ * the D1 row would end up with two different, independently-generated ids
+ * for the same new stop. Assigning once, up front, and reusing that same
+ * array for both calls keeps them identical.
  */
 function organizeAndPersist(items: ItineraryItem[], tripLengthDays: number | null, tripId: string) {
-  const organized = organizeItinerary(dedupeItinerary(items), tripLengthDays)
+  const organized = ensureStopIds(organizeItinerary(dedupeItinerary(items), tripLengthDays))
   useTripStore.getState().setItinerary(organized)
   persist(tripId, { itinerary: organized })
 }
@@ -100,10 +109,12 @@ export function useItineraryActions(tripId: string) {
    * re-clustering, so the traveler's explicit placement is honored.
    */
   function addToDay(input: { name: string; lat?: number; lng?: number; category?: string }, day: number) {
-    const next = dedupeItinerary([
-      ...itinerary,
-      { time: '', text: input.name, type: 'option', q: input.name, lat: input.lat, lng: input.lng, category: input.category, day },
-    ])
+    const next = ensureStopIds(
+      dedupeItinerary([
+        ...itinerary,
+        { time: '', text: input.name, type: 'option', q: input.name, lat: input.lat, lng: input.lng, category: input.category, day },
+      ]),
+    )
     useTripStore.getState().setItinerary(next)
     persist(tripId, { itinerary: next })
   }
@@ -131,7 +142,7 @@ export function useItineraryActions(tripId: string) {
       category: p.category,
       day: (i % days) + 1,
     }))
-    const next = dedupeItinerary([...itinerary, ...additions])
+    const next = ensureStopIds(dedupeItinerary([...itinerary, ...additions]))
     useTripStore.getState().setItinerary(next)
     persist(tripId, { itinerary: next })
     // Only report stops that survived dedupe (were actually appended).
@@ -159,7 +170,9 @@ export function useItineraryActions(tripId: string) {
   function moveStop(entries: { item: ItineraryItem; index: number }[], entryPos: number, direction: -1 | 1) {
     const targetPos = entryPos + direction
     if (targetPos < 0 || targetPos >= entries.length) return
-    const reordered = reorderItinerary(itinerary, entries[entryPos].index, entries[targetPos].index, entries[entryPos].item.day ?? 1)
+    const reordered = ensureStopIds(
+      reorderItinerary(itinerary, entries[entryPos].index, entries[targetPos].index, entries[entryPos].item.day ?? 1),
+    )
     useTripStore.getState().setItinerary(reordered)
     persist(tripId, { itinerary: reordered })
   }
@@ -171,7 +184,7 @@ export function useItineraryActions(tripId: string) {
    * override the traveler's explicit choice.
    */
   function moveToDay(index: number, day: number) {
-    const next = itinerary.map((it, i) => (i === index ? { ...it, day } : it))
+    const next = ensureStopIds(itinerary.map((it, i) => (i === index ? { ...it, day } : it)))
     useTripStore.getState().setItinerary(next)
     persist(tripId, { itinerary: next })
   }
@@ -181,7 +194,7 @@ export function useItineraryActions(tripId: string) {
    * An empty string falls the row back to its soft time-of-day slot label.
    */
   function setStopTime(index: number, time: string) {
-    const next = itinerary.map((it, i) => (i === index ? { ...it, time } : it))
+    const next = ensureStopIds(itinerary.map((it, i) => (i === index ? { ...it, time } : it)))
     useTripStore.getState().setItinerary(next)
     persist(tripId, { itinerary: next })
   }
@@ -201,7 +214,7 @@ export function useItineraryActions(tripId: string) {
     const stripped = itinerary.map((item) => ({ ...item, day: undefined }))
     // adjustItineraryForTripLength dedupes existing + candidates; organize after.
     const adjusted = adjustItineraryForTripLength(stripped, newLength, availableThingsToDo)
-    const organized = organizeItinerary(adjusted, newLength)
+    const organized = ensureStopIds(organizeItinerary(adjusted, newLength))
     useTripStore.getState().setItinerary(organized)
     useTripStore.getState().setTripLengthDays(newLength)
     persist(tripId, { itinerary: organized, tripLengthDays: newLength })
@@ -218,16 +231,25 @@ export function useItineraryActions(tripId: string) {
    * chat revision cannot reintroduce a stop already kept from an unmentioned
    * day, or land the same place twice within the plan itself.
    *
+   * `planToItinerary` rebuilds every mentioned day's items from scratch with
+   * no `id` — it only knows real places, not itinerary history — so a stop
+   * that stays on a re-mentioned day (e.g. "add a food stop on day 2") would
+   * otherwise get a brand-new id from `ensureStopIds` even though the
+   * traveler never removed it, silently detaching any photo already
+   * attached to it. `carryOverStopIds` runs first and copies the id from
+   * the matching existing stop (by placeId, else by name) before that can
+   * happen.
+   *
    * @param plan - Day-grouped indices from the planner
    * @param places - The real candidate places the indices refer to
    * @param days - Trip length the plan was built for
    */
   function applyPlan(plan: PlanDay[], places: ThingToDo[], days: number, opts: { merge?: boolean } = {}) {
-    const planned = planToItinerary(plan, places)
+    const planned = carryOverStopIds(itinerary, planToItinerary(plan, places))
     const merged = opts.merge ? mergePreservingUnmentionedDays(itinerary, planned, plan) : planned
     // First occurrence wins — carried-over stops keep their day when the plan
     // also mentions the same place on a revised day.
-    const items = dedupeItinerary(merged)
+    const items = ensureStopIds(dedupeItinerary(merged))
     useTripStore.getState().setItinerary(items)
     useTripStore.getState().setTripLengthDays(days)
     persist(tripId, { itinerary: items, tripLengthDays: days })
@@ -245,9 +267,10 @@ export function useItineraryActions(tripId: string) {
    * re-clustering so undo is a faithful reversal, not a re-plan.
    */
   function restorePlan(items: ItineraryItem[], days: number | null) {
-    useTripStore.getState().setItinerary(items)
+    const restored = ensureStopIds(items)
+    useTripStore.getState().setItinerary(restored)
     useTripStore.getState().setTripLengthDays(days)
-    persist(tripId, { itinerary: items, tripLengthDays: days })
+    persist(tripId, { itinerary: restored, tripLengthDays: days })
   }
 
   return { itinerary, tripLengthDays, adding, addStop, addFromThingToDo, addToDay, addStops, removeStop, moveStop, moveToDay, setStopTime, setTripLength, setStartDate, applyPlan, restorePlan }

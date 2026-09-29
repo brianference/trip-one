@@ -10,6 +10,7 @@ import {
 import { useTripStore } from '../../../store/tripStore'
 import { queueTripWrite } from '../../../lib/api/tripWriteQueue'
 import { dedupeItinerary } from '../../../lib/itinerary/dedupeItinerary'
+import { ensureStopIds } from '../../../lib/itinerary/stopIds'
 import { logger } from '../../../lib/logger'
 
 /**
@@ -67,28 +68,35 @@ export function useTripData(tripId: string) {
       .then((loadedTrip) => {
         if (cancelled) return
         tripLoaded = true
-        // Self-heal legacy rows that drifted before write-path dedupe existed.
-        // WHY: the live Tokyo demo (00000000-0000-4000-8000-000000000002)
+        // Self-heal legacy rows that drifted, or predate stop ids, before
+        // today's write paths existed.
+        // WHY dedupe: the live Tokyo demo (00000000-0000-4000-8000-000000000002)
         // stored 25 stops with three exact pairs (Odaiba Beach, Odaiba Marine
-        // Park, Isshiki Beach) while its seed file has 6 unique stops. Drop
-        // dups once on load and persist through the write queue so the row
-        // is cleaned without a migration. Only writes when something was
-        // actually removed — does not re-fire on every visit after the row
-        // is clean, and does not fight a traveler who later re-adds a place
-        // through the (now-guarded) write paths.
+        // Park, Isshiki Beach) while its seed file has 6 unique stops.
+        // WHY ids: a row saved before stop ids existed has none, and a later
+        // feature attaches uploaded photos to a stop by `id` — an id that
+        // gets regenerated on every reload (rather than assigned once and
+        // persisted) would silently detach that photo.
+        // Both heals write through the queue at most once per load: only
+        // when dedupe actually dropped something, or ensureStopIds actually
+        // added an id, so a clean/already-ided row never re-fires on every
+        // visit and never fights a traveler's own later edits.
         const cleanedItinerary = dedupeItinerary(loadedTrip.itinerary)
-        const healed: Trip = { ...loadedTrip, itinerary: cleanedItinerary }
+        const idedItinerary = ensureStopIds(cleanedItinerary)
+        const healed: Trip = { ...loadedTrip, itinerary: idedItinerary }
         setTrip(healed)
         useTripStore.setState({
           tripId: healed.id,
           locationSlug: healed.locationSlug,
-          itinerary: cleanedItinerary,
+          itinerary: idedItinerary,
           tripLengthDays: healed.tripLengthDays,
           startDate: healed.startDate ?? null,
         })
-        if (cleanedItinerary.length !== loadedTrip.itinerary.length) {
-          queueTripWrite(healed.id, { itinerary: cleanedItinerary }, (err) => {
-            logger.error('failed to persist legacy duplicate-stop cleanup', err)
+        const dedupeRemovedStops = cleanedItinerary.length !== loadedTrip.itinerary.length
+        const idsWereAdded = idedItinerary !== cleanedItinerary
+        if (dedupeRemovedStops || idsWereAdded) {
+          queueTripWrite(healed.id, { itinerary: idedItinerary }, (err) => {
+            logger.error('failed to persist legacy itinerary self-heal (dedupe/stable ids)', err)
             useTripStore.getState().setSaveError(true)
           })
         }

@@ -1,4 +1,4 @@
-const US_COUNTRY = new Set(['united states', 'united states of america', 'usa'])
+import { US_COUNTRY_NAMES } from './usRegions'
 
 /**
  * Trims a raw Nominatim display name to a clean, human "City, Region" form.
@@ -23,7 +23,7 @@ export function cleanDisplayName(raw: string): string {
   if (segs.length === 0) return parts[0]
 
   // For US places, drop the country so the region shown is the state.
-  if (US_COUNTRY.has(segs[segs.length - 1].toLowerCase())) {
+  if (US_COUNTRY_NAMES.has(segs[segs.length - 1].toLowerCase())) {
     segs = segs.slice(0, -1)
   }
 

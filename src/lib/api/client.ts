@@ -81,8 +81,14 @@ export interface Trip {
   tripLengthDays?: number | null
   /** Trip start date (YYYY-MM-DD), or null/absent if not set. */
   startDate?: string | null
+  /** The traveler's own name for the trip (shown as the recap heading), or null/absent if never set. */
+  title?: string | null
 }
 
+/**
+ * Maps a trip row from the API (snake_case) to the client's `Trip` shape.
+ * @param row - The trip as `GET/POST/PATCH /api/trips` returns it
+ */
 function fromRow(row: {
   id: string
   location_slug: string
@@ -90,6 +96,7 @@ function fromRow(row: {
   design_style: DesignStyle
   trip_length_days?: number | null
   start_date?: string | null
+  title?: string | null
 }): Trip {
   return {
     id: row.id,
@@ -98,6 +105,7 @@ function fromRow(row: {
     designStyle: row.design_style,
     tripLengthDays: row.trip_length_days ?? null,
     startDate: row.start_date ?? null,
+    title: row.title ?? null,
   }
 }
 

@@ -14,6 +14,7 @@ import { ShareTrip } from '../components/ShareTrip'
 import { PlaceDetailPanel } from '../place/PlaceDetailPanel'
 import { usePlaceDetail, type PlaceQuery } from '../place/usePlaceDetail'
 import { placeQueryFor } from '../place/placeQuery'
+import { RecapOverviewCard } from '../../recap/RecapOverviewCard'
 
 const DEFAULT_FORECAST_DAYS = 5
 const NEXT_UP_COUNT = 3
@@ -31,6 +32,7 @@ export function OverviewPage() {
   const { trip, location } = useTripContext()
   const itinerary = useTripStore((s) => s.itinerary)
   const tripLengthDays = useTripStore((s) => s.tripLengthDays)
+  const startDate = useTripStore((s) => s.startDate)
   const displayName = location?.displayName ?? trip.locationSlug
 
   const { data: forecast } = useForecast(location?.lat ?? 0, location?.lng ?? 0)
@@ -50,6 +52,7 @@ export function OverviewPage() {
         <ShareTrip tripId={trip.id} tripName={displayName} />
       </div>
       <p className="chronicle-save-hint">This link is your trip — bookmark or share it to come back. No account needed.</p>
+      <RecapOverviewCard tripId={trip.id} itinerary={itinerary} startDate={startDate} tripLengthDays={tripLengthDays} />
 
       {/*
         Content order matches the previous mobile stack (map → weather → stats →

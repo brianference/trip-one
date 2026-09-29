@@ -66,6 +66,12 @@
 
   /* ---- Semantic ---- */
   --chronicle-danger: var(--color-danger-500);
+  /* Theme-aware danger TEXT/soft-background pair for a warning that sits ON a
+     surface (the per-day "spread across town" note, the Meal badge) — see the
+     --accent-danger-text/--accent-danger-soft definitions in theme.css for
+     why a single danger tone can't be used directly as text here. */
+  --chronicle-danger-text: var(--accent-danger-text);
+  --chronicle-danger-soft: var(--accent-danger-soft);
 
   /* ---- Typography ----
      The serif display/body faces are replaced by the shared sans stack; this
@@ -143,6 +149,12 @@
   color: var(--color-on-primary);
 }
 
+/* Share recap while its link is being created (aria-disabled keeps focus). */
+.chronicle-share-btn[aria-disabled='true'] {
+  opacity: 0.65;
+  cursor: progress;
+}
+
 .chronicle-save-hint {
   margin: 4px 0 var(--chronicle-space-md);
   font-family: var(--chronicle-font-body);
@@ -194,6 +206,345 @@
 
 .chronicle-legal-back {
   margin-top: var(--chronicle-space-xl);
+}
+
+/* ---------- Recap walkthrough map (Task 11/12) ---------- */
+.chronicle-recap-map {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-md);
+}
+
+.chronicle-recap-map-canvas {
+  height: 360px;
+  width: 100%;
+  border-radius: var(--chronicle-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--chronicle-border-hairline);
+}
+
+@media (max-width: 480px) {
+  .chronicle-recap-map-canvas {
+    height: 260px;
+  }
+}
+
+/*
+ * The route/traveled lines and the stop markers sit ON the Leaflet basemap
+ * (CARTO Voyager raster tiles), which stays light-toned in both app themes —
+ * there is no dark tile layer to match. Using the theme-SWAPPED
+ * `--accent-text`/`--chronicle-gold` aliases here (which resolve to a pale
+ * pine in dark mode, tuned for a dark PAGE surface) would make these hard to
+ * read against a map that stays light regardless of theme. So this
+ * deliberately uses the theme-INVARIANT palette tokens from theme.css
+ * (--color-primary, --color-pine-500, --color-on-primary) instead of the
+ * swapped Chronicle aliases the controls below use.
+ */
+.trip-one-recap-route {
+  stroke: var(--color-pine-500);
+}
+
+.trip-one-recap-traveled {
+  stroke: var(--color-primary);
+}
+
+.trip-one-recap-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border: 2px solid var(--color-on-primary);
+  box-shadow: var(--chronicle-shadow-card);
+  font-family: var(--chronicle-font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chronicle-recap-map-controls {
+  display: flex;
+  gap: var(--chronicle-space-sm);
+  flex-wrap: wrap;
+}
+
+.chronicle-recap-map-btn,
+.chronicle-recap-btn {
+  flex: none;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 var(--chronicle-space-md);
+  border: 1px solid var(--chronicle-teal);
+  border-radius: var(--chronicle-radius-pill);
+  background: none;
+  color: var(--accent-text);
+  font-family: var(--chronicle-font-mono);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.chronicle-recap-map-btn:hover,
+.chronicle-recap-btn:hover:not([aria-disabled='true']) {
+  background: var(--chronicle-teal);
+  color: var(--color-on-primary);
+}
+
+.chronicle-recap-map-btn[aria-pressed='true'],
+.chronicle-recap-btn[aria-pressed='true'] {
+  background: var(--chronicle-teal);
+  color: var(--color-on-primary);
+}
+
+.chronicle-recap-map-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* aria-disabled (not disabled) keeps a first/last-photo button focusable. */
+.chronicle-recap-btn[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---------- Recap page (Task 12) ---------- */
+.chronicle-recap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-xl);
+}
+
+.chronicle-recap h1 {
+  margin-bottom: var(--chronicle-space-xs);
+}
+
+.chronicle-recap-dates {
+  margin: 0;
+  font-family: var(--chronicle-font-mono);
+  font-size: 14px;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-recap-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-md);
+  min-width: 0;
+}
+
+.chronicle-recap-h2 {
+  margin: 0;
+  font-family: var(--chronicle-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-recap-h3 {
+  margin: 0 0 var(--chronicle-space-sm);
+  font-family: var(--chronicle-font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--chronicle-gold);
+}
+
+/* Slideshow: a fixed-ratio frame so a portrait photo never pushes the
+   controls around, with the photo letterboxed inside it (object-fit: contain). */
+.chronicle-recap-slideshow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-md);
+}
+
+.chronicle-recap-slide {
+  border-radius: var(--chronicle-radius-lg);
+}
+
+.chronicle-recap-slide-figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-sm);
+}
+
+.chronicle-recap-slide-frame {
+  aspect-ratio: 4 / 3;
+  /* Keeps a desktop-width slide from pushing everything below it off screen. */
+  max-height: min(70vh, 520px);
+  width: 100%;
+  border-radius: var(--chronicle-radius-lg);
+  border: 1px solid var(--chronicle-border-hairline);
+  background: var(--chronicle-bg-surface-2);
+  overflow: hidden;
+}
+
+.chronicle-recap-slide-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.chronicle-recap-slide-caption {
+  font-family: var(--chronicle-font-body);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--chronicle-text-primary);
+}
+
+.chronicle-recap-slide-count {
+  margin: var(--chronicle-space-xs) 0 0;
+  font-family: var(--chronicle-font-mono);
+  font-size: 13px;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-recap-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--chronicle-space-sm);
+}
+
+/* Day-by-day list */
+.chronicle-recap-day + .chronicle-recap-day {
+  margin-top: var(--chronicle-space-lg);
+}
+
+.chronicle-recap-stops {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-md);
+}
+
+.chronicle-recap-stop {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--chronicle-space-md);
+}
+
+.chronicle-recap-stop-order {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-family: var(--chronicle-font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chronicle-recap-stop-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-sm);
+  min-width: 0;
+  padding-top: 3px;
+}
+
+.chronicle-recap-stop-name {
+  font-family: var(--chronicle-font-body);
+  font-size: 16px;
+  color: var(--chronicle-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.chronicle-recap-footer {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--chronicle-space-lg);
+  border-top: 1px solid var(--chronicle-border-hairline);
+}
+
+/* Share recap (owner) */
+.chronicle-recap-share {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--chronicle-space-xs);
+  /* Wide enough for the read-only link fallback to show most of the URL. */
+  width: min(100%, 320px);
+}
+
+/* Beside the heading (tablet and up) the button sits flush right; on a
+   phone the header wraps and it lines up under the title instead. */
+@media (min-width: 600px) {
+  .chronicle-recap-share {
+    align-items: flex-end;
+  }
+}
+
+.chronicle-recap-share .chronicle-save-hint {
+  margin: 0;
+}
+
+.chronicle-recap-share-manual {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-xs);
+  width: 100%;
+}
+
+.chronicle-recap-share-input {
+  min-height: 44px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 var(--chronicle-space-sm);
+  border: 1px solid var(--chronicle-border-subtle);
+  border-radius: var(--chronicle-radius-sm);
+  background: var(--chronicle-bg-surface);
+  color: var(--chronicle-text-primary);
+  font-family: var(--chronicle-font-mono);
+  font-size: 13px;
+}
+
+.chronicle-recap-share-error {
+  margin: 0;
+  font-family: var(--chronicle-font-body);
+  font-size: 14px;
+  color: var(--chronicle-danger);
+}
+
+/* Overview entry points */
+.chronicle-preview-card.chronicle-recap-over-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--chronicle-space-sm);
+  border-color: var(--chronicle-teal);
+  background: var(--color-primary-soft);
+}
+
+.chronicle-preview-card.chronicle-recap-over-card h2,
+.chronicle-preview-card.chronicle-recap-over-card .chronicle-rate-line {
+  color: var(--color-on-primary-soft);
+  margin: 0;
+}
+
+.chronicle-preview-card.chronicle-recap-over-card .chronicle-rate-line {
+  font-family: var(--chronicle-font-body);
+}
+
+/* The public recap sits inside the site chrome, whose footer follows it:
+   .chronicle-page's full-viewport min-height would leave a blank band. */
+.chronicle-page.chronicle-recap-public {
+  min-height: 0;
+}
+
+.chronicle-recap-entry {
+  margin: 0 0 var(--chronicle-space-sm);
 }
 
 /* ---------- Theme toggle (fixed, top-right, every page) ---------- */
@@ -428,6 +779,44 @@ body {
   font-weight: 500;
 }
 
+/* ---------- Money page: preset-amount conversion table ---------- */
+.chronicle-money-table {
+  width: 100%;
+  margin: 0 0 var(--chronicle-space-lg);
+  border-collapse: collapse;
+  font-family: var(--chronicle-font-mono);
+  font-size: 13px;
+}
+
+.chronicle-money-table caption {
+  margin-bottom: var(--chronicle-space-sm);
+  text-align: left;
+  font-family: var(--chronicle-font-body);
+  font-size: 12px;
+  /* Same AA-contrast fix as .chronicle-section-nav-item — tertiary (58% mix)
+     measured 4.1:1 on white via axe-core; secondary (78% mix) clears it. */
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-money-table th,
+.chronicle-money-table td {
+  padding: var(--chronicle-space-sm) var(--chronicle-space-md);
+  text-align: left;
+  border-bottom: 1px solid var(--chronicle-border-hairline);
+}
+
+.chronicle-money-table th {
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-money-table td {
+  color: var(--chronicle-text-primary);
+}
+
 .chronicle-link-list {
   display: flex;
   flex-direction: column;
@@ -623,8 +1012,14 @@ body {
   padding: 0 var(--chronicle-space-lg);
   border: none;
   border-radius: var(--chronicle-radius-pill);
-  background: var(--chronicle-gold);
-  color: var(--chronicle-text-on-gold);
+  /* Was --chronicle-gold/--chronicle-text-on-gold: gold is THEME-AWARE text
+     colour (pine-300 in dark mode, tuned for text on the dark surface), not a
+     button fill — white text on pine-300 measured 2.29:1 via axe-core in dark
+     mode, below AA. Every other primary action pill in this file already uses
+     teal (the theme-invariant primary) + on-primary white; matching that
+     fixes the contrast and the inconsistency in one move. */
+  background: var(--chronicle-teal);
+  color: var(--color-on-primary);
   font-family: var(--chronicle-font-mono);
   font-weight: 500;
   font-size: 13px;
@@ -635,7 +1030,7 @@ body {
 }
 
 .chronicle-stop-submit:hover {
-  background: var(--chronicle-gold-hover);
+  background: var(--chronicle-teal-hover);
 }
 
 .chronicle-timeline ol {
@@ -649,7 +1044,6 @@ body {
 }
 
 .chronicle-entry {
-  position: relative;
   padding: var(--chronicle-space-md) 0;
   border-bottom: 1px solid var(--chronicle-border-hairline);
 }
@@ -659,13 +1053,19 @@ body {
 }
 
 .chronicle-entry-main {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--chronicle-space-sm);
   flex-wrap: wrap;
 }
 
-.chronicle-entry span[data-testid^='timeline-dot'] {
+/* Anchored to `.chronicle-entry-main` (the time/badge/name/actions line), not
+   the whole `<li>` — the `<li>` also holds the edit panel and, since Task 8,
+   the per-stop photo row below the main line. Anchoring to the `<li>` with
+   `top: 50%` put the dot beside "+ Photo" instead of level with the stop
+   name on any stop that grew taller than its main line. */
+.chronicle-entry-main span[data-testid^='timeline-dot'] {
   position: absolute;
   left: calc(-1 * var(--chronicle-space-lg) - 5px);
   top: 50%;
@@ -692,7 +1092,8 @@ body {
   font-family: var(--chronicle-font-body);
   font-style: italic;
   letter-spacing: 0;
-  color: var(--chronicle-text-tertiary);
+  /* Same AA-contrast fix as .chronicle-section-nav-item. */
+  color: var(--chronicle-text-secondary);
 }
 
 .chronicle-entry-text {
@@ -807,6 +1208,140 @@ body {
   font-size: 14px;
   text-transform: none;
   letter-spacing: 0;
+}
+
+/* ---------- Stop photo controls ---------- */
+.chronicle-photo-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--chronicle-space-sm);
+  margin-top: var(--chronicle-space-sm);
+}
+
+.chronicle-photo-add-btn {
+  flex: none;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 14px;
+  border-radius: var(--chronicle-radius-pill);
+  border: 1px solid var(--chronicle-border-hairline);
+  background: var(--chronicle-bg-surface-2);
+  color: var(--chronicle-text-secondary);
+  font-family: var(--chronicle-font-mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.chronicle-photo-add-btn:hover:not([aria-disabled='true']),
+.chronicle-photo-add-btn:focus-visible {
+  color: var(--accent-text);
+  border-color: var(--chronicle-teal);
+}
+
+/* `aria-disabled`, not the `disabled` attribute: the button stays focusable
+   and announces its upload state via the adjacent live region — a real
+   `disabled` button drops focus (and any screen reader context) the moment
+   an upload starts. */
+.chronicle-photo-add-btn[aria-disabled='true'] {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.chronicle-photo-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--chronicle-space-sm);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.chronicle-photo-thumb {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 64px;
+}
+
+.chronicle-photo-thumb--confirming {
+  width: auto;
+  min-width: 148px;
+}
+
+.chronicle-photo-thumb__img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: var(--chronicle-radius-sm);
+  border: 1px solid var(--chronicle-border-hairline);
+  display: block;
+}
+
+.chronicle-photo-thumb__remove {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 4px;
+  border-radius: var(--chronicle-radius-sm);
+  border: 1px solid var(--chronicle-border-hairline);
+  background: var(--chronicle-bg-surface-2);
+  color: var(--chronicle-text-secondary);
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.chronicle-photo-thumb__remove:hover,
+.chronicle-photo-thumb__remove:focus-visible {
+  color: var(--chronicle-danger);
+  border-color: var(--chronicle-danger);
+}
+
+.chronicle-photo-thumb__confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--chronicle-radius-sm);
+  background: var(--chronicle-bg-surface-2);
+}
+
+.chronicle-photo-thumb__confirm span {
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  /* `--chronicle-text-tertiary` (58% mix) measured 3.95:1 on this surface in
+     light mode via axe-core — below the 4.5:1 AA minimum. Secondary (78% mix)
+     clears it in both themes. */
+  color: var(--chronicle-text-secondary);
+  text-align: center;
+}
+
+.chronicle-photo-thumb__confirm-btns {
+  display: flex;
+  gap: 4px;
+}
+
+.chronicle-photo-thumb__confirm-yes,
+.chronicle-photo-thumb__confirm-no {
+  flex: 1;
+  min-height: 44px;
+  min-width: 44px;
+  border-radius: var(--chronicle-radius-sm);
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid var(--chronicle-border-hairline);
+}
+
+.chronicle-photo-thumb__confirm-yes {
+  background: var(--chronicle-danger);
+  color: #fff;
+  border-color: var(--chronicle-danger);
+}
+
+.chronicle-photo-thumb__confirm-no {
+  background: var(--chronicle-bg-surface);
+  color: var(--chronicle-text-secondary);
 }
 
 /* ---------- Things to do ---------- */
@@ -947,8 +1482,11 @@ body {
 }
 
 .chronicle-ttd-showunrated {
+  /* Was --chronicle-text-tertiary (4.1:1 on white via axe-core, below AA) —
+     the combined selector above already sets the correct
+     --chronicle-text-secondary; this override just needs to stop
+     re-lowering it back to tertiary. */
   margin-left: auto;
-  color: var(--chronicle-text-tertiary);
 }
 
 .chronicle-ttd-onplan {
@@ -1105,7 +1643,8 @@ body {
   font-family: var(--chronicle-font-body);
   font-size: 12px;
   line-height: 1.4;
-  color: var(--chronicle-text-tertiary);
+  /* Same AA-contrast fix as .chronicle-section-nav-item. */
+  color: var(--chronicle-text-secondary);
 }
 
 .chronicle-ttd-card--experience {
@@ -1254,7 +1793,7 @@ body:has(.chronicle-page) label {
     padding-left: var(--chronicle-space-md);
   }
 
-  .chronicle-entry span[data-testid^='timeline-dot'] {
+  .chronicle-entry-main span[data-testid^='timeline-dot'] {
     left: calc(-1 * var(--chronicle-space-md) - 3px);
   }
 
@@ -1414,8 +1953,12 @@ body:has(.chronicle-page) label {
 }
 
 .chronicle-badge--dinner {
-  background: rgba(176, 73, 42, 0.16);
-  color: #b0492a;
+  /* Was a hard-coded hex pair (#b0492a on rgba(176,73,42,.16)) — never a
+     token, and it measured 4.35:1 in light / 2.6:1 in dark via axe-core,
+     below the 4.5:1 AA minimum in both. The theme-aware danger text/soft
+     pair (Task 13b fix round 1) replaces it. */
+  background: var(--chronicle-danger-soft);
+  color: var(--chronicle-danger-text);
 }
 
 .chronicle-directions-link {
@@ -1486,7 +2029,10 @@ body:has(.chronicle-page) label {
   font-size: 10px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--chronicle-text-tertiary);
+  /* `--chronicle-text-tertiary` (58% mix) measured 4.1:1 on white in light
+     mode via axe-core — below the 4.5:1 AA minimum. Secondary (78% mix)
+     clears it in both themes; see the same fix on .chronicle-photo-thumb__confirm. */
+  color: var(--chronicle-text-secondary);
   cursor: pointer;
 }
 
@@ -1603,6 +2149,16 @@ body:has(.chronicle-page) label {
   color: var(--chronicle-text-primary);
   font-family: var(--chronicle-font-mono);
   font-size: 12px;
+}
+
+/* Money page's reverse converter is a full-page control, not the slim
+   header chip — it needs a real >=44px tap target. The shared
+   .chronicle-currency-input stays 30px on purpose for the compact header
+   chip, so this is a separate modifier added alongside it, never a change
+   to the shared rule. */
+.chronicle-currency-input--lg {
+  min-height: 44px;
+  font-size: 14px;
 }
 
 /* Tighten the six-item nav so every label fits on small phones. */
@@ -2190,7 +2746,8 @@ body:has(.chronicle-page) label {
   font-size: 12px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--chronicle-text-tertiary);
+  /* Same AA-contrast fix as .chronicle-section-nav-item above. */
+  color: var(--chronicle-text-secondary);
   text-decoration: none;
 }
 
@@ -2204,7 +2761,8 @@ body:has(.chronicle-page) label {
   font-family: var(--chronicle-font-body);
   font-size: 13px;
   font-style: italic;
-  color: var(--chronicle-text-tertiary);
+  /* Same AA-contrast fix as .chronicle-section-nav-item. */
+  color: var(--chronicle-text-secondary);
 }
 
 /* ---------- Landing page ---------- */
@@ -3366,7 +3924,8 @@ body:has(.chronicle-page) label {
 .chronicle-export-hint {
   font-family: var(--chronicle-font-mono);
   font-size: 11px;
-  color: var(--chronicle-text-tertiary);
+  /* Same AA-contrast fix as .chronicle-section-nav-item. */
+  color: var(--chronicle-text-secondary);
 }
 
 /* Print-only trip title (destination + dates); hidden on screen. */

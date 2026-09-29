@@ -11,7 +11,7 @@ import { Logo } from '../../components/Logo'
 import { ThemeToggle } from '../../components/ThemeToggle'
 import { recordRecentTrip } from './recentTrips'
 import { useForecast } from '../weather/useForecast'
-import { currencyForDisplayName } from '../localinfo/currencyByCountry'
+import { destinationFor } from '../localinfo/destination'
 import { useCurrencyRate } from '../localinfo/useCurrencyRate'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
 
@@ -57,8 +57,11 @@ export function TripShell() {
 
   // Current temperature for the nav's Weather item — visible from any page.
   const { data: forecast } = useForecast(location?.lat ?? 0, location?.lng ?? 0)
-  // Destination currency (for the header converter), resolved once here.
-  const currencyCode = location ? currencyForDisplayName(location.displayName) : 'USD'
+  // Destination facts (country, currency, language) drive which conditional
+  // nav tabs (Phrases, Money) show for this trip, and the header converter's
+  // currency (null while loading or when the currency is unknown: no request).
+  const destination = destinationFor(location?.displayName)
+  const currencyCode = destination.status === 'known' ? destination.currency : null
   const { rate: currencyRate } = useCurrencyRate(currencyCode)
 
   // Remember this trip for the homepage "Continue" list once it has a name.
@@ -140,7 +143,7 @@ export function TripShell() {
         </div>
       </div>
       <div className="chronicle-trip-header">
-        <TripNav tripId={id} variant="pill" currentTempF={forecast?.temperatureF ?? null} />
+        <TripNav tripId={id} variant="pill" currentTempF={forecast?.temperatureF ?? null} destination={destination} />
         <div className="chronicle-header-utility">
           <CurrencyTool code={currencyCode} rate={currencyRate} />
         </div>
@@ -152,7 +155,7 @@ export function TripShell() {
         </ErrorBoundary>
       </main>
       <footer className="chronicle-page-footer">
-        <TripNav tripId={id} variant="footer" />
+        <TripNav tripId={id} variant="footer" destination={destination} />
         <p className="chronicle-footer-note">Real weather, maps, and nearby places — refreshed each time you visit.</p>
       </footer>
     </div>

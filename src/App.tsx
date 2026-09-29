@@ -23,6 +23,9 @@ import { OverviewPage } from './features/trip/pages/OverviewPage'
 import { TripPlanPage } from './features/trip/pages/TripPlanPage'
 import { WeatherPage } from './features/trip/pages/WeatherPage'
 import { PhrasebookPage } from './features/trip/pages/PhrasebookPage'
+import { MoneyPage } from './features/trip/pages/MoneyPage'
+import { TripRecapPage } from './features/recap/TripRecapPage'
+import { RecapPublicPage } from './features/recap/RecapPublicPage'
 import './styles/theme.css'
 import './themes/chronicle/chronicle.css'
 
@@ -101,11 +104,18 @@ export default function App() {
             <Route path="things-to-do" element={<TripPlanPage />} />
             <Route path="weather" element={<WeatherPage />} />
             <Route path="phrasebook" element={<PhrasebookPage />} />
+            <Route path="money" element={<MoneyPage />} />
+            <Route path="recap" element={<TripRecapPage />} />
             {/* Alias: older links/bookmarks to the former Info page still resolve. */}
             <Route path="local-info" element={<WeatherPage />} />
           </Route>
 
+          {/* The public, read-only recap sits outside TripShell (a viewer holds
+              only the share token, never the trip) but inside the site chrome:
+              someone opening a shared link has usually never seen Trip One, and
+              the header tells them where they are. See RecapPublicPage. */}
           {[
+            { path: '/recap/:token', element: <RecapPublicPage /> },
             { path: '/explore', element: <ExplorePage /> },
             { path: '/about', element: <AboutPage /> },
             { path: '/contact', element: <ContactPage /> },

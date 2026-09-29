@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { ItineraryItem } from '../../../lib/validation/schemas'
 import { useTripContext } from '../useTripContext'
 import { useTripStore } from '../../../store/tripStore'
@@ -15,6 +16,8 @@ import { TripExport } from '../components/TripExport'
 import { PlaceDetailPanel } from '../place/PlaceDetailPanel'
 import { usePlaceDetail, type PlaceQuery } from '../place/usePlaceDetail'
 import { placeQueryFor, placeQueryForThing } from '../place/placeQuery'
+import { useTripPhotos } from '../../photos/useTripPhotos'
+import { DEMO_TRIP_ID_SET } from '../../../lib/api/demoIds'
 
 const TRIP_LENGTH_OPTIONS = Array.from({ length: 14 }, (_, i) => i + 1)
 
@@ -34,6 +37,10 @@ export function TripPlanPage() {
   const [selected, setSelected] = useState<PlaceQuery | null>(null)
   const [mapFocus, setMapFocus] = useState<{ lat: number; lng: number; nonce: number } | null>(null)
   const { detail, loading, error } = usePlaceDetail(selected)
+  // Demo trips (seeded, shared examples) reject photo uploads server-side — the add
+  // button is hidden for them rather than rendered as a control that always fails.
+  const demoTrip = DEMO_TRIP_ID_SET.has(trip.id)
+  const photos = useTripPhotos(trip.id)
 
   // Reveal a stop or a place tapped in the map / a chat "Added" chip.
   const focusStop = (item: { text?: string; name?: string; lat?: number; lng?: number; category?: string }) => {
@@ -70,6 +77,10 @@ export function TripPlanPage() {
   // Names already on the plan (to badge things-to-do and drive the detail sheet's add/remove state).
   const plannedNames = useMemo(() => new Set(itinerary.map((it) => it.text)), [itinerary])
   const onPlanIndex = selected ? itinerary.findIndex((it) => it.text === (selected.name ?? selected.label)) : -1
+  const selectedPlanStopId = onPlanIndex >= 0 ? (itinerary[onPlanIndex].id ?? null) : null
+  // The open detail panel shows the photo error in its own photo section; the
+  // page shows it only when the panel isn't, so it is announced exactly once.
+  const panelShowsPhotoError = selected !== null && selectedPlanStopId !== null
 
   if (!location) return <TripSkeleton />
 
@@ -107,6 +118,9 @@ export function TripPlanPage() {
           </label>
         </div>
         <TripExport itinerary={itinerary} startDate={startDate} destinationName={location.displayName} />
+        <Link to={`/trip/${trip.id}/recap`} className="chronicle-preview-link">
+          View trip recap
+        </Link>
       </div>
 
       <TripMap
@@ -137,7 +151,13 @@ export function TripPlanPage() {
           </div>
         )}
         {effort && (
-          <p className={`mt-1.5 text-sm ${effort.crossTown ? 'text-danger-500' : 'opacity-70'}`}>
+          // Was `opacity-70` / `text-danger-500` (Tailwind utilities on the
+          // inherited page color, never a --chronicle-* token) — opacity-70
+          // measured fine on axe, but the crossTown branch's raw
+          // text-danger-500 measured 3.16:1 on the dark surface via
+          // axe-core, below AA (Task 13b fix round 1). Both branches now use
+          // theme-aware tokens instead.
+          <p className={`mt-1.5 text-sm ${effort.crossTown ? 'text-[var(--chronicle-danger-text)]' : 'text-[var(--chronicle-text-secondary)]'}`}>
             {formatEffort(effort)}
             {effort.crossTown && ' · spread across town — consider splitting'}
           </p>
@@ -153,9 +173,17 @@ export function TripPlanPage() {
             onSetTime={setStopTime}
             onOpen={(item) => focusStop(item)}
             onRemove={removeStop}
+            photos={photos}
+            tripId={trip.id}
+            demoTrip={demoTrip}
           />
         ) : (
           <p className="mt-3 text-sm opacity-70">No stops on day {selectedDay} yet — add one below, or ask the chat.</p>
+        )}
+        {photos.error && !panelShowsPhotoError && (
+          <p role="alert" className="mt-2 text-sm text-danger-500">
+            {photos.error}
+          </p>
         )}
         <ItineraryStopForm onSubmit={addStop} submitting={adding} />
       </section>
@@ -210,6 +238,10 @@ export function TripPlanPage() {
             setSelected(null)
           }}
           onRemoveFromPlan={onPlanIndex >= 0 ? () => { removeStop(onPlanIndex); setSelected(null) } : undefined}
+          tripId={trip.id}
+          demoTrip={demoTrip}
+          photos={photos}
+          planStopId={selectedPlanStopId}
         />
       )}
     </article>

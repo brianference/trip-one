@@ -1,6 +1,7 @@
 import type { ItineraryItem } from '../../../lib/validation/schemas'
 import { ItineraryEntryRow } from './ItineraryEntryRow'
 import { ExperienceCard } from './ExperienceCard'
+import type { UseTripPhotosResult } from '../../photos/useTripPhotos'
 
 /** True when this stop is a bookable paid experience (not an ordinary POI). */
 function isExperienceStop(item: ItineraryItem): boolean {
@@ -18,6 +19,9 @@ export function ItineraryDayGroup({
   onSetTime,
   onOpen,
   onRemove,
+  photos,
+  tripId,
+  demoTrip,
 }: {
   day: number
   entries: { item: ItineraryItem; index: number }[]
@@ -28,6 +32,12 @@ export function ItineraryDayGroup({
   onSetTime: (index: number, time: string) => void
   onOpen?: (item: ItineraryItem) => void
   onRemove: (index: number) => void
+  /** The trip's photos, grouped by stop, plus the actions each row's add/remove controls call. */
+  photos: UseTripPhotosResult
+  /** The trip these photos belong to, for building thumbnail URLs. */
+  tripId: string
+  /** True on read-only demo trips — hides each row's add-photo button. */
+  demoTrip: boolean
 }) {
   return (
     <div className="chronicle-day-group">
@@ -53,7 +63,7 @@ export function ItineraryDayGroup({
             </li>
           ) : (
             <ItineraryEntryRow
-              key={`${item.time}-${item.text}-${index}`}
+              key={item.id ?? `${item.time}-${item.text}-${index}`}
               item={item}
               position={entryPos}
               total={entries.length}
@@ -66,6 +76,12 @@ export function ItineraryDayGroup({
               onMoveToDay={(d) => onMoveToDay(index, d)}
               onSetTime={(t) => onSetTime(index, t)}
               onRemove={() => onRemove(index)}
+              stopPhotos={item.id ? (photos.byStop.get(item.id) ?? []) : []}
+              uploadingPhoto={item.id ? photos.uploading.has(item.id) : false}
+              onAddPhoto={item.id ? (file: File) => photos.upload(item.id as string, file) : undefined}
+              onRemovePhoto={photos.remove}
+              tripId={tripId}
+              demoTrip={demoTrip}
             />
           ),
         )}

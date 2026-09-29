@@ -8,6 +8,11 @@ describe('CurrencyTool', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
+  it('renders nothing for an unknown (null) currency', () => {
+    const { container } = render(<CurrencyTool code={null} rate={null} />)
+    expect(container).toBeEmptyDOMElement()
+  })
+
   it('renders nothing when the rate is unavailable', () => {
     const { container } = render(<CurrencyTool code="MAD" rate={null} />)
     expect(container).toBeEmptyDOMElement()

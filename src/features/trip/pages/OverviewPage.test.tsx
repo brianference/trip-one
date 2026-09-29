@@ -71,4 +71,69 @@ describe('OverviewPage', () => {
     expect(screen.getByText(/no stops yet/i)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /plan your itinerary/i })).toBeInTheDocument()
   })
+
+  describe('recap entry (fixed clock)', () => {
+    /** Synthetic unit-test trip: 3 days from Sep 1 2026, with one stop that has two photos. */
+    function renderTrip(startDate: string | null) {
+      outletContext = {
+        trip: { id: 't1', locationSlug: 'oslo-norway', itinerary: [], designStyle: 'chronicle', tripLengthDays: 3 },
+        location: { slug: 'oslo-norway', lat: 59.9, lng: 10.75, displayName: 'Oslo, Norway', thingsToDo: [] },
+      }
+      useTripStore.setState({
+        itinerary: [{ id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', time: '', text: 'Vigeland Park', type: 'option', day: 1 }],
+        tripLengthDays: 3,
+        startDate,
+      })
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockImplementation(async (url: string) => ({
+          ok: true,
+          json: async () =>
+            url.endsWith('/api/trips/t1/photos')
+              ? {
+                  photos: [
+                    { id: 'p1', stopId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', width: 10, height: 10, createdAt: '2026-09-01' },
+                    { id: 'p2', stopId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', width: 10, height: 10, createdAt: '2026-09-02' },
+                    // A photo whose stop was deleted: not in the recap, so not counted.
+                    { id: 'p3', stopId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', width: 10, height: 10, createdAt: '2026-09-02' },
+                  ],
+                }
+              : {},
+        })),
+      )
+      render(
+        <MemoryRouter>
+          <OverviewPage />
+        </MemoryRouter>,
+      )
+    }
+
+    afterEach(() => vi.useRealTimers())
+
+    it('a trip whose last day is before today shows "Your trip is over" with a link to the recap', () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date(2026, 8, 4, 9, 0))
+      renderTrip('2026-09-01')
+      expect(screen.getByRole('heading', { name: 'Your trip is over' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'See your trip recap' })).toHaveAttribute('href', '/trip/t1/recap')
+      expect(screen.queryByRole('link', { name: /photos? so far/ })).toBeNull()
+    })
+
+    it('a trip still ahead (or under way) shows only the smaller "Recap (N photos so far)" entry', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date(2026, 8, 3, 9, 0))
+      renderTrip('2026-09-01')
+      expect(screen.queryByRole('heading', { name: 'Your trip is over' })).toBeNull()
+      const entry = await screen.findByRole('link', { name: 'Recap (2 photos so far)' })
+      expect(entry).toHaveAttribute('href', '/trip/t1/recap')
+    })
+
+    it('a trip with no start date shows the smaller entry', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date(2030, 0, 1))
+      renderTrip(null)
+      expect(screen.queryByRole('heading', { name: 'Your trip is over' })).toBeNull()
+      expect(await screen.findByRole('link', { name: /^Recap \(/ })).toHaveAttribute('href', '/trip/t1/recap')
+    })
+  })
 })

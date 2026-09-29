@@ -14,8 +14,23 @@ describe('currencyForDisplayName', () => {
     expect(currencyForDisplayName('Yellowstone National Park, Park County, Wyoming, United States')).toBe('USD')
   })
 
-  it('falls back to USD for an unrecognized country', () => {
-    expect(currencyForDisplayName('Somewhere, Neverland')).toBe('USD')
+  it('returns null (unknown), never a guessed USD, for an unrecognized country', () => {
+    expect(currencyForDisplayName('Somewhere, Neverland')).toBeNull()
+    expect(currencyForDisplayName('Havana, Cuba')).toBeNull()
+  })
+
+  it('is USD for a cleaned US name, whose trailing segment is the state, DC or a territory', () => {
+    expect(currencyForDisplayName('Miami, Florida')).toBe('USD')
+    expect(currencyForDisplayName('Washington, District of Columbia')).toBe('USD')
+    expect(currencyForDisplayName('San Juan, Puerto Rico')).toBe('USD')
+  })
+
+  it('maps Taiwan to TWD', () => {
+    expect(currencyForDisplayName('Taipei, Taiwan')).toBe('TWD')
+  })
+
+  it('does not treat an Object.prototype key as a country', () => {
+    expect(currencyForDisplayName('Somewhere, constructor')).toBeNull()
   })
 
   it('maps common tourist-destination countries missing from the original curated list', () => {

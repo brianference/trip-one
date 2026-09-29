@@ -3,6 +3,79 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v19.0.0 — Trip recaps with your photos, and a money page that works everywhere
+
+### Added — photos on every stop
+
+Each stop on the Plan page has an "Add photo" button. On a phone it offers the
+camera or the photo library. The browser shrinks the photo to a 1600px long
+edge and re-encodes it as JPEG before it leaves the device, which keeps uploads
+small and drops the photo's metadata, including its GPS position, because a
+canvas carries none. Photos go to a private Cloudflare R2 bucket and are served
+only through the app. The server checks the file's real bytes, not the name it
+was given, and refuses anything that is not a JPEG, PNG or WebP. Up to 6 photos
+per stop and 300 per trip. Demo trips do not take photos.
+
+Photos belong to a stop, not to its position in the list. Every itinerary item
+now carries a stable id, so a photo stays with its stop through reordering,
+moving to another day, and chat re-planning.
+
+### Added — the trip recap
+
+Each trip has a recap page:
+- a map walkthrough that draws the route stop by stop, in itinerary order,
+  opening on a view of the whole trip;
+- a slideshow of the trip's photos in the same order, captioned
+  "Day 2 · Stop 5 · {place}";
+- the two follow each other, and only one plays at a time;
+- at the bottom, "Plan your next trip with us".
+
+Once a trip's dates have passed, its Home page shows "Your trip is over" with a
+link to the recap.
+
+### Added — sharing a recap
+
+"Share recap" creates a read-only link, `/recap/<token>`. The trip link itself
+lets anyone edit the trip, so the recap never contains it: the recap API returns
+no trip id, and a recap link can only reach its own trip's photos. Unknown and
+revoked links look the same to a visitor.
+
+### Added — the Money page
+
+International trips have a Money tab that converts $10, $25, $50, $100, $300
+and $1,000 into the local currency, with a converter for the other direction.
+Rates come from open.er-api.com, cached for 6 hours.
+
+### Fixed — 16 currencies had no rate at all
+
+The previous rate source had no rate for 16 of the 45 currencies the app knew,
+including the Vietnamese dong, Moroccan dirham and UAE dirham. Those trips
+showed nothing. The new source covers all of them.
+
+### Fixed — the phrasebook told some countries they were English-speaking
+
+A trip to Slovenia, Kenya or the Philippines was told it was English-speaking,
+because anything missing from the phrasebook table was assumed to be. It now
+says "We don't have a phrasebook for {country} yet". Phrases and Money only
+appear on trips where they apply, and a trip counts as domestic only when it is
+positively in the US.
+
+### Fixed — accessibility on the Plan and Money pages
+
+axe-core reported serious and critical issues on these pages, most of them
+already live: trip tab labels below AA contrast, a hidden chat panel that could
+still take keyboard focus, the per-day walking-effort line in dark mode, and the
+Meal badge. All fixed with theme tokens; axe now reports none on either page in
+either theme.
+
+### Known issues
+
+- A trip to the country Georgia is read as the US state, so it shows no Phrases
+  or Money tab.
+- Cuba and Cambodia show "no currency info yet".
+- A photo on a stop you delete stays in storage until the trip is deleted. It no
+  longer counts toward the 300-photo limit.
+
 ## v18.0.0 — Explore photos are back, and the About page uses the screen
 
 ### Fixed — every Explore card showed a colour block instead of a photo
