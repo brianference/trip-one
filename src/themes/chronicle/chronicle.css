@@ -196,6 +196,46 @@
   margin-top: var(--chronicle-space-xl);
 }
 
+/* ---------- Recap walkthrough map (Task 11/12) ---------- */
+.chronicle-recap-map-controls {
+  display: flex;
+  gap: var(--chronicle-space-sm);
+  flex-wrap: wrap;
+  margin-top: var(--chronicle-space-md);
+}
+
+.chronicle-recap-map-btn {
+  flex: none;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 var(--chronicle-space-md);
+  border: 1px solid var(--chronicle-teal);
+  border-radius: var(--chronicle-radius-pill);
+  background: none;
+  color: var(--accent-text);
+  font-family: var(--chronicle-font-mono);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.chronicle-recap-map-btn:hover {
+  background: var(--chronicle-teal);
+  color: var(--color-on-primary);
+}
+
+.chronicle-recap-map-btn[aria-pressed='true'] {
+  background: var(--chronicle-teal);
+  color: var(--color-on-primary);
+}
+
+.chronicle-recap-map-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ---------- Theme toggle (fixed, top-right, every page) ---------- */
 .chronicle-theme-toggle {
   position: fixed;
