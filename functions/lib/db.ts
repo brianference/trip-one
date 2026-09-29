@@ -479,9 +479,23 @@ function normalizeUserRow(row: UserRow): UserRow {
   return { ...row, email_verified: row.email_verified === 1 ? 1 : 0 }
 }
 
-/** Replaces a user's password hash (used by the transparent rehash on login). */
-export async function updateUserPasswordHash(env: Env, id: string, passwordHash: string): Promise<void> {
-  await env.DB.prepare('UPDATE users SET password_hash = ? WHERE id = ?').bind(passwordHash, id).run()
+/**
+ * Replaces a user's password hash for the transparent rehash on login, but
+ * only if it is still the hash that was just verified. A reset, or a takeover
+ * by email proof, that lands between the login's read and this write must
+ * win; overwriting it would bring the old password back.
+ * @returns true when the row still held `oldHash` and was updated
+ */
+export async function updateUserPasswordHash(
+  env: Env,
+  id: string,
+  oldHash: string,
+  newHash: string,
+): Promise<boolean> {
+  const res = await env.DB.prepare('UPDATE users SET password_hash = ? WHERE id = ? AND password_hash = ?')
+    .bind(newHash, id, oldHash)
+    .run()
+  return (res.meta?.changes ?? 0) > 0
 }
 
 /**
@@ -807,9 +821,9 @@ export interface EmailCodeRow {
 }
 
 /**
- * How many codes were issued to this email since `sinceMs`, used or not. The
- * per-email hourly cap counts these, which is why superseded codes are expired
- * rather than deleted.
+ * How many codes were issued to this email since `sinceMs`, used or not. Both
+ * per-email caps (hourly and daily) count these, which is why superseded codes
+ * are expired rather than deleted.
  */
 export async function countEmailCodesSince(env: Env, email: string, sinceMs: number): Promise<number> {
   const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM email_codes WHERE email = ? AND created_at >= ?')
@@ -829,7 +843,7 @@ export async function deleteEmailCodesCreatedBefore(env: Env, beforeMs: number):
 
 /**
  * Expires every live, unused code for this email so only the next one issued
- * can work. The rows stay so the hourly cap still counts them.
+ * can work. The rows stay so the hourly and daily caps still count them.
  */
 export async function expireActiveEmailCodes(env: Env, email: string, nowMs: number): Promise<void> {
   await env.DB.prepare('UPDATE email_codes SET expires_at = ? WHERE email = ? AND used_at IS NULL AND expires_at > ?')

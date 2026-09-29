@@ -54,7 +54,12 @@ export async function onRequestPost({ env, request }: { env: AuthEnv; request: R
     // plaintext is in hand and known correct.
     if (needsRehash(user.password_hash, Boolean(env.PASSWORD_PEPPER))) {
       try {
-        await updateUserPasswordHash(env as Env, user.id, await hashPassword(password, env.PASSWORD_PEPPER))
+        await updateUserPasswordHash(
+          env as Env,
+          user.id,
+          user.password_hash,
+          await hashPassword(password, env.PASSWORD_PEPPER),
+        )
       } catch (err) {
         // A failed upgrade must not fail the login; it retries next time.
         logger.warn('password rehash failed', { reason: err instanceof Error ? err.message : String(err) })

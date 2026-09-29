@@ -9,8 +9,7 @@ import {
   type UserRow,
 } from '../../../lib/db'
 import { redeemEmailCode } from '../../../lib/auth/emailCode'
-import { hashPassword } from '../../../lib/auth/password'
-import { randomToken } from '../../../lib/auth/tokens'
+import { unusablePasswordHash } from '../../../lib/auth/password'
 import { signToken } from '../../../lib/auth/jwt'
 import { sessionCookie, type AuthEnv } from '../../../lib/auth/session'
 import { codeVerifySchema, firstIssueMessage, CODE_FAILED_MESSAGE } from '../../../lib/auth/validation'
@@ -19,8 +18,6 @@ import { logger } from '../../../../src/lib/logger'
 
 /** Per-IP verifies per hour. Each code also dies after 5 guesses; this caps guessing across many emails. */
 const RATE_LIMIT_PER_HOUR = 30
-/** Random bytes in the discarded secret behind a code-created account's password hash. */
-const UNUSABLE_SECRET_BYTES = 32
 /** Longest display name the register form accepts. */
 const MAX_DISPLAY_NAME_LENGTH = 80
 
@@ -33,15 +30,6 @@ function json(body: unknown, status: number, headers: Record<string, string> = {
     status,
     headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store', ...headers },
   })
-}
-
-/**
- * A password hash nobody can match: PBKDF2 of a random 32-byte secret that is
- * thrown away. The person can set a real password later through reset.
- * @param env - Auth env (optional pepper)
- */
-function unusablePasswordHash(env: AuthEnv): Promise<string> {
-  return hashPassword(randomToken(UNUSABLE_SECRET_BYTES), env.PASSWORD_PEPPER)
 }
 
 /**
@@ -68,7 +56,7 @@ async function signInUser(env: AuthEnv, email: string): Promise<UserRow> {
     try {
       return await createUser(env, {
         email,
-        password_hash: await unusablePasswordHash(env),
+        password_hash: await unusablePasswordHash(env.PASSWORD_PEPPER),
         display_name: localPart || null,
         email_verified: true,
       })
@@ -79,7 +67,7 @@ async function signInUser(env: AuthEnv, email: string): Promise<UserRow> {
   }
   if (user.email_verified === 1) return user
 
-  await secureUnverifiedUser(env, user.id, await unusablePasswordHash(env))
+  await secureUnverifiedUser(env, user.id, await unusablePasswordHash(env.PASSWORD_PEPPER))
   // Read back so the session is signed with the bumped token version.
   const secured = await getUserById(env, user.id)
   if (!secured) throw new Error('user vanished during code sign-in')

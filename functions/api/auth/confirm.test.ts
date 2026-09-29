@@ -61,7 +61,8 @@ describe('POST /api/auth/confirm', () => {
     })
     const res = await onRequestPost({ env, request: post({ token }) })
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ ok: true, email: 'alex@example.com' })
+    // passwordReset is covered by the stateful tests below; this statement-level fake reports no row changes.
+    expect(await res.json()).toMatchObject({ ok: true, email: 'alex@example.com' })
     expect(calls.some((c) => c.sql.includes('email_verified = 1'))).toBe(true)
     expect(calls.some((c) => c.sql.includes('used_at') && c.sql.includes('email_verifications'))).toBe(true)
   })

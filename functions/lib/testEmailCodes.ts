@@ -1,10 +1,11 @@
 import { fakeD1, type FakeD1 } from './testD1'
-import type { EmailCodeRow, UserRow } from './db'
+import type { EmailCodeRow, TokenRow, UserRow } from './db'
 
 /**
  * A stateful fake D1 for the email-code sign-in tests.
  *
- * It keeps real `email_codes`, `users` and `request_log` tables in memory and
+ * It keeps real `email_codes`, `users`, `email_verifications` and `request_log`
+ * tables in memory and
  * honours the WHERE clause of every statement the code path runs (email scope,
  * `used_at IS NULL`, expiry, the attempts cap), so a query that dropped one of
  * those conditions would be caught rather than papered over. Any statement it
@@ -19,6 +20,13 @@ export interface CodeStore {
   /** Trip ids passed to claimTripForUser, with the claiming user. */
   claims: { tripId: string; userId: string }[]
   requestLog: { ipHash: string; endpoint: string; createdAt: string }[]
+  /** Confirmation-link tokens (hashed), as register and confirm-request write them. */
+  verifications: TokenRow[]
+}
+
+/** A shallow copy of a row, or null. */
+function copyOf<T extends object>(row: T | undefined): T | null {
+  return row ? { ...row } : null
 }
 
 /**
@@ -30,6 +38,7 @@ export function codeStore(extraEnv: Record<string, unknown> = {}): CodeStore {
   const users: UserRow[] = []
   const claims: { tripId: string; userId: string }[] = []
   const requestLog: { ipHash: string; endpoint: string; createdAt: string }[] = []
+  const verifications: TokenRow[] = []
 
   const first = (sql: string, args: unknown[]): unknown => {
     if (sql.includes('FROM request_log WHERE ip_hash = ? AND endpoint = ?')) {
@@ -51,12 +60,41 @@ export function codeStore(extraEnv: Record<string, unknown> = {}): CodeStore {
         .sort((a, b) => b.created_at - a.created_at || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0))
       return live[0] ? { ...live[0] } : null
     }
-    if (sql === 'SELECT * FROM users WHERE email = ?') return users.find((u) => u.email === args[0]) ?? null
-    if (sql === 'SELECT * FROM users WHERE id = ?') return users.find((u) => u.id === args[0]) ?? null
+    // Copies, as D1 returns: a caller must never hold a live reference into the store.
+    if (sql === 'SELECT * FROM users WHERE email = ?') return copyOf(users.find((u) => u.email === args[0]))
+    if (sql === 'SELECT * FROM users WHERE id = ?') return copyOf(users.find((u) => u.id === args[0]))
+    if (sql === 'SELECT token_hash, user_id, expires_at, used_at FROM email_verifications WHERE token_hash = ?') {
+      const row = verifications.find((v) => v.token_hash === args[0])
+      return row ? { ...row } : null
+    }
     throw new Error(`codeStore: unexpected first() SQL: ${sql}`)
   }
 
   const run = (sql: string, args: unknown[]): number => {
+    if (sql === 'DELETE FROM email_verifications WHERE user_id = ?') {
+      const keep = verifications.filter((v) => v.user_id !== args[0])
+      const removed = verifications.length - keep.length
+      verifications.splice(0, verifications.length, ...keep)
+      return removed
+    }
+    if (sql === 'INSERT INTO email_verifications (token_hash, user_id, expires_at) VALUES (?, ?, ?)') {
+      const [tokenHash, userId, expiresAt] = args as [string, string, number]
+      verifications.push({ token_hash: tokenHash, user_id: userId, expires_at: expiresAt, used_at: null })
+      return 1
+    }
+    if (sql === 'UPDATE email_verifications SET used_at = ? WHERE token_hash = ?') {
+      const [usedAt, tokenHash] = args as [number, string]
+      const row = verifications.find((v) => v.token_hash === tokenHash)
+      if (row) row.used_at = usedAt
+      return row ? 1 : 0
+    }
+    if (sql === 'UPDATE users SET password_hash = ? WHERE id = ? AND password_hash = ?') {
+      const [newHash, id, oldHash] = args as [string, string, string]
+      const row = users.find((u) => u.id === id && u.password_hash === oldHash)
+      if (!row) return 0
+      row.password_hash = newHash
+      return 1
+    }
     if (sql.startsWith('INSERT INTO request_log')) {
       const [ipHash, endpoint, createdAt] = args as [string, string, string]
       requestLog.push({ ipHash, endpoint, createdAt })
@@ -141,5 +179,5 @@ export function codeStore(extraEnv: Record<string, unknown> = {}): CodeStore {
   }
 
   const fake = fakeD1({ first, run, extraEnv })
-  return { fake, codes, users, claims, requestLog }
+  return { fake, codes, users, claims, requestLog, verifications }
 }

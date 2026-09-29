@@ -34,4 +34,16 @@ describe('ForgotPage', () => {
     expect(screen.queryByText(/not found/i)).not.toBeInTheDocument()
     expect(screen.getByText(/if an account exists for that address/i)).toHaveAttribute('aria-live', 'polite')
   })
+
+  it('starts empty, and pre-fills the email another page passed in router state', () => {
+    const { unmount } = renderPage()
+    expect(screen.getByLabelText(/^email$/i)).toHaveValue('')
+    unmount()
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/forgot', state: { email: 'alex@example.com' } }]}>
+        <ForgotPage />
+      </MemoryRouter>,
+    )
+    expect(screen.getByLabelText(/^email$/i)).toHaveValue('alex@example.com')
+  })
 })
