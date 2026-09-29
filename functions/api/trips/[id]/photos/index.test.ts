@@ -29,10 +29,13 @@ interface UploadFields {
 }
 
 /**
- * Builds a multipart upload request. Every field defaults to a valid value;
- * pass null to omit one.
+ * Builds a multipart upload request the way a browser sends a FormData body:
+ * serialized up front, with its multipart Content-Type and a Content-Length.
+ * (undici's `new Request(url, { body: form })` leaves Content-Length off the
+ * request's headers, which the handler now refuses with 411.) Every field
+ * defaults to a valid value; pass null to omit one.
  */
-function uploadRequest(tripId: string, fields: UploadFields = {}): Request {
+async function uploadRequest(tripId: string, fields: UploadFields = {}): Promise<Request> {
   const form = new FormData()
   const file = fields.file === undefined ? new Blob([JPEG_BYTES], { type: 'image/jpeg' }) : fields.file
   if (file) form.append('file', file, fields.fileName ?? 'photo.jpg')
@@ -42,12 +45,21 @@ function uploadRequest(tripId: string, fields: UploadFields = {}): Request {
   if (width !== null) form.append('width', width)
   const height = fields.height === undefined ? '600' : fields.height
   if (height !== null) form.append('height', height)
-  return new Request(`https://x/api/trips/${tripId}/photos`, { method: 'POST', body: form })
+  const encoded = new Response(form)
+  const body = new Uint8Array(await encoded.arrayBuffer())
+  return new Request(`https://x/api/trips/${tripId}/photos`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': encoded.headers.get('Content-Type') ?? '',
+      'Content-Length': String(body.byteLength),
+    },
+    body,
+  })
 }
 
 /** Calls the upload handler. */
-function upload(env: ReturnType<typeof photoEnv>['env'], request: Request, tripId = TRIP_ID) {
-  return onRequestPost({ env, request, params: { id: tripId } })
+async function upload(env: ReturnType<typeof photoEnv>['env'], request: Request | Promise<Request>, tripId = TRIP_ID) {
+  return onRequestPost({ env, request: await request, params: { id: tripId } })
 }
 
 /** True when any recorded D1 statement inserted a photo row. */
@@ -185,6 +197,41 @@ describe('POST /api/trips/:id/photos', () => {
     expect(res.status).toBe(413)
     expect(r2.objects.size).toBe(0)
   })
+
+  it('refuses a streamed body with no Content-Length with 411, before parsing it', async () => {
+    const { env, r2, calls } = photoEnv()
+    const multipart = await uploadRequest(TRIP_ID)
+    const stream = new Blob([await multipart.arrayBuffer()]).stream()
+    const request = new Request(`https://x/api/trips/${TRIP_ID}/photos`, {
+      method: 'POST',
+      headers: { 'Content-Type': multipart.headers.get('Content-Type') ?? '' },
+      body: stream,
+      duplex: 'half',
+    } as RequestInit)
+    expect(request.headers.get('Content-Length')).toBeNull()
+    const res = await upload(env, request)
+    expect(res.status).toBe(411)
+    expect((await res.json()).error).toBe('We couldn’t tell how large that upload is. Please choose the photo again and retry.')
+    expect(request.bodyUsed).toBe(false)
+    expect(r2.objects.size).toBe(0)
+    expect(inserted(calls)).toBe(false)
+  })
+
+  it.each([['not a number', 'lots'], ['negative', '-5'], ['a fraction', '10.5'], ['empty', '']])(
+    'refuses a Content-Length that is %s with 411',
+    async (_label, contentLength) => {
+      const { env, r2 } = photoEnv()
+      const multipart = await uploadRequest(TRIP_ID)
+      const request = new Request(`https://x/api/trips/${TRIP_ID}/photos`, {
+        method: 'POST',
+        headers: { 'Content-Type': multipart.headers.get('Content-Type') ?? '', 'Content-Length': contentLength },
+        body: await multipart.arrayBuffer(),
+      })
+      const res = await upload(env, request)
+      expect(res.status).toBe(411)
+      expect(r2.objects.size).toBe(0)
+    },
+  )
 
   it('rejects the upload with 409 when the stop already has MAX_PHOTOS_PER_STOP photos', async () => {
     const { env, r2 } = photoEnv({ stopPhotoCount: MAX_PHOTOS_PER_STOP })

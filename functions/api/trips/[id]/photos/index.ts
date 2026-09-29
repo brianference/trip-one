@@ -19,10 +19,12 @@ export const MAX_PHOTO_DIMENSION = 10000
 /**
  * Room allowed for the multipart envelope (boundaries, part headers, the
  * stop_id/width/height fields) on top of the file itself. Used only to refuse
- * an obviously oversized body before it is parsed into memory; the exact
+ * an oversized body before `formData()` buffers it into memory; the exact
  * per-file limit is still enforced on `file.size`.
  */
 const MULTIPART_OVERHEAD_BYTES = 64 * 1024
+/** Largest request body an upload may declare: one allowed photo plus the envelope. */
+const MAX_UPLOAD_BODY_BYTES = MAX_PHOTO_BYTES + MULTIPART_OVERHEAD_BYTES
 
 /** Per-IP hourly cap on photo uploads. */
 const UPLOADS_PER_HOUR = 120
@@ -36,6 +38,7 @@ const SERVER_ERROR_MESSAGE = 'Something went wrong on our end. Please try again 
 const BAD_UPLOAD_MESSAGE = 'We couldn’t read that upload. Please choose the photo again and retry.'
 const DEMO_MESSAGE = "Demo trips can't hold photos. Start your own trip to add some."
 const TOO_LARGE_MESSAGE = 'That photo is too large. Please choose one under 4 MB.'
+const LENGTH_REQUIRED_MESSAGE = 'We couldn’t tell how large that upload is. Please choose the photo again and retry.'
 const NOT_AN_IMAGE_MESSAGE = 'That file isn’t a photo we can use. Please choose a JPEG, PNG or WebP image.'
 const UNKNOWN_STOP_MESSAGE = 'That stop isn’t on this trip any more. Refresh the page and try again.'
 const STOP_FULL_MESSAGE = `This stop already has ${MAX_PHOTOS_PER_STOP} photos. Remove one to add another.`
@@ -98,13 +101,20 @@ function itineraryHasStop(itinerary: unknown[], stopId: string): boolean {
 }
 
 /**
- * True when the request declares a body too large to possibly be one allowed
- * photo plus its form fields, so it can be refused before being buffered.
+ * Checks the declared body size BEFORE `formData()` runs, because `formData()`
+ * buffers the whole body into memory. A request with no Content-Length (for
+ * example a chunked upload) could otherwise stream up to the platform body
+ * limit into the isolate before `file.size` is ever looked at, so a missing or
+ * malformed header is refused rather than trusted.
  * @param request - The incoming request
+ * @returns 'ok', 'invalid' (missing or not a non-negative integer) or 'too-large'
  */
-function declaredBodyTooLarge(request: Request): boolean {
-  const declared = Number(request.headers.get('Content-Length'))
-  return Number.isFinite(declared) && declared > MAX_PHOTO_BYTES + MULTIPART_OVERHEAD_BYTES
+function checkDeclaredBodySize(request: Request): 'ok' | 'invalid' | 'too-large' {
+  const header = request.headers.get('Content-Length')
+  if (header === null || !/^\d+$/.test(header.trim())) return 'invalid'
+  const declared = Number(header.trim())
+  if (!Number.isSafeInteger(declared)) return 'invalid'
+  return declared > MAX_UPLOAD_BODY_BYTES ? 'too-large' : 'ok'
 }
 
 /**
@@ -149,13 +159,14 @@ export async function onRequestGet({
  *
  * The client-declared type is ignored: the stored and served type is what the
  * leading bytes sniff as, and anything that is not a JPEG, PNG or WEBP is
- * refused. The size is checked on `file.size` before the bytes are read. The
- * object key is built only from the validated trip id and a server-generated
- * photo id, never from anything else the client sent.
+ * refused. The declared Content-Length is required and bounded before the
+ * body is parsed (411 / 413), and `file.size` is checked before the file is
+ * copied out. The object key is built only from the validated trip id and a
+ * server-generated photo id, never from anything else the client sent.
  *
  * @param context - Request context with `env`, `request` and `params.id`
  * @returns 201 `{ id, stopId, width, height, createdAt }`, or `{ error }` with
- * 400, 403 (demo trip), 404, 409 (limit reached), 413, 415, 429 or 500
+ * 400, 403 (demo trip), 404, 409 (limit reached), 411, 413, 415, 429 or 500
  */
 export async function onRequestPost({
   env,
@@ -170,7 +181,9 @@ export async function onRequestPost({
   if (!tripIdResult.success) return json({ error: NOT_FOUND_MESSAGE }, 404)
   const tripId = tripIdResult.data
 
-  if (declaredBodyTooLarge(request)) return json({ error: TOO_LARGE_MESSAGE }, 413)
+  const declaredSize = checkDeclaredBodySize(request)
+  if (declaredSize === 'invalid') return json({ error: LENGTH_REQUIRED_MESSAGE }, 411)
+  if (declaredSize === 'too-large') return json({ error: TOO_LARGE_MESSAGE }, 413)
 
   if (await isRateLimited(env, request, 'photos-upload', UPLOADS_PER_HOUR)) {
     return json({ error: RATE_LIMIT_MESSAGE }, 429)
@@ -193,8 +206,9 @@ export async function onRequestPost({
   })
   if (!(file instanceof File) || !fields.success) return json({ error: BAD_UPLOAD_MESSAGE }, 400)
 
-  // Size first, from the part's metadata, so an oversized file is never copied
-  // into an ArrayBuffer.
+  // The body is already in memory by now (formData() buffered it, bounded by
+  // the Content-Length check above). Checking the part's size here only avoids
+  // making a second copy of an oversized file with arrayBuffer().
   if (file.size > MAX_PHOTO_BYTES) return json({ error: TOO_LARGE_MESSAGE }, 413)
 
   const { stop_id: stopId, width, height } = fields.data
