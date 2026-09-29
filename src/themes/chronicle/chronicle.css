@@ -428,6 +428,42 @@ body {
   font-weight: 500;
 }
 
+/* ---------- Money page: preset-amount conversion table ---------- */
+.chronicle-money-table {
+  width: 100%;
+  margin: 0 0 var(--chronicle-space-lg);
+  border-collapse: collapse;
+  font-family: var(--chronicle-font-mono);
+  font-size: 13px;
+}
+
+.chronicle-money-table caption {
+  margin-bottom: var(--chronicle-space-sm);
+  text-align: left;
+  font-family: var(--chronicle-font-body);
+  font-size: 12px;
+  color: var(--chronicle-text-tertiary);
+}
+
+.chronicle-money-table th,
+.chronicle-money-table td {
+  padding: var(--chronicle-space-sm) var(--chronicle-space-md);
+  text-align: left;
+  border-bottom: 1px solid var(--chronicle-border-hairline);
+}
+
+.chronicle-money-table th {
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--chronicle-text-secondary);
+}
+
+.chronicle-money-table td {
+  color: var(--chronicle-text-primary);
+}
+
 .chronicle-link-list {
   display: flex;
   flex-direction: column;

@@ -1,4 +1,6 @@
+import type { ReactElement } from 'react'
 import { NavLink } from 'react-router-dom'
+import type { DestinationInfo } from '../localinfo/destination'
 
 // Lighter, cohesive line icons (Lucide-style, 1.75 stroke) — crisper at tab
 // size than the old 2px glyphs, and Phrasebook uses a translate mark so it
@@ -54,21 +56,52 @@ function NewTripIcon() {
   )
 }
 
+function MoneyIcon() {
+  return (
+    <svg {...ICON_PROPS} aria-hidden="true">
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
+
+/** One item in the trip nav; `show`, when present, hides the item for destinations the predicate rejects (loading, or "known" but not a match). */
+interface TripPage {
+  to: string
+  end: boolean
+  label: string
+  Icon: () => ReactElement
+  show?: (destination: DestinationInfo) => boolean
+}
+
+/** A phrasebook is only useful abroad, and only where English won't already get you by. */
+function showPhrases(destination: DestinationInfo): boolean {
+  return destination.status === 'known' && destination.international && !destination.englishSpeaking
+}
+
+/** A currency converter is only useful where the local currency actually differs from USD. */
+function showMoney(destination: DestinationInfo): boolean {
+  return destination.status === 'known' && destination.international && destination.currency !== 'USD'
+}
+
 /**
  * Real routes, not tabs-within-one-component and not anchor-scroll — each
  * link navigates to a distinct URL under `/trip/:id/*`, so back/forward and
  * direct deep links all work correctly. `end` on the Overview link keeps it
  * from matching every nested trip route.
  */
-function tripPages(tripId: string) {
+function tripPages(tripId: string): TripPage[] {
   // Map, itinerary, and things-to-do are one consolidated "Plan" page now.
   // "New trip" leaves the current trip for the homepage, where you pick a new
-  // location — the current trip stays saved at its own link.
+  // location — the current trip stays saved at its own link. Phrases and
+  // Money are conditional on the destination (see `showPhrases`/`showMoney`),
+  // so a domestic or English-speaking trip never shows an irrelevant tab.
   return [
     { to: `/trip/${tripId}`, end: true, label: 'Home', Icon: HomeIcon },
     { to: `/trip/${tripId}/plan`, end: false, label: 'Plan', Icon: MapIcon },
     { to: `/trip/${tripId}/weather`, end: false, label: 'Weather', Icon: WeatherIcon },
-    { to: `/trip/${tripId}/phrasebook`, end: false, label: 'Phrases', Icon: PhraseIcon },
+    { to: `/trip/${tripId}/phrasebook`, end: false, label: 'Phrases', Icon: PhraseIcon, show: showPhrases },
+    { to: `/trip/${tripId}/money`, end: false, label: 'Money', Icon: MoneyIcon, show: showMoney },
     { to: '/', end: true, label: 'New trip', Icon: NewTripIcon },
   ]
 }
@@ -77,10 +110,21 @@ function tripPages(tripId: string) {
  * The pill nav bar, shared between `TripShell`'s persistent sticky nav and the
  * footer's quick-link row. When `currentTempF` is provided, the Weather item
  * shows the destination's live temperature, so the current conditions are
- * visible from anywhere without opening the Weather page.
+ * visible from anywhere without opening the Weather page. `destination`
+ * decides which conditional items (Phrases, Money) are shown.
  */
-export function TripNav({ tripId, variant, currentTempF }: { tripId: string; variant: 'pill' | 'footer'; currentTempF?: number | null }) {
-  const pages = tripPages(tripId)
+export function TripNav({
+  tripId,
+  variant,
+  currentTempF,
+  destination,
+}: {
+  tripId: string
+  variant: 'pill' | 'footer'
+  currentTempF?: number | null
+  destination: DestinationInfo
+}) {
+  const pages = tripPages(tripId).filter((page) => !page.show || page.show(destination))
   const navClass = variant === 'pill' ? 'chronicle-section-nav' : 'chronicle-footer-links'
   const itemClass = variant === 'pill' ? 'chronicle-tap-target chronicle-section-nav-item' : 'chronicle-footer-link'
 

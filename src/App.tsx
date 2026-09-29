@@ -23,6 +23,7 @@ import { OverviewPage } from './features/trip/pages/OverviewPage'
 import { TripPlanPage } from './features/trip/pages/TripPlanPage'
 import { WeatherPage } from './features/trip/pages/WeatherPage'
 import { PhrasebookPage } from './features/trip/pages/PhrasebookPage'
+import { MoneyPage } from './features/trip/pages/MoneyPage'
 import './styles/theme.css'
 import './themes/chronicle/chronicle.css'
 
@@ -101,6 +102,7 @@ export default function App() {
             <Route path="things-to-do" element={<TripPlanPage />} />
             <Route path="weather" element={<WeatherPage />} />
             <Route path="phrasebook" element={<PhrasebookPage />} />
+            <Route path="money" element={<MoneyPage />} />
             {/* Alias: older links/bookmarks to the former Info page still resolve. */}
             <Route path="local-info" element={<WeatherPage />} />
           </Route>

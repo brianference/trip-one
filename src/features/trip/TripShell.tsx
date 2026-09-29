@@ -12,6 +12,7 @@ import { ThemeToggle } from '../../components/ThemeToggle'
 import { recordRecentTrip } from './recentTrips'
 import { useForecast } from '../weather/useForecast'
 import { currencyForDisplayName } from '../localinfo/currencyByCountry'
+import { destinationFor } from '../localinfo/destination'
 import { useCurrencyRate } from '../localinfo/useCurrencyRate'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
 
@@ -60,6 +61,9 @@ export function TripShell() {
   // Destination currency (for the header converter), resolved once here.
   const currencyCode = location ? currencyForDisplayName(location.displayName) : 'USD'
   const { rate: currencyRate } = useCurrencyRate(currencyCode)
+  // Destination facts (country, currency, language) drive which conditional
+  // nav tabs (Phrases, Money) show for this trip.
+  const destination = destinationFor(location?.displayName)
 
   // Remember this trip for the homepage "Continue" list once it has a name.
   const tripName = location?.displayName
@@ -140,7 +144,7 @@ export function TripShell() {
         </div>
       </div>
       <div className="chronicle-trip-header">
-        <TripNav tripId={id} variant="pill" currentTempF={forecast?.temperatureF ?? null} />
+        <TripNav tripId={id} variant="pill" currentTempF={forecast?.temperatureF ?? null} destination={destination} />
         <div className="chronicle-header-utility">
           <CurrencyTool code={currencyCode} rate={currencyRate} />
         </div>
@@ -152,7 +156,7 @@ export function TripShell() {
         </ErrorBoundary>
       </main>
       <footer className="chronicle-page-footer">
-        <TripNav tripId={id} variant="footer" />
+        <TripNav tripId={id} variant="footer" destination={destination} />
         <p className="chronicle-footer-note">Real weather, maps, and nearby places — refreshed each time you visit.</p>
       </footer>
     </div>
