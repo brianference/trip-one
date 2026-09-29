@@ -3,6 +3,7 @@ import { confirmSchema, firstIssueMessage } from '../../lib/auth/validation'
 import { isRateLimited } from '../../lib/rateLimitGuard'
 import { getAuthedUser, type AuthEnv } from '../../lib/auth/session'
 import type { Env } from '../../lib/db'
+import { logger } from '../../../src/lib/logger'
 
 /**
  * Tight-ish limit: each guess is cheap (a hash lookup) but an unbounded
@@ -35,7 +36,7 @@ function json(body: unknown, status: number, headers: Record<string, string> = {
  * `{ ok: false, needsSignIn: true, email }`, so the page can ask them to sign
  * in and come back, or offer "This wasn't me" (POST /api/auth/confirm/deny).
  *
- * @returns 200 as above, or `{ error }` with 400 (bad or spent link) or 429
+ * @returns 200 as above, or `{ error }` with 400 (bad or spent link), 429 or 500
  */
 export async function onRequestPost({ env, request }: { env: AuthEnv; request: Request }): Promise<Response> {
   const raw = (await request.json().catch(() => ({}))) as Record<string, unknown>
@@ -46,9 +47,14 @@ export async function onRequestPost({ env, request }: { env: AuthEnv; request: R
     return json({ error: 'Too many attempts. Please try again later.' }, 429)
   }
 
-  const session = await getAuthedUser(env, request)
-  const result = await confirmEmail(env, parsed.data.token, session?.id ?? null)
-  if (result.ok) return json({ ok: true, email: result.email, passwordReset: false }, 200)
-  if (result.reason === 'needs-sign-in') return json({ ok: false, needsSignIn: true, email: result.email }, 200)
-  return json({ error: CONFIRM_LINK_INVALID_MESSAGE }, 400)
+  try {
+    const session = await getAuthedUser(env, request)
+    const result = await confirmEmail(env, parsed.data.token, session?.id ?? null)
+    if (result.ok) return json({ ok: true, email: result.email, passwordReset: false }, 200)
+    if (result.reason === 'needs-sign-in') return json({ ok: false, needsSignIn: true, email: result.email }, 200)
+    return json({ error: CONFIRM_LINK_INVALID_MESSAGE }, 400)
+  } catch (err) {
+    logger.error('confirm failed', err)
+    return json({ error: 'Something went wrong on our end. Please try again in a moment.' }, 500)
+  }
 }
