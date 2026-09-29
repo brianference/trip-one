@@ -353,10 +353,19 @@ describe('RecapMap', () => {
     expect(onStopSelect).toHaveBeenLastCalledWith('c')
   })
 
-  it('starts playback automatically on mount when playing is true and there is more than one stop', () => {
+  it('starts playback automatically on mount when playing is true and there is more than one stop, and reports it via onPlayingChange', () => {
     const raf = stubRaf()
-    render(<RecapMap route={threeStops} activeStopId={null} onStopSelect={vi.fn()} playing />)
+    const onPlayingChange = vi.fn()
+    render(
+      <RecapMap route={threeStops} activeStopId={null} onStopSelect={vi.fn()} playing onPlayingChange={onPlayingChange} />,
+    )
     expect(raf.rafSpy).toHaveBeenCalled()
+    // isPlaying is seeded false so the mount-time autostart is a real
+    // false->true transition, not a same-value no-op that would silently
+    // swallow the very first "playback started" report.
+    expect(onPlayingChange).toHaveBeenCalledWith(true)
+    // Effects run before render() returns in tests, so the button has
+    // already settled to "Pause" by the time we can observe it here.
     expect(screen.getByRole('button', { name: /pause/i })).toBeInstanceOf(HTMLButtonElement)
   })
 
@@ -411,6 +420,63 @@ describe('RecapMap', () => {
     expect(raf.rafSpy).toHaveBeenCalledTimes(1)
     expect(screen.getByRole('button', { name: /pause/i })).toBeInstanceOf(HTMLButtonElement)
     expect(onPlayingChange).not.toHaveBeenCalledWith(false)
+  })
+
+  it('pressing Play during an external +1 hop cancels the hop cleanly: exactly one onStopSelect, none after unmount', () => {
+    const raf = stubRaf()
+    const onStopSelect = vi.fn()
+    const { rerender, unmount } = render(<RecapMap route={threeStops} activeStopId={null} onStopSelect={onStopSelect} />)
+
+    // The hop starts animating leg 0->1 on its own.
+    rerender(<RecapMap route={threeStops} activeStopId="b" onStopSelect={onStopSelect} />)
+    expect(raf.rafSpy).toHaveBeenCalledTimes(1)
+
+    // Play is pressed mid-hop. Without the fix, this overwrites rafIdRef and
+    // the hop's own frame becomes uncancellable.
+    fireEvent.click(screen.getByRole('button', { name: /play/i }))
+    expect(raf.cafSpy).toHaveBeenCalled() // the hop's frame was cancelled...
+    expect(raf.pendingCount()).toBe(1) // ...and exactly one (restarted) frame replaces it
+
+    // Complete the restarted leg.
+    raf.flush(0)
+    raf.flush(2500)
+    expect(onStopSelect).toHaveBeenCalledTimes(1)
+    expect(onStopSelect).toHaveBeenCalledWith('b')
+
+    // Playback chains into leg 1->2; unmount mid-flight and confirm nothing
+    // further fires — a leaked hop frame would otherwise survive unmount
+    // (cleanup only cancels whichever id is currently referenced).
+    unmount()
+    raf.flush(99999)
+    expect(onStopSelect).toHaveBeenCalledTimes(1)
+  })
+
+  it('pressing Play during an external +1 hop under reduced motion cancels the hop cleanly: exactly one onStopSelect, none after unmount', () => {
+    stubMatchMedia(true)
+    vi.useFakeTimers()
+    const onStopSelect = vi.fn()
+    const { rerender, unmount } = render(<RecapMap route={threeStops} activeStopId={null} onStopSelect={onStopSelect} />)
+
+    // The hop draws the full leg immediately and schedules a 2500ms timer.
+    rerender(<RecapMap route={threeStops} activeStopId="b" onStopSelect={onStopSelect} />)
+
+    // Play is pressed mid-hop. Without the fix, this schedules a second,
+    // independent 2500ms timer alongside the hop's uncancelled one.
+    fireEvent.click(screen.getByRole('button', { name: /play/i }))
+
+    act(() => {
+      vi.advanceTimersByTime(2500)
+    })
+    expect(onStopSelect).toHaveBeenCalledTimes(1)
+    expect(onStopSelect).toHaveBeenCalledWith('b')
+
+    // Playback chains into leg 1->2; unmount mid-flight and confirm nothing
+    // further fires.
+    unmount()
+    act(() => {
+      vi.advanceTimersByTime(10000)
+    })
+    expect(onStopSelect).toHaveBeenCalledTimes(1)
   })
 
   it('an external activeStopId jump to a non-adjacent stop snaps, stops any animation, and reports playback stopped', () => {
@@ -476,6 +542,27 @@ describe('RecapMap', () => {
 
     expect(vi.mocked(L).map).toHaveBeenCalledTimes(1)
     expect(mapInstance.remove).not.toHaveBeenCalled()
+  })
+
+  it('a stop rename rebuilds the map and gives its marker the updated accessible name (same id/order/coordinates)', () => {
+    const { rerender } = render(<RecapMap route={threeStops} activeStopId={null} onStopSelect={vi.fn()} />)
+    expect(vi.mocked(L).map).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(L).divIcon).toHaveBeenCalledTimes(3)
+
+    const renamedStops: RecapStop[] = [threeStops[0], { ...threeStops[1], text: 'Ueno Park (renamed)' }, threeStops[2]]
+    rerender(<RecapMap route={renamedStops} activeStopId={null} onStopSelect={vi.fn()} />)
+
+    // stopId/order/lat/lng are all unchanged — only `text` differs — but the
+    // signature includes `text`, so this must still be a real rebuild:
+    // markers render the name in their aria-label, and a stale one left over
+    // from the old identity-only signature would silently keep the old name.
+    expect(vi.mocked(L).map).toHaveBeenCalledTimes(2)
+    expect(vi.mocked(L).divIcon).toHaveBeenCalledTimes(6)
+    const latestLabels = vi.mocked(L).divIcon.mock.calls.slice(3).map((call) => {
+      const html = call[0]?.html as HTMLElement
+      return html.getAttribute('aria-label')
+    })
+    expect(latestLabels).toEqual(['Stop 1: Shibuya Crossing', 'Stop 2: Ueno Park (renamed)', 'Stop 3: Senso-ji'])
   })
 
   it('a real route content change rebuilds the map, stops playback, and reports it via onPlayingChange', () => {

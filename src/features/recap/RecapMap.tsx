@@ -93,15 +93,21 @@ function plottedStops(route: RecapStop[]): PlottedStop[] {
 }
 
 /**
- * A stable signature over the plotted stops' identity, order and position.
+ * A stable signature over everything a rebuild needs to reflect: each
+ * stop's identity, order and position (stopId/order/lat/lng), plus its
+ * displayed text — markers render both `order` (the number) and `text` (the
+ * "Stop N: {name}" accessible name), so a rename or renumber with unchanged
+ * coordinates must still trigger a real rebuild or the markers go stale.
  * The map-rebuild effect keys on this string rather than the `route` array's
  * own identity so a parent re-render that passes a content-equal but
  * freshly-allocated array (a common React pattern) does not tear the map
- * down and reset playback — only an actual change to which stops are
- * plotted, their order, or their coordinates does.
+ * down and reset playback — only an actual change to one of these fields
+ * does. (A heuristic join, not a strict serialization: a stop `text`
+ * containing the `|`/`:` delimiters could in principle collide, but the
+ * worst case is a missed or extra rebuild, not a wrong route.)
  */
 function routeSignatureOf(stops: PlottedStop[]): string {
-  return stops.map((stop) => `${stop.stopId}:${stop.lat}:${stop.lng}`).join('|')
+  return stops.map((stop) => `${stop.stopId}:${stop.order}:${stop.lat}:${stop.lng}:${stop.text}`).join('|')
 }
 
 /** Whether the user's OS/browser prefers reduced motion, re-checked on each call (not cached) since it can change mid-session. */
@@ -144,10 +150,14 @@ export function RecapMap({ route, activeStopId, onStopSelect, playing = false, s
   const currentIndexRef = useRef(currentIndex)
   currentIndexRef.current = currentIndex
 
-  // Seeded from `playing`, but only when there's actually a leg to animate —
-  // otherwise the Play/Pause button would render disabled and showing
-  // "Pause" for a route with nothing playing and no way to toggle it back.
-  const [isPlaying, setIsPlaying] = useState(playing && stops.length > 1)
+  // Always seeded false, even when `playing` is true: `setPlaying` only
+  // reports `onPlayingChange` on an actual transition, so seeding this true
+  // would make the mount-time autostart a false->false no-op and silently
+  // swallow the very first "playback started" report. The autostart effect
+  // below calls `startPlayback`, which makes the real, reported transition —
+  // the button may show "Play" for the first commit and settle to "Pause"
+  // once that effect runs, which happens before `render()` returns in tests.
+  const [isPlaying, setIsPlaying] = useState(false)
   const isPlayingRef = useRef(isPlaying)
   isPlayingRef.current = isPlaying
 
@@ -251,8 +261,28 @@ export function RecapMap({ route, activeStopId, onStopSelect, playing = false, s
     rafIdRef.current = requestAnimationFrame(frame)
   }
 
-  /** Starts continuous playback from `fromIndex`. */
+  /**
+   * Starts continuous playback from `fromIndex`. Always cancels any
+   * in-flight animation first — Play can be pressed while an external
+   * `activeStopId` hop (see the effect below) is already mid-leg toward
+   * `fromIndex + 1`, and without this the hop's own rAF/timer id would be
+   * overwritten by this call's, leaving the hop's loop uncancellable: it
+   * would keep running, complete the same leg a second time (a duplicate
+   * `onStopSelect`), and could still fire after unmount since cleanup only
+   * cancels whichever id is currently referenced.
+   *
+   * Deliberately RESTARTS the current leg from `fromIndex` rather than
+   * resuming from the hop's in-progress position: `animateLeg` has no
+   * cross-call progress state to resume from (each call's `startTime` and
+   * revealed sub-segments live only in that call's closure), and threading
+   * "resume from N% of this leg" through would add real complexity for a
+   * leg that takes at most a few seconds — a full restart is visually a
+   * minor, one-time blip, not a jump. `drawTraveledThrough(fromIndex)`
+   * erases whatever partial progress the cancelled hop had drawn before the
+   * fresh `animateLeg` call redraws it from the start.
+   */
   function startPlayback(fromIndex: number) {
+    stopAnimating()
     setCurrentIndex(fromIndex)
     currentIndexRef.current = fromIndex
     setPlaying(true)
