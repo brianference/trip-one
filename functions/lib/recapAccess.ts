@@ -29,8 +29,16 @@ export function generateRecapToken(): string {
   return toBase64Url(bytes)
 }
 
-/** Per-IP hourly cap on public recap reads; the recap JSON and its photo bytes share one budget. */
+/** Per-IP hourly cap on reads of the public recap JSON (`recap-read`). Photo bytes have their own budget. */
 export const RECAP_READS_PER_HOUR = 600
+
+/**
+ * Per-IP hourly cap on public recap photo fetches (`recap-photo-read`), kept
+ * apart from {@link RECAP_READS_PER_HOUR} because one recap view fetches every
+ * photo. A trip holds at most MAX_PHOTOS_PER_TRIP = 300 photos, so 3000 lets a
+ * full recap be viewed about 10 times an hour from one IP.
+ */
+export const RECAP_PHOTO_READS_PER_HOUR = 3000
 
 /**
  * The one 404 message for every public recap miss (unknown, revoked or

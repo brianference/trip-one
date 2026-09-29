@@ -20,7 +20,6 @@ import {
 import { photoRow } from '../../lib/testPhotos'
 import { logger } from '../../../src/lib/logger'
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 
 type RecapEnv = ReturnType<typeof recapEnv>['env']
 
@@ -89,7 +88,7 @@ describe('GET /api/recap/:token', () => {
     const text = await res.text()
     expect(text).not.toContain(TRIP_ID)
     const body = JSON.parse(text) as RecapPayload
-    expect(body.stops[0].stopId).toMatch(UUID_RE)
+    expect(body.stops[0].stopId).toBe('stop-0')
     expect(body.photos).toHaveLength(1)
     expect(body.photos[0].stopId).toBe(body.stops[0].stopId)
   })
@@ -113,8 +112,48 @@ describe('GET /api/recap/:token', () => {
     const body = (await (await get(env, ACTIVE_TOKEN)).json()) as RecapPayload
     expect(body.stops).toHaveLength(1)
     expect(body.stops[0]).toMatchObject({ day: 1, text: 'Legacy stop', lat: null, lng: null, category: null })
-    expect(body.stops[0].stopId).toMatch(UUID_RE)
+    expect(body.stops[0].stopId).toBe('stop-0')
     expect(body.photos).toEqual([])
+  })
+
+  it('gives re-minted stops the same stopId on every load', async () => {
+    const state = defaultRecapState()
+    state.trips[TRIP_ID] = tripRow(TRIP_ID, [
+      { time: '09:00', text: 'Legacy stop', type: 'fixed', day: 1 },
+      { id: TRIP_ID, time: '10:00', text: 'Odd stop', type: 'fixed', day: 1 },
+      ...TRIP_ITINERARY,
+    ])
+    const { env } = recapEnv(state)
+    const first = (await (await get(env, ACTIVE_TOKEN)).json()) as RecapPayload
+    const second = (await (await get(env, ACTIVE_TOKEN)).json()) as RecapPayload
+    expect(first.stops.map((s) => s.stopId)).toEqual(['stop-0', 'stop-1', SECOND_STOP_ID, STOP_ID])
+    expect(second.stops.map((s) => s.stopId)).toEqual(first.stops.map((s) => s.stopId))
+  })
+
+  it('attaches photos of a shared stored stop id to the first stop only, and every photo points at a returned stop', async () => {
+    const state = defaultRecapState()
+    state.trips[TRIP_ID] = tripRow(TRIP_ID, [
+      { id: TRIP_ID, time: '09:00', text: 'First odd stop', type: 'fixed', day: 1 },
+      { id: TRIP_ID, time: '10:00', text: 'Second odd stop', type: 'fixed', day: 1 },
+      { id: STOP_ID, time: '11:00', text: 'Trinity College', type: 'fixed', day: 1 },
+      { id: STOP_ID, time: '12:00', text: 'Trinity again', type: 'fixed', day: 2 },
+    ])
+    state.photos = [
+      photoRow({ stop_id: TRIP_ID }),
+      photoRow({ id: SECOND_PHOTO_ID, stop_id: STOP_ID }),
+    ]
+    const { env } = recapEnv(state)
+    const text = await (await get(env, ACTIVE_TOKEN)).text()
+    expect(text).not.toContain(TRIP_ID)
+    const body = JSON.parse(text) as RecapPayload
+    const stopIds = body.stops.map((s) => s.stopId)
+    expect(stopIds).toEqual(['stop-0', 'stop-1', STOP_ID, 'stop-3'])
+    expect(new Set(stopIds).size).toBe(stopIds.length)
+    expect(body.photos.map((p) => [p.id, p.stopId])).toEqual([
+      [PHOTO_ID, 'stop-0'],
+      [SECOND_PHOTO_ID, STOP_ID],
+    ])
+    for (const photo of body.photos) expect(stopIds).toContain(photo.stopId)
   })
 
   it('answers 404 for a revoked token', async () => {

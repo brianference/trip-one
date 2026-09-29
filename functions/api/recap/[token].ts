@@ -61,14 +61,32 @@ function finiteOrNull(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
+/** A stored stop id passed through as-is: uuid-shaped, so it can never collide with a {@link positionalStopId}. */
+const PASS_THROUGH_STOP_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * The public id for a stop whose stored id cannot be passed through. It comes
+ * from the stop's position in the itinerary only, so it is the same on every
+ * load of the recap and carries nothing about the trip.
+ * @param index - The stop's index in the stored itinerary array
+ */
+function positionalStopId(index: number): string {
+  return `stop-${index}`
+}
+
 /**
  * Maps the itinerary to public stops, in itinerary order, keeping only the
  * recap fields (never booking links, prices or product codes).
  *
- * A stop's id is passed through so photos can be matched to it, except when
- * it is missing (a legacy stop) or contains the trip id: those get a fresh
- * random id instead. Returns the map from stored stop id to public stop id so
- * photos follow the same substitution.
+ * A stop's stored id is passed through so photos can be matched to it when it
+ * is a uuid that does not contain the trip id and no earlier stop used it.
+ * Otherwise (a legacy stop with no id, an id containing the trip id, a
+ * non-uuid id, or a duplicate) the stop gets {@link positionalStopId}, which
+ * is stable across loads. Every public stopId is therefore unique.
+ *
+ * Photos are keyed by stored stop id, so the returned map sends each stored
+ * id to the public id of the FIRST stop that carries it: when stops share a
+ * stored id, their photos all attach to the first of them.
  *
  * @param itinerary - The trip's itinerary as stored
  * @param tripId - The trip id, which must not appear in the output
@@ -77,15 +95,17 @@ function toPublicStops(itinerary: unknown[], tripId: string): { stops: RecapStop
   const stops: RecapStop[] = []
   const stopIds = new Map<string, string>()
   const tripIdLower = tripId.toLowerCase()
-  for (const item of itinerary) {
-    if (typeof item !== 'object' || item === null) continue
+  itinerary.forEach((item, index) => {
+    if (typeof item !== 'object' || item === null) return
     const stop = item as Record<string, unknown>
-    if (typeof stop.text !== 'string') continue
+    if (typeof stop.text !== 'string') return
 
     const storedId = typeof stop.id === 'string' && stop.id !== '' ? stop.id : null
-    const safeId = storedId !== null && !storedId.toLowerCase().includes(tripIdLower)
-    const stopId = safeId ? storedId : crypto.randomUUID()
-    if (storedId !== null && !stopIds.has(storedId)) stopIds.set(storedId, stopId)
+    const firstUse = storedId !== null && !stopIds.has(storedId)
+    const passThrough =
+      firstUse && PASS_THROUGH_STOP_ID.test(storedId) && !storedId.toLowerCase().includes(tripIdLower)
+    const stopId = passThrough ? storedId : positionalStopId(index)
+    if (storedId !== null && firstUse) stopIds.set(storedId, stopId)
 
     const day = typeof stop.day === 'number' && Number.isInteger(stop.day) && stop.day >= 1 ? stop.day : DEFAULT_STOP_DAY
     stops.push({
@@ -96,7 +116,7 @@ function toPublicStops(itinerary: unknown[], tripId: string): { stops: RecapStop
       lng: finiteOrNull(stop.lng),
       category: publicText(stop.category, tripId),
     })
-  }
+  })
   return { stops, stopIds }
 }
 

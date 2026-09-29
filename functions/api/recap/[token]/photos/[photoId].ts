@@ -2,7 +2,7 @@ import type { Env } from '../../../../lib/db'
 import { getActiveRecapLinkByToken, getPhotoForTrip } from '../../../../lib/db'
 import { isRateLimited } from '../../../../lib/rateLimitGuard'
 import { photoBytesResponse } from '../../../../lib/photoResponse'
-import { recapTokenSchema, RECAP_READS_PER_HOUR, RECAP_NOT_FOUND_MESSAGE } from '../../../../lib/recapAccess'
+import { recapTokenSchema, RECAP_PHOTO_READS_PER_HOUR, RECAP_NOT_FOUND_MESSAGE } from '../../../../lib/recapAccess'
 import { logger } from '../../../../../src/lib/logger'
 import { z } from 'zod'
 
@@ -51,7 +51,7 @@ export async function onRequestGet({
   const parsed = paramsSchema.safeParse(params)
   if (!parsed.success) return json({ error: RECAP_NOT_FOUND_MESSAGE }, 404)
 
-  if (await isRateLimited(env, request, 'recap-read', RECAP_READS_PER_HOUR)) {
+  if (await isRateLimited(env, request, 'recap-photo-read', RECAP_PHOTO_READS_PER_HOUR)) {
     return json({ error: RATE_LIMIT_MESSAGE }, 429)
   }
 

@@ -91,12 +91,17 @@ describe('GET /api/recap/:token/photos/:photoId', () => {
     expect((await get(env, ACTIVE_TOKEN, PHOTO_ID)).status).toBe(404)
   })
 
-  it('rate-limits with 429 under the recap-read key at 600 per hour', async () => {
+  it('rate-limits with 429 under its own recap-photo-read key at 3000 per hour', async () => {
     const state = defaultRecapState()
-    state.recentRequests = 600
+    state.recentRequests = 2999
     const { env, calls } = recapEnv(state, { r2: filledBucket() })
+    expect((await get(env, ACTIVE_TOKEN, PHOTO_ID)).status).toBe(200)
+    const args = calls.find((c) => c.sql.includes('FROM request_log'))?.args
+    expect(args).toContain('recap-photo-read')
+    expect(args).not.toContain('recap-read')
+
+    state.recentRequests = 3000
     expect((await get(env, ACTIVE_TOKEN, PHOTO_ID)).status).toBe(429)
-    expect(calls.find((c) => c.sql.includes('FROM request_log'))?.args).toContain('recap-read')
   })
 
   it('answers 500 without either trip id when R2 is unreachable', async () => {
