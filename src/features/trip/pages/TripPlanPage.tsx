@@ -12,7 +12,7 @@ import { ItineraryStopForm } from '../components/ItineraryStopForm'
 import { ItineraryDayGroup } from '../components/ItineraryDayGroup'
 import { ThingsToDoList } from '../components/ThingsToDoList'
 import { TripSkeleton } from '../components/TripSkeleton'
-import { TripExport } from '../components/TripExport'
+import { TripHeaderActions } from '../components/TripHeaderActions'
 import { PlaceDetailPanel } from '../place/PlaceDetailPanel'
 import { usePlaceDetail, type PlaceQuery } from '../place/usePlaceDetail'
 import { placeQueryFor, placeQueryForThing } from '../place/placeQuery'
@@ -117,7 +117,14 @@ export function TripPlanPage() {
             </select>
           </label>
         </div>
-        <TripExport itinerary={itinerary} startDate={startDate} destinationName={location.displayName} />
+        <TripHeaderActions
+          itinerary={itinerary}
+          startDate={startDate}
+          destinationName={location.displayName}
+          demoTrip={demoTrip}
+          selectedDay={selectedDay}
+          photos={photos}
+        />
         <Link to={`/trip/${trip.id}/recap`} className="chronicle-preview-link">
           View trip recap
         </Link>

@@ -1282,6 +1282,14 @@ body {
   flex-shrink: 0;
 }
 
+/* The choose-stop sheet's "Choose photo" button reuses this same primary
+   pill, disabled only in the edge case where the trip has no id'd stops yet
+   to attach a photo to. */
+.chronicle-photo-add-btn--primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 /* Empty state under the primary pill when a stop has no photos yet
    (design section 2). */
 .chronicle-photo-empty {
@@ -4073,6 +4081,69 @@ body:has(.chronicle-page) label {
   font-size: 11px;
   /* Same AA-contrast fix as .chronicle-section-nav-item. */
   color: var(--chronicle-text-secondary);
+}
+
+/* Split pill: [Print / PDF | Add photos] — one joined control, Print/PDF
+   plain and Add photos in the photo accent (--accent-photo, theme.css),
+   matching docs/design/photo-controls-option-a.html sections 3-4. On a demo
+   trip the Add photos segment is omitted entirely (photo writes are
+   rejected server-side there) and the remaining Print/PDF segment fills the
+   pill alone. */
+.chronicle-split-group {
+  display: inline-flex;
+  min-height: 44px;
+  border-radius: var(--chronicle-radius-pill);
+  border: 1px solid var(--chronicle-border-hairline);
+  overflow: hidden;
+}
+
+.chronicle-split-seg {
+  display: flex;
+  align-items: center;
+  gap: var(--chronicle-space-sm);
+  min-height: 44px;
+  padding: 0 18px;
+  border: none;
+  font-family: var(--chronicle-font-body);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chronicle-split-seg--left {
+  background: var(--chronicle-bg-surface-2);
+  color: var(--chronicle-text-primary);
+  border-right: 1px solid var(--chronicle-border-hairline);
+}
+
+.chronicle-split-seg--left:hover,
+.chronicle-split-seg--left:focus-visible {
+  color: var(--accent-text);
+}
+
+.chronicle-split-seg--right {
+  background: var(--accent-photo);
+  color: var(--on-accent-photo);
+}
+
+.chronicle-split-seg--right:hover,
+.chronicle-split-seg--right:focus-visible {
+  background: var(--accent-photo-hover);
+  color: var(--on-accent-photo);
+}
+
+@media (max-width: 600px) {
+  /* The joined pill drops to its own full-width row under the date/length
+     fields, each segment sharing it evenly (design section 4). */
+  .chronicle-split-group {
+    display: flex;
+    width: 100%;
+  }
+
+  .chronicle-split-seg {
+    flex: 1;
+    justify-content: center;
+  }
 }
 
 /* Print-only trip title (destination + dates); hidden on screen. */
