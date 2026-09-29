@@ -66,6 +66,14 @@ const DEFAULT_ZOOM = 13
 const ROUTE_FIT_PADDING_PX = 32
 
 /**
+ * Closest zoom the whole-route fit may choose. Without a cap, stops sharing
+ * (or nearly sharing) one coordinate make a zero-size box and Leaflet zooms to
+ * the tile layer's maximum (20), showing a blank street corner; 16 still shows
+ * the surrounding streets.
+ */
+const ROUTE_FIT_MAX_ZOOM = 16
+
+/**
  * Builds a numbered marker icon. The number is the stop's 1-based trip
  * order (matching `RecapStop.order`), and the icon's own DOM element (not an
  * adjacent list) carries `role="img"` and `aria-label="Stop N: {name}"` —
@@ -392,7 +400,11 @@ export function RecapMap({
         // whatever zoom is current, so this overview persists unless the
         // viewer zooms in themselves.
         const bounds = L.latLngBounds(currentStops.map((s): L.LatLngTuple => [s.lat, s.lng]))
-        map.fitBounds(bounds, { animate: false, padding: [ROUTE_FIT_PADDING_PX, ROUTE_FIT_PADDING_PX] })
+        map.fitBounds(bounds, {
+          animate: false,
+          padding: [ROUTE_FIT_PADDING_PX, ROUTE_FIT_PADDING_PX],
+          maxZoom: ROUTE_FIT_MAX_ZOOM,
+        })
       } else {
         map.setView([currentStops[startIndex].lat, currentStops[startIndex].lng], DEFAULT_ZOOM, { animate: false })
       }

@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { onRequestGet, onRequestDelete } from './[photoId]'
 import { fakeR2 } from '../../../../lib/testD1'
 import { photoEnv, photoRow, TRIP_ID, OTHER_TRIP_ID, PHOTO_ID, PNG_BYTES } from '../../../../lib/testPhotos'
+import { DEMO_TRIP_IDS } from '../../../../../src/lib/api/demoIds'
 
 /** Stores `bytes` in a fresh fake bucket under `key`. */
 function bucketWith(key: string, bytes: Uint8Array, contentType = 'image/png') {
@@ -99,6 +100,16 @@ describe('DELETE /api/trips/:id/photos/:photoId', () => {
     const res = await call(onRequestDelete, env, TRIP_ID, PHOTO_ID)
     expect(res.status).toBe(404)
     expect(r2.objects.has(foreign.r2_key)).toBe(true)
+    expect(calls.some((c) => c.sql.startsWith('DELETE'))).toBe(false)
+  })
+
+  it('refuses to delete a photo from a demo trip with 403 and deletes nothing', async () => {
+    const row = photoRow({ trip_id: DEMO_TRIP_IDS.dublin })
+    const r2 = bucketWith(row.r2_key, PNG_BYTES)
+    const { env, calls } = photoEnv({ photos: [row], r2 })
+    const res = await call(onRequestDelete, env, DEMO_TRIP_IDS.dublin, PHOTO_ID)
+    expect(res.status).toBe(403)
+    expect(r2.objects.has(row.r2_key)).toBe(true)
     expect(calls.some((c) => c.sql.startsWith('DELETE'))).toBe(false)
   })
 

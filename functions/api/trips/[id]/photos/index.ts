@@ -2,7 +2,7 @@ import type { Env, PhotoRow } from '../../../../lib/db'
 import { getTrip, listPhotosForTrip, countPhotosForStop, insertPhoto } from '../../../../lib/db'
 import { isRateLimited } from '../../../../lib/rateLimitGuard'
 import { sniffImageType, SNIFF_BYTES } from '../../../../lib/imageSniff'
-import { DEMO_TRIP_IDS } from '../../../../../src/lib/api/demoIds'
+import { DEMO_TRIP_ID_SET } from '../../../../../src/lib/api/demoIds'
 import { logger } from '../../../../../src/lib/logger'
 import { z } from 'zod'
 
@@ -43,8 +43,6 @@ const NOT_AN_IMAGE_MESSAGE = 'That file isn’t a photo we can use. Please choos
 const UNKNOWN_STOP_MESSAGE = 'That stop isn’t on this trip any more. Refresh the page and try again.'
 const STOP_FULL_MESSAGE = `This stop already has ${MAX_PHOTOS_PER_STOP} photos. Remove one to add another.`
 const TRIP_FULL_MESSAGE = `This trip already has ${MAX_PHOTOS_PER_TRIP} photos. Remove some to add more.`
-
-const DEMO_TRIP_ID_SET: ReadonlySet<string> = new Set(Object.values(DEMO_TRIP_IDS))
 
 /** Trip ids are uuids; anything else cannot be a trip and is answered 404. */
 const tripIdSchema = z.string().uuid()

@@ -2,6 +2,7 @@ import type { Env } from '../../../../lib/db'
 import { getPhotoForTrip, deletePhotoRow } from '../../../../lib/db'
 import { isRateLimited } from '../../../../lib/rateLimitGuard'
 import { photoBytesResponse } from '../../../../lib/photoResponse'
+import { DEMO_TRIP_ID_SET } from '../../../../../src/lib/api/demoIds'
 import { logger } from '../../../../../src/lib/logger'
 import { z } from 'zod'
 
@@ -14,6 +15,7 @@ const PHOTO_CACHE_CONTROL = 'private, max-age=86400'
 const RATE_LIMIT_MESSAGE =
   'You’ve made a lot of requests in a short time. Please wait a few minutes and try again.'
 const NOT_FOUND_MESSAGE = 'We couldn’t find that photo.'
+const DEMO_MESSAGE = "Demo trips can't hold photos. Start your own trip to add some."
 const SERVER_ERROR_MESSAGE = 'Something went wrong on our end. Please try again in a moment.'
 
 /** Both path params are uuids; anything else cannot name a photo and is answered 404. */
@@ -78,10 +80,11 @@ export async function onRequestGet({
  *
  * Removes a photo: the R2 object first, then the row. If the object delete
  * fails the row is kept, so the photo stays visible and deletable rather than
- * leaving an unreachable object in the bucket.
+ * leaving an unreachable object in the bucket. Demo trips are refused with
+ * 403, like uploads, so nobody can strip photos off a shared demo.
  *
  * @param context - Request context with `env`, `request` and `params`
- * @returns 200 `{ ok: true }`, or `{ error }` with 404, 429 or 500
+ * @returns 200 `{ ok: true }`, or `{ error }` with 403 (demo trip), 404, 429 or 500
  */
 export async function onRequestDelete({
   env,
@@ -98,6 +101,8 @@ export async function onRequestDelete({
   if (await isRateLimited(env, request, 'photos-delete', DELETES_PER_HOUR)) {
     return json({ error: RATE_LIMIT_MESSAGE }, 429)
   }
+
+  if (DEMO_TRIP_ID_SET.has(parsed.data.id)) return json({ error: DEMO_MESSAGE }, 403)
 
   try {
     const row = await getPhotoForTrip(env, parsed.data.id, parsed.data.photoId)

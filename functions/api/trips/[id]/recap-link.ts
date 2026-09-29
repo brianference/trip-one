@@ -7,7 +7,7 @@ import {
 } from '../../../lib/db'
 import { isRateLimited } from '../../../lib/rateLimitGuard'
 import { generateRecapToken } from '../../../lib/recapAccess'
-import { DEMO_TRIP_IDS } from '../../../../src/lib/api/demoIds'
+import { DEMO_TRIP_ID_SET } from '../../../../src/lib/api/demoIds'
 import { logger } from '../../../../src/lib/logger'
 import { z } from 'zod'
 
@@ -19,8 +19,6 @@ const RATE_LIMIT_MESSAGE =
 const NOT_FOUND_MESSAGE = 'We couldn’t find that trip.'
 const SERVER_ERROR_MESSAGE = 'Something went wrong on our end. Please try again in a moment.'
 const DEMO_MESSAGE = "Demo trips can't be shared as a recap. Start your own trip to share one."
-
-const DEMO_TRIP_ID_SET: ReadonlySet<string> = new Set(Object.values(DEMO_TRIP_IDS))
 
 /** Trip ids are uuids; anything else cannot be a trip and is answered 404. */
 const tripIdSchema = z.string().uuid()

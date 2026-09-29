@@ -5,6 +5,12 @@ export const DEMO_TRIP_IDS = {
   beijing: 'c129576f-61d1-4e76-bef2-51b0cdf433f2',
 } as const
 
+/**
+ * Demo trip ids as a plain string set, the one membership check shared by the
+ * client (no share or photo controls on a demo) and the server (403 on writes).
+ */
+export const DEMO_TRIP_ID_SET: ReadonlySet<string> = new Set(Object.values(DEMO_TRIP_IDS))
+
 /** Pre-built trips shown on the homepage as one-tap starting points — all real data. */
 export const DEMO_TRIPS = [
   { id: DEMO_TRIP_IDS.tokyo, city: 'Tokyo', blurb: 'Ramen, gardens, neighborhoods · 5 days' },

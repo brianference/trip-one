@@ -11,6 +11,18 @@ export interface TripPhoto {
 const FILE_FIELD = 'file'
 
 /**
+ * The server's own `error` text from a failed response, or `fallback` when the
+ * body is not JSON (a platform 413 or 502 page, for example) or has no `error`.
+ * @param res - A response that is not ok
+ * @param fallback - The message to use when the body carries none
+ * @returns The message to throw
+ */
+async function errorMessageFrom(res: Response, fallback: string): Promise<string> {
+  const body: { error?: unknown } = await res.json().catch(() => ({}))
+  return typeof body.error === 'string' ? body.error : fallback
+}
+
+/**
  * Uploads an already-resized photo for one itinerary stop. Callers resize and
  * re-encode with `resizeImage` before calling this — the server never sees
  * the original, unresized bytes.
@@ -32,9 +44,8 @@ export async function uploadStopPhoto(
   form.append('height', String(photo.height))
 
   const res = await fetch(`/api/trips/${tripId}/photos`, { method: 'POST', body: form })
-  const body = await res.json()
-  if (!res.ok) throw new Error(body.error ?? 'failed to upload photo')
-  return body as TripPhoto
+  if (!res.ok) throw new Error(await errorMessageFrom(res, 'failed to upload photo'))
+  return (await res.json()) as TripPhoto
 }
 
 /**
@@ -44,9 +55,9 @@ export async function uploadStopPhoto(
  */
 export async function listTripPhotos(tripId: string): Promise<TripPhoto[]> {
   const res = await fetch(`/api/trips/${tripId}/photos`)
-  const body = await res.json()
-  if (!res.ok) throw new Error(body.error ?? 'failed to load photos')
-  return (body.photos ?? []) as TripPhoto[]
+  if (!res.ok) throw new Error(await errorMessageFrom(res, 'failed to load photos'))
+  const body: { photos?: TripPhoto[] } = await res.json()
+  return body.photos ?? []
 }
 
 /**
@@ -57,10 +68,7 @@ export async function listTripPhotos(tripId: string): Promise<TripPhoto[]> {
  */
 export async function deleteTripPhoto(tripId: string, photoId: string): Promise<void> {
   const res = await fetch(`/api/trips/${tripId}/photos/${photoId}`, { method: 'DELETE' })
-  if (!res.ok) {
-    const body = await res.json()
-    throw new Error(body.error ?? 'failed to delete photo')
-  }
+  if (!res.ok) throw new Error(await errorMessageFrom(res, 'failed to delete photo'))
 }
 
 /**

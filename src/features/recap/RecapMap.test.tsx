@@ -286,9 +286,20 @@ describe('RecapMap', () => {
     expect(mapInstance.fitBounds).toHaveBeenCalledTimes(1)
     const [bounds, options] = mapInstance.fitBounds.mock.calls[0]
     expect(bounds).toEqual(vi.mocked(L).latLngBounds.mock.results[0].value)
-    expect(options).toEqual({ animate: false, padding: [32, 32] })
+    expect(options).toEqual({ animate: false, padding: [32, 32], maxZoom: 16 })
     // Only the base map's placeholder [0,0] view; the route never gets a fixed zoom.
     expect(mapInstance.setView).not.toHaveBeenCalledWith(expect.anything(), 13, expect.anything())
+  })
+
+  it('caps the fit at zoom 16 when every stop shares one coordinate, instead of zooming to the tile maximum', () => {
+    const sameSpot = [
+      stop({ stopId: 'a', order: 1, text: 'Hotel lobby', lat: 35.7, lng: 139.77 }),
+      stop({ stopId: 'b', order: 2, text: 'Hotel restaurant', lat: 35.7, lng: 139.77 }),
+    ]
+    render(<RecapMap route={sameSpot} activeStopId={null} onStopSelect={vi.fn()} />)
+    const mapInstance = vi.mocked(L).map.mock.results[0].value as { fitBounds: ReturnType<typeof vi.fn> }
+    expect(mapInstance.fitBounds).toHaveBeenCalledTimes(1)
+    expect(mapInstance.fitBounds.mock.calls[0][1]).toMatchObject({ maxZoom: 16 })
   })
 
   it('a single-stop route is centered with setView (no extent to fit)', () => {

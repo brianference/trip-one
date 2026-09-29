@@ -41,7 +41,7 @@
  * been removed entirely: `--trip` mode always creates a brand-new trip via
  * the API, and every PATCH/DELETE this script issues targets only a
  * trip/photo it created in THIS run (see `createTripFixtureViaApi` and the
- * photo cleanup in `main`). `--trip` also refuses to run at all unless BASE
+ * photo and recap-link cleanup in `main`). `--trip` also refuses to run at all unless BASE
  * resolves to a loopback host (localhost/127.0.0.1/[::1]) — see the guard
  * right below the arg parsing.
  *
@@ -424,6 +424,9 @@ async function main() {
   let uploadedPhotoId = null
   let lisbonTripId = null
   let miamiTripId = null
+  // Set only just before THIS run presses Share on the trip THIS run created,
+  // so the cleanup below never revokes a recap link on anyone else's trip.
+  let recapLinkTripId = null
 
   try {
     // ------------------------------------------------------- Step 1.1 / 1.6
@@ -504,6 +507,7 @@ async function main() {
 
     // ------------------------------------------------------------- Step 1.5
     await page.goto(`${BASE}/trip/${lisbonTripId}/recap`, { waitUntil: 'networkidle' })
+    recapLinkTripId = lisbonTripId
     await page.getByRole('button', { name: 'Share recap' }).click()
 
     const shareOutcome = await pollUntil(async () => {
@@ -593,6 +597,15 @@ async function main() {
     if (uploadedPhotoId && lisbonTripId) {
       const deleted = await getJson(`/api/trips/${lisbonTripId}/photos/${uploadedPhotoId}`, { method: 'DELETE' })
       record('cleanup: test photo deleted', deleted.status === 200, `got ${deleted.status}`)
+    }
+    if (recapLinkTripId) {
+      // Caught so a failed revoke is recorded without skipping the trace saves below.
+      try {
+        const revoked = await getJson(`/api/trips/${recapLinkTripId}/recap-link`, { method: 'DELETE' })
+        record('cleanup: test recap link revoked', revoked.status === 200, `got ${revoked.status}`)
+      } catch (err) {
+        record('cleanup: test recap link revoked', false, err instanceof Error ? err.message : String(err))
+      }
     }
 
     mkdirSync(TRACE_DIR, { recursive: true })

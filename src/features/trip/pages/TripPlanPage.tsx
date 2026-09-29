@@ -17,10 +17,7 @@ import { PlaceDetailPanel } from '../place/PlaceDetailPanel'
 import { usePlaceDetail, type PlaceQuery } from '../place/usePlaceDetail'
 import { placeQueryFor, placeQueryForThing } from '../place/placeQuery'
 import { useTripPhotos } from '../../photos/useTripPhotos'
-import { DEMO_TRIP_IDS } from '../../../lib/api/demoIds'
-
-/** Demo trip ids as a plain string set, for a cheap membership check per render. */
-const DEMO_TRIP_ID_SET: ReadonlySet<string> = new Set(Object.values(DEMO_TRIP_IDS))
+import { DEMO_TRIP_ID_SET } from '../../../lib/api/demoIds'
 
 const TRIP_LENGTH_OPTIONS = Array.from({ length: 14 }, (_, i) => i + 1)
 
@@ -80,6 +77,10 @@ export function TripPlanPage() {
   // Names already on the plan (to badge things-to-do and drive the detail sheet's add/remove state).
   const plannedNames = useMemo(() => new Set(itinerary.map((it) => it.text)), [itinerary])
   const onPlanIndex = selected ? itinerary.findIndex((it) => it.text === (selected.name ?? selected.label)) : -1
+  const selectedPlanStopId = onPlanIndex >= 0 ? (itinerary[onPlanIndex].id ?? null) : null
+  // The open detail panel shows the photo error in its own photo section; the
+  // page shows it only when the panel isn't, so it is announced exactly once.
+  const panelShowsPhotoError = selected !== null && selectedPlanStopId !== null
 
   if (!location) return <TripSkeleton />
 
@@ -179,7 +180,7 @@ export function TripPlanPage() {
         ) : (
           <p className="mt-3 text-sm opacity-70">No stops on day {selectedDay} yet — add one below, or ask the chat.</p>
         )}
-        {photos.error && (
+        {photos.error && !panelShowsPhotoError && (
           <p role="alert" className="mt-2 text-sm text-danger-500">
             {photos.error}
           </p>
@@ -240,7 +241,7 @@ export function TripPlanPage() {
           tripId={trip.id}
           demoTrip={demoTrip}
           photos={photos}
-          planStopId={onPlanIndex >= 0 ? (itinerary[onPlanIndex].id ?? null) : null}
+          planStopId={selectedPlanStopId}
         />
       )}
     </article>

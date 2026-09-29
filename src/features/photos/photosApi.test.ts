@@ -35,6 +35,24 @@ describe('photosApi', () => {
     await expect(uploadStopPhoto('trip-1', 'stop-1', { blob, width: 800, height: 600 })).rejects.toThrow(message)
   })
 
+  it('falls back to its own message when an error body is not JSON (a platform 413 or 502 page)', async () => {
+    const notJson = (status: number) => ({
+      ok: false,
+      status,
+      json: async () => {
+        throw new SyntaxError('Unexpected token < in JSON at position 0')
+      },
+    })
+    const blob = new Blob(['x'], { type: 'image/jpeg' })
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(notJson(413)))
+    await expect(uploadStopPhoto('trip-1', 'stop-1', { blob, width: 800, height: 600 })).rejects.toThrow('failed to upload photo')
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(notJson(502)))
+    await expect(listTripPhotos('trip-1')).rejects.toThrow('failed to load photos')
+    await expect(deleteTripPhoto('trip-1', 'p1')).rejects.toThrow('failed to delete photo')
+  })
+
   it('lists a trip photos', async () => {
     const photos = [{ id: 'p1', stopId: 'stop-1', width: 800, height: 600, createdAt: '2026-09-29T00:00:00.000Z' }]
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ photos }) }))

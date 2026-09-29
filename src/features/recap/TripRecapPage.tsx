@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTripContext } from '../trip/useTripContext'
 import { useTripStore } from '../../store/tripStore'
 import { listTripPhotos, tripPhotoUrl, type TripPhoto } from '../photos/photosApi'
-import { DEMO_TRIP_IDS } from '../../lib/api/demoIds'
+import { DEMO_TRIP_ID_SET } from '../../lib/api/demoIds'
 import type { ItineraryItem } from '../../lib/validation/schemas'
 import { logger } from '../../lib/logger'
 import type { RecapPayload } from './types'
@@ -10,9 +10,6 @@ import { DEFAULT_DAY } from './buildRecap'
 import { RecapView } from './RecapView'
 import { ShareRecap } from './ShareRecap'
 import { TripSkeleton } from '../trip/components/TripSkeleton'
-
-/** Demo trip ids as a plain string set: demo trips can't mint a recap link (the server answers 403). */
-const DEMO_TRIP_ID_SET: ReadonlySet<string> = new Set(Object.values(DEMO_TRIP_IDS))
 
 /**
  * The recap's stops from the live itinerary, in itinerary order, with the
