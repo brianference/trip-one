@@ -15,6 +15,11 @@ import { TripExport } from '../components/TripExport'
 import { PlaceDetailPanel } from '../place/PlaceDetailPanel'
 import { usePlaceDetail, type PlaceQuery } from '../place/usePlaceDetail'
 import { placeQueryFor, placeQueryForThing } from '../place/placeQuery'
+import { useTripPhotos } from '../../photos/useTripPhotos'
+import { DEMO_TRIP_IDS } from '../../../lib/api/demoIds'
+
+/** Demo trip ids as a plain string set, for a cheap membership check per render. */
+const DEMO_TRIP_ID_SET: ReadonlySet<string> = new Set(Object.values(DEMO_TRIP_IDS))
 
 const TRIP_LENGTH_OPTIONS = Array.from({ length: 14 }, (_, i) => i + 1)
 
@@ -34,6 +39,10 @@ export function TripPlanPage() {
   const [selected, setSelected] = useState<PlaceQuery | null>(null)
   const [mapFocus, setMapFocus] = useState<{ lat: number; lng: number; nonce: number } | null>(null)
   const { detail, loading, error } = usePlaceDetail(selected)
+  // Demo trips (seeded, shared examples) reject photo uploads server-side — the add
+  // button is hidden for them rather than rendered as a control that always fails.
+  const demoTrip = DEMO_TRIP_ID_SET.has(trip.id)
+  const photos = useTripPhotos(trip.id)
 
   // Reveal a stop or a place tapped in the map / a chat "Added" chip.
   const focusStop = (item: { text?: string; name?: string; lat?: number; lng?: number; category?: string }) => {
@@ -153,9 +162,17 @@ export function TripPlanPage() {
             onSetTime={setStopTime}
             onOpen={(item) => focusStop(item)}
             onRemove={removeStop}
+            photos={photos}
+            tripId={trip.id}
+            demoTrip={demoTrip}
           />
         ) : (
           <p className="mt-3 text-sm opacity-70">No stops on day {selectedDay} yet — add one below, or ask the chat.</p>
+        )}
+        {photos.error && (
+          <p role="alert" className="mt-2 text-sm text-danger-500">
+            {photos.error}
+          </p>
         )}
         <ItineraryStopForm onSubmit={addStop} submitting={adding} />
       </section>
@@ -210,6 +227,10 @@ export function TripPlanPage() {
             setSelected(null)
           }}
           onRemoveFromPlan={onPlanIndex >= 0 ? () => { removeStop(onPlanIndex); setSelected(null) } : undefined}
+          tripId={trip.id}
+          demoTrip={demoTrip}
+          photos={photos}
+          planStopId={onPlanIndex >= 0 ? (itinerary[onPlanIndex].id ?? null) : null}
         />
       )}
     </article>

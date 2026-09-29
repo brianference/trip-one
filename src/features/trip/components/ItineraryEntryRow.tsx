@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import type { ItineraryItem } from '../../../lib/validation/schemas'
 import { roleFor, slotLabel, directionsUrl } from '../../../lib/itinerary/badges'
+import { StopPhotoButton } from '../../photos/StopPhotoButton'
+import { StopPhotoStrip } from '../../photos/StopPhotoStrip'
+import type { TripPhoto } from '../../photos/photosApi'
 
 const DOT_COLOR: Record<string, string> = { fixed: '#a5d088', travel: '#ffd700', option: '#5ba3ff' }
 
@@ -23,6 +26,12 @@ export function ItineraryEntryRow({
   onMoveToDay,
   onSetTime,
   onRemove,
+  stopPhotos,
+  uploadingPhoto,
+  onAddPhoto,
+  onRemovePhoto,
+  tripId,
+  demoTrip,
 }: {
   item: ItineraryItem
   position: number
@@ -37,6 +46,18 @@ export function ItineraryEntryRow({
   onMoveToDay: (day: number) => void
   onSetTime: (time: string) => void
   onRemove: () => void
+  /** This stop's photos. Empty when the stop has no stable id yet or has none uploaded. */
+  stopPhotos: TripPhoto[]
+  /** True while a photo is uploading for this stop. */
+  uploadingPhoto: boolean
+  /** Adds a photo to this stop. Undefined when the stop has no stable `id` — the add button is hidden in that case. */
+  onAddPhoto?: (file: File) => void
+  /** Removes one of this stop's photos by id. */
+  onRemovePhoto: (photoId: string) => void
+  /** The trip these photos belong to, for building thumbnail URLs. */
+  tripId: string
+  /** True on read-only demo trips, where photo uploads are rejected server-side — hides the add button. */
+  demoTrip: boolean
 }) {
   const [editing, setEditing] = useState(false)
   const badge = roleFor(item)
@@ -106,6 +127,19 @@ export function ItineraryEntryRow({
               ↓
             </button>
           </div>
+        </div>
+      )}
+
+      {/* A stop without a stable id (legacy data before the store backfill ran) gets
+          no photo controls — there is nowhere stable to key an upload against. */}
+      {item.id && (
+        <div className="chronicle-photo-row">
+          {!demoTrip && onAddPhoto && (
+            <StopPhotoButton stopName={item.text} uploading={uploadingPhoto} onSelect={onAddPhoto} />
+          )}
+          {stopPhotos.length > 0 && (
+            <StopPhotoStrip tripId={tripId} stopName={item.text} photos={stopPhotos} onRemove={onRemovePhoto} />
+          )}
         </div>
       )}
     </li>

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { ItineraryEntryRow } from './ItineraryEntryRow'
+import type { TripPhoto } from '../../photos/photosApi'
 
 const base = {
   position: 0,
@@ -13,6 +14,12 @@ const base = {
   onMoveToDay: vi.fn(),
   onSetTime: vi.fn(),
   onRemove: vi.fn(),
+  stopPhotos: [] as TripPhoto[],
+  uploadingPhoto: false,
+  onAddPhoto: vi.fn(),
+  onRemovePhoto: vi.fn(),
+  tripId: 'trip-1',
+  demoTrip: false,
 }
 
 describe('ItineraryEntryRow', () => {
@@ -90,5 +97,55 @@ describe('ItineraryEntryRow', () => {
     render(<ItineraryEntryRow {...base} item={{ time: '08:00', text: 'Drop me', type: 'option' }} onRemove={onRemove} />)
     fireEvent.click(screen.getByRole('button', { name: /remove drop me/i }))
     expect(onRemove).toHaveBeenCalled()
+  })
+
+  it('renders no photo button for a stop without a stable id (legacy data)', () => {
+    render(<ItineraryEntryRow {...base} item={{ time: '08:00', text: 'Legacy stop', type: 'option' }} />)
+    expect(screen.queryByRole('button', { name: /add photo/i })).not.toBeInTheDocument()
+  })
+
+  it('renders the add-photo button for a stop with a stable id, and forwards the chosen file', () => {
+    const onAddPhoto = vi.fn()
+    render(
+      <ItineraryEntryRow
+        {...base}
+        item={{ time: '08:00', text: 'Museum', type: 'option', id: 'stop-1' }}
+        onAddPhoto={onAddPhoto}
+      />,
+    )
+    const button = screen.getByRole('button', { name: 'Add photo to Museum' })
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    const file = new File(['bytes'], 'photo.jpg', { type: 'image/jpeg' })
+    fireEvent.change(input, { target: { files: [file] } })
+    expect(onAddPhoto).toHaveBeenCalledWith(file)
+    expect(button).toBeInTheDocument()
+  })
+
+  it('hides the add-photo button on a demo trip', () => {
+    render(<ItineraryEntryRow {...base} item={{ time: '08:00', text: 'Museum', type: 'option', id: 'stop-1' }} demoTrip />)
+    expect(screen.queryByRole('button', { name: /add photo/i })).not.toBeInTheDocument()
+  })
+
+  it("renders the stop's uploaded photos as thumbnails", () => {
+    const photo: TripPhoto = { id: 'p1', stopId: 'stop-1', width: 1600, height: 1200, createdAt: '2026-09-29T00:00:00.000Z' }
+    render(
+      <ItineraryEntryRow
+        {...base}
+        item={{ time: '08:00', text: 'Museum', type: 'option', id: 'stop-1' }}
+        stopPhotos={[photo]}
+      />,
+    )
+    expect(screen.getByAltText('Photo 1 of 1 at Museum')).toBeInTheDocument()
+  })
+
+  it('shows "Uploading…" while this stop\'s upload is in flight', () => {
+    render(
+      <ItineraryEntryRow
+        {...base}
+        item={{ time: '08:00', text: 'Museum', type: 'option', id: 'stop-1' }}
+        uploadingPhoto
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Add photo to Museum' })).toHaveTextContent('Uploading…')
   })
 })
