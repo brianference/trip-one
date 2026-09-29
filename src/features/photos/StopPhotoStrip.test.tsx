@@ -91,4 +91,42 @@ describe('StopPhotoStrip', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
     expect(screen.getByRole('button', { name: '+ Photo' })).toHaveFocus()
   })
+
+  describe('captioned variant (the stop popup)', () => {
+    it('shows a visible caption under each tile, not just alt text', () => {
+      render(<StopPhotoStrip tripId="trip-1" stopName="Louvre Museum" photos={photos} onRemove={vi.fn()} variant="captioned" />)
+      expect(screen.getByText('Photo 1 of 2 at Louvre Museum')).toBeInTheDocument()
+      expect(screen.getByText('Photo 2 of 2 at Louvre Museum')).toBeInTheDocument()
+      // Same text also still backs the image's alt.
+      expect(screen.getByAltText('Photo 1 of 2 at Louvre Museum')).toBeInTheDocument()
+    })
+
+    it('has no stacked "Remove" text button — the corner × carries the same accessible name', () => {
+      render(<StopPhotoStrip tripId="trip-1" stopName="Louvre Museum" photos={photos} onRemove={vi.fn()} variant="captioned" />)
+      expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Remove photo 1 of 2 at Louvre Museum' })).toBeInTheDocument()
+    })
+
+    it('the corner × opens the same inline confirm prompt', () => {
+      const onRemove = vi.fn()
+      render(<StopPhotoStrip tripId="trip-1" stopName="Louvre Museum" photos={photos} onRemove={onRemove} variant="captioned" />)
+      fireEvent.click(screen.getByRole('button', { name: 'Remove photo 1 of 2 at Louvre Museum' }))
+      expect(screen.getByText('Remove this photo?')).toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+      expect(onRemove).toHaveBeenCalledWith('p1')
+    })
+
+    it('keeps the same focus management: Cancel on open, back to the same tile on cancel, next tile after delete', () => {
+      render(<StopPhotoStrip tripId="trip-1" stopName="Louvre Museum" photos={photos} onRemove={vi.fn()} variant="captioned" />)
+      fireEvent.click(screen.getByRole('button', { name: 'Remove photo 1 of 2 at Louvre Museum' }))
+      expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+      expect(screen.getByRole('button', { name: 'Remove photo 1 of 2 at Louvre Museum' })).toHaveFocus()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Remove photo 1 of 2 at Louvre Museum' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+      expect(screen.getByRole('button', { name: 'Remove photo 2 of 2 at Louvre Museum' })).toHaveFocus()
+    })
+  })
 })

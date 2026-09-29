@@ -123,6 +123,20 @@ export function PlaceDetailPanel({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+          {/* Category chip: derived from query.category, so — like the photo
+              block below — it doesn't depend on details loading. Design order
+              is title, then this chip, then the Add photos pill, then the
+              strip; it must render above the photo block, not inside the
+              showBody-gated badge row where the rest of the loaded badges
+              (rating/price/open-now) still live. */}
+          {category && (
+            <div className="flex flex-wrap items-center gap-2 pb-2">
+              <span className="rounded-full border border-[var(--hairline)] px-2.5 py-1 text-xs font-medium capitalize">
+                {category.replaceAll('_', ' ')}
+              </span>
+            </div>
+          )}
+
           {/* Photos-first: this block renders unconditionally on whether the place
               is on the plan, OUTSIDE the showBody gate below, so a traveler can add
               or browse a stop's photos while Google's rating/hours/reviews are still
@@ -146,6 +160,7 @@ export function PlaceDetailPanel({
                   photos={photos.byStop.get(planStopId) ?? []}
                   onRemove={photos.remove}
                   addButtonRef={addPhotoRef}
+                  variant="captioned"
                 />
               ) : (
                 <div className="chronicle-photo-empty">
@@ -186,11 +201,6 @@ export function PlaceDetailPanel({
 
             <div className="flex flex-wrap items-center gap-2">
               {detail && <Stars rating={detail.rating} count={detail.reviewCount} />}
-              {category && (
-                <span className="rounded-full border border-[var(--hairline)] px-2.5 py-1 text-xs font-medium capitalize">
-                  {category.replaceAll('_', ' ')}
-                </span>
-              )}
               {detail?.priceLevel != null && PRICE[detail.priceLevel] && (
                 <span className="rounded-full border border-[var(--hairline)] px-2.5 py-1 text-xs font-medium">{PRICE[detail.priceLevel]}</span>
               )}
@@ -285,7 +295,7 @@ export function PlaceDetailPanel({
                 {onRemoveFromPlan && (
                   <button
                     type="button"
-                    className="min-h-[44px] rounded-[var(--radius-pill)] px-3 text-sm font-medium text-danger-500 hover:bg-danger-50"
+                    className="min-h-[44px] rounded-[var(--radius-pill)] px-3 text-sm font-medium text-[var(--chronicle-danger-text)] hover:bg-danger-50"
                     onClick={onRemoveFromPlan}
                   >
                     Remove from trip

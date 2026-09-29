@@ -176,6 +176,40 @@ describe('PlaceDetailPanel', () => {
     expect(screen.getByAltText('Photo 1 of 1 at Sushi Ota')).toBeInTheDocument()
   })
 
+  it('places the category chip above the photo block, not inside the loaded badge row', () => {
+    render(
+      <PlaceDetailPanel
+        query={{ label: 'Sushi Ota', placeId: 'abc', category: 'restaurant' }}
+        detail={null}
+        loading
+        error={null}
+        onClose={vi.fn()}
+        tripId="trip-1"
+        photos={stubPhotos()}
+        planStopId="stop-1"
+      />,
+    )
+    // The chip is derived from query.category, so — like the photo block — it
+    // must render even while details are still loading, and it must come
+    // before the Add-photo button in DOM order.
+    const chip = screen.getByText('restaurant')
+    const addButton = screen.getByRole('button', { name: 'Add photo to Sushi Ota' })
+    expect(chip.compareDocumentPosition(addButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('does not duplicate the category chip once details have loaded', () => {
+    render(
+      <PlaceDetailPanel
+        query={{ label: 'Sushi Ota', placeId: 'abc' }}
+        detail={{ ...detail, category: 'restaurant' }}
+        loading={false}
+        error={null}
+        onClose={vi.fn()}
+      />,
+    )
+    expect(screen.getAllByText('restaurant')).toHaveLength(1)
+  })
+
   it('renders the photo block while details are still loading', () => {
     render(
       <PlaceDetailPanel

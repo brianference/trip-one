@@ -1338,6 +1338,93 @@ body {
   display: block;
 }
 
+/* Captioned variant: the stop popup's horizontal photo strip (design
+   docs/design/photo-controls-option-a.html section 1) — 108px tiles in a
+   horizontal scroller, a visible caption under each, and a small corner ×
+   instead of the stacked text "Remove" button. */
+.chronicle-photo-strip--captioned {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.chronicle-photo-thumb--captioned {
+  flex: 0 0 108px;
+  width: 108px;
+}
+
+/* Higher specificity than either single-class rule above, so the confirm
+   prompt still gets its wider auto/148px sizing instead of being squeezed
+   into the 108px tile width while it's open. */
+.chronicle-photo-thumb--captioned.chronicle-photo-thumb--confirming {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 148px;
+}
+
+.chronicle-photo-thumb--captioned .chronicle-photo-thumb__img {
+  width: 108px;
+  height: 108px;
+}
+
+.chronicle-photo-thumb__media {
+  position: relative;
+  width: 108px;
+  height: 108px;
+}
+
+.chronicle-photo-thumb__caption {
+  margin: 0;
+  font-family: var(--chronicle-font-mono);
+  font-size: 11px;
+  line-height: 1.35;
+  /* --chronicle-text-tertiary measured below AA on this surface (see the
+     confirm-prompt note further down); secondary clears it in both themes. */
+  color: var(--chronicle-text-secondary);
+}
+
+/* 44×44 real hit area (WCAG target size), drawn as a smaller ~28px circle
+   centered inside it so it reads as a small corner control, not a full-size
+   button, over the top-right of the photo. */
+.chronicle-photo-thumb__remove-corner {
+  /* Kept fully inside the 108x108 media box (not offset negative) — the
+     strip scrolls horizontally via overflow-x:auto, which also computes
+     overflow-y to auto (not visible) and would clip anything poking past
+     the tile's own edge. */
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.chronicle-photo-thumb__remove-corner-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--chronicle-bg-surface);
+  border: 1px solid var(--chronicle-border-hairline);
+  color: var(--chronicle-text-secondary);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.chronicle-photo-thumb__remove-corner:hover .chronicle-photo-thumb__remove-corner-icon,
+.chronicle-photo-thumb__remove-corner:focus-visible .chronicle-photo-thumb__remove-corner-icon {
+  color: var(--chronicle-danger-text);
+  border-color: var(--chronicle-danger);
+}
+
 .chronicle-photo-thumb__remove {
   min-height: 44px;
   min-width: 44px;
