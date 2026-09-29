@@ -1641,6 +1641,16 @@ body:has(.chronicle-page) label {
   font-size: 12px;
 }
 
+/* Money page's reverse converter is a full-page control, not the slim
+   header chip — it needs a real >=44px tap target. The shared
+   .chronicle-currency-input stays 30px on purpose for the compact header
+   chip, so this is a separate modifier added alongside it, never a change
+   to the shared rule. */
+.chronicle-currency-input--lg {
+  min-height: 44px;
+  font-size: 14px;
+}
+
 /* Tighten the six-item nav so every label fits on small phones. */
 @media (max-width: 520px) {
   .chronicle-section-nav {

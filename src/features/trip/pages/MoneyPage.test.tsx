@@ -10,11 +10,15 @@ vi.mock('react-router-dom', async (importOriginal) => {
   return { ...actual, useOutletContext: () => outletContext }
 })
 
-function mockTokyoContext() {
+function mockContext(location: { displayName: string } | null) {
   outletContext = {
-    trip: { id: 't1', locationSlug: 'tokyo-japan', itinerary: [], designStyle: 'chronicle', tripLengthDays: null },
-    location: { slug: 'tokyo-japan', lat: 35.68, lng: 139.69, displayName: 'Tokyo, Japan', thingsToDo: [] },
+    trip: { id: 't1', locationSlug: 'placeholder', itinerary: [], designStyle: 'chronicle', tripLengthDays: null },
+    location: location && { slug: 'x', lat: 0, lng: 0, displayName: location.displayName, thingsToDo: [] },
   }
+}
+
+function mockTokyoContext() {
+  mockContext({ displayName: 'Tokyo, Japan' })
 }
 
 describe('MoneyPage', () => {
@@ -56,10 +60,41 @@ describe('MoneyPage', () => {
     // Provider's update date, shown in a stable (UTC) form.
     expect(screen.getByText(/september 29, 2026/i)).toBeInTheDocument()
 
+    // The label spells out the ISO code (not just the symbol, which is
+    // ambiguous across dollar-type currencies) — Fix 1(c).
+    const reverseInput = screen.getByLabelText(/JPY/i)
+
+    // The input is a real full-page control, not the slim header chip — it
+    // needs a real >=44px tap target, via a Money-page-only modifier class
+    // that leaves the shared .chronicle-currency-input alone — Fix 1(a).
+    expect(reverseInput).toHaveClass('chronicle-currency-input')
+    expect(reverseInput).toHaveClass('chronicle-currency-input--lg')
+
+    // The result is a live region so a screen reader announces the update
+    // without the user having to move focus — Fix 1(b).
+    const result = screen.getByRole('status')
+    expect(result).toHaveAttribute('aria-live', 'polite')
+    expect(result).toBeEmptyDOMElement()
+
     // Reverse converter: ¥2000 at rate 150.4 -> $13.30.
-    const reverseInput = screen.getByLabelText(/¥ to \$/i)
     fireEvent.change(reverseInput, { target: { value: '2000' } })
-    expect(screen.getByText(/\$13\.30/)).toBeInTheDocument()
+    expect(result).toHaveTextContent('$13.30')
+  })
+
+  it('strips thousands-separator commas before converting ("1,000" is a valid amount, not invalid input) — Fix 1(d)', async () => {
+    mockTokyoContext()
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rate: 150.4, updatedAt: null }) }))
+
+    render(
+      <MemoryRouter>
+        <MoneyPage />
+      </MemoryRouter>,
+    )
+
+    const reverseInput = await waitFor(() => screen.getByLabelText(/JPY/i))
+    fireEvent.change(reverseInput, { target: { value: '1,000' } })
+    // 1000 / 150.4 ≈ 6.65.
+    expect(screen.getByRole('status')).toHaveTextContent('$6.65')
   })
 
   it('shows an unavailable message and no table when the rate is null', async () => {
@@ -74,5 +109,35 @@ describe('MoneyPage', () => {
 
     await waitFor(() => expect(screen.getByText(/currency rate unavailable right now/i)).toBeInTheDocument())
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
+  })
+
+  it('shows a "no conversion needed" message and no table or credit for a domestic US destination (Miami) — Fix 2', () => {
+    mockContext({ displayName: 'Miami, Florida' })
+    vi.stubGlobal('fetch', vi.fn())
+
+    render(
+      <MemoryRouter>
+        <MoneyPage />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText(/no currency conversion needed for this trip/i)).toBeInTheDocument()
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /exchange rate api/i })).not.toBeInTheDocument()
+  })
+
+  it('shows a loading state (never a fake USD-to-USD table) while the location has not resolved yet', () => {
+    mockContext(null)
+    vi.stubGlobal('fetch', vi.fn())
+
+    render(
+      <MemoryRouter>
+        <MoneyPage />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText(/^loading…$/i)).toBeInTheDocument()
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /exchange rate api/i })).not.toBeInTheDocument()
   })
 })
