@@ -157,6 +157,15 @@
     --accent-text: var(--color-pine-600);
     --color-primary-soft: #dbeae2;
     --color-on-primary-soft: var(--color-ink-800);
+
+    /* Danger TEXT/background for a warning that sits ON a surface (the
+       per-day "spread across town" note, the Meal badge) — same reasoning as
+       --accent-secondary above: a single danger tone can't clear AA on both a
+       white and a near-black surface. danger-600 on white passes easily; in
+       dark mode danger-500 needs lightening toward white first. Verified via
+       axe-core (Task 13b fix round 1), not hand-computed. */
+    --accent-danger-text: var(--color-danger-600);
+    --accent-danger-soft: var(--color-danger-50);
   }
 
   /* Dark applies ONLY when the visitor asks for it via the toggle
@@ -174,6 +183,8 @@
       --accent-text: var(--color-pine-300);
       --color-primary-soft: #24382f;
       --color-on-primary-soft: var(--color-sand-100);
+      --accent-danger-text: color-mix(in oklab, var(--color-danger-500) 62%, white);
+      --accent-danger-soft: color-mix(in oklab, var(--color-danger-500) 22%, var(--color-ink-800));
     }
   }
 
@@ -188,6 +199,8 @@
     --accent-text: var(--color-pine-300);
     --color-primary-soft: #24382f;
     --color-on-primary-soft: var(--color-sand-100);
+    --accent-danger-text: color-mix(in oklab, var(--color-danger-500) 62%, white);
+    --accent-danger-soft: color-mix(in oklab, var(--color-danger-500) 22%, var(--color-ink-800));
   }
 
   html {

@@ -150,7 +150,13 @@ export function TripPlanPage() {
           </div>
         )}
         {effort && (
-          <p className={`mt-1.5 text-sm ${effort.crossTown ? 'text-danger-500' : 'opacity-70'}`}>
+          // Was `opacity-70` / `text-danger-500` (Tailwind utilities on the
+          // inherited page color, never a --chronicle-* token) — opacity-70
+          // measured fine on axe, but the crossTown branch's raw
+          // text-danger-500 measured 3.16:1 on the dark surface via
+          // axe-core, below AA (Task 13b fix round 1). Both branches now use
+          // theme-aware tokens instead.
+          <p className={`mt-1.5 text-sm ${effort.crossTown ? 'text-[var(--chronicle-danger-text)]' : 'text-[var(--chronicle-text-secondary)]'}`}>
             {formatEffort(effort)}
             {effort.crossTown && ' · spread across town — consider splitting'}
           </p>

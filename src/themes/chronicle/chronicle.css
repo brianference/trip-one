@@ -66,6 +66,12 @@
 
   /* ---- Semantic ---- */
   --chronicle-danger: var(--color-danger-500);
+  /* Theme-aware danger TEXT/soft-background pair for a warning that sits ON a
+     surface (the per-day "spread across town" note, the Meal badge) — see the
+     --accent-danger-text/--accent-danger-soft definitions in theme.css for
+     why a single danger tone can't be used directly as text here. */
+  --chronicle-danger-text: var(--accent-danger-text);
+  --chronicle-danger-soft: var(--accent-danger-soft);
 
   /* ---- Typography ----
      The serif display/body faces are replaced by the shared sans stack; this
@@ -1476,8 +1482,11 @@ body {
 }
 
 .chronicle-ttd-showunrated {
+  /* Was --chronicle-text-tertiary (4.1:1 on white via axe-core, below AA) —
+     the combined selector above already sets the correct
+     --chronicle-text-secondary; this override just needs to stop
+     re-lowering it back to tertiary. */
   margin-left: auto;
-  color: var(--chronicle-text-tertiary);
 }
 
 .chronicle-ttd-onplan {
@@ -1944,8 +1953,12 @@ body:has(.chronicle-page) label {
 }
 
 .chronicle-badge--dinner {
-  background: rgba(176, 73, 42, 0.16);
-  color: #b0492a;
+  /* Was a hard-coded hex pair (#b0492a on rgba(176,73,42,.16)) — never a
+     token, and it measured 4.35:1 in light / 2.6:1 in dark via axe-core,
+     below the 4.5:1 AA minimum in both. The theme-aware danger text/soft
+     pair (Task 13b fix round 1) replaces it. */
+  background: var(--chronicle-danger-soft);
+  color: var(--chronicle-danger-text);
 }
 
 .chronicle-directions-link {
