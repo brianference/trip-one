@@ -3,6 +3,62 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v20.0.0 — Add photos where you'll see it, and invite the people who were there
+
+### Changed — photo controls follow the approved design
+
+The stop popup now puts photos at the top, under the place name and category:
+a full-width orange "Add photos" button, then a scrolling strip of captioned
+photos ("Photo 1 of 3 at …"), each with a small remove button. The photos show
+straight away, even while place details are still loading. Before, they sat at
+the very bottom and appeared only once details had loaded.
+
+The "Your trip" header now has one joined button, [Print / PDF | Add photos].
+Add photos asks which stop the photo belongs to, then opens the file picker.
+
+Orange (the photo accent) now marks photo actions only. White text sits on the
+darkest orange so it passes contrast in both themes.
+
+### Added — invite people to add photos
+
+On a trip's recap page, the owner can invite people by email. Each invite shows
+as Invited or Joined. A pending invite can be removed. A joined person can't be
+removed, because they already have the trip link.
+
+The shared recap shows "Were you on this trip? Add your photos". Tapping it
+opens three steps: enter your email, type the 6-digit code we email you, and
+you're on the trip. The trip link is only ever given to someone who is signed
+in, has verified their email, and was invited at that address.
+
+### Added — sign in with an emailed code
+
+You can sign in, or create an account, with a 6-digit code sent to your email.
+Codes expire after 10 minutes and allow 5 tries. An address can receive at most
+5 codes an hour and 10 a day. Only a hash of each code is stored.
+
+### Security
+
+- Code sign-in on an account that was registered but never verified now resets
+  that account's password and signs out its old sessions. Someone who
+  pre-registered your address can't keep access once you prove you own it.
+- The email confirmation link has the same protection when it's opened without
+  that account's own session. Before this release, someone who pre-registered
+  your address kept their password after you confirmed it.
+- Invite emails are capped to stop the feature being used to send spam: 20 new
+  sends per trip and 3 per recipient per day, no re-send within 24 hours, and
+  300 a day across the app. The caps are enforced in a single database
+  statement, so bursts of parallel requests can't slip past them. IPv6 rate
+  limits now group addresses by /64.
+
+### Known issues (fix in progress)
+
+- An invited guest who signs in with a password but hasn't verified their email
+  is wrongly told they aren't invited. Signing in with the emailed code works.
+- The remove and confirm buttons in the invite list are smaller than 44px, and
+  keyboard focus isn't kept after removing an invite.
+- The automated production test does not send invite or code emails. They would
+  go to real inboxes, so those paths are covered by unit tests.
+
 ## v19.0.0 — Trip recaps with your photos, and a money page that works everywhere
 
 ### Added — photos on every stop
