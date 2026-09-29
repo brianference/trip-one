@@ -21,27 +21,29 @@ interface Props {
   /** Stops with coordinates, in itinerary order (`Recap['route']`). */
   route: RecapStop[]
   /**
-   * The stop currently highlighted. Read on mount and whenever it changes
-   * from outside (e.g. a slideshow elsewhere on the page moving to a new
-   * photo's stop) to pan/snap the map there. This component also calls
-   * `onStopSelect` — from its own playback reaching a new stop, or a marker
-   * click — so a parent can mirror the change back into this prop and keep
-   * the two in sync; it does not require that round trip to keep animating
-   * on its own.
+   * The stop currently highlighted, driven from outside this component (e.g.
+   * a slideshow elsewhere on the page moving to a new photo's stop). A stop
+   * id that isn't on the plotted route (no coordinates, or unknown) is
+   * ignored entirely. Otherwise:
+   *  - if it's exactly the stop after the current one, the map animates
+   *    that single leg (respecting reduced motion) and does NOT change
+   *    whether playback is "on" — this is also what lets an external mirror
+   *    of this component's own `onStopSelect` events track it without
+   *    starting a second, overlapping animation of the same leg;
+   *  - for any other target (backward, or skipping more than one stop), the
+   *    map snaps straight there, stops any in-flight animation, and reports
+   *    playback as stopped via `onPlayingChange`.
    */
   activeStopId: string | null
-  /** Called with a stop's id whenever the current stop changes. */
+  /** Called with a stop's id whenever the current stop changes — from playback, a marker click/keypress, or an external `activeStopId` hop. */
   onStopSelect: (stopId: string) => void
-  /** Whether the walkthrough starts playing immediately on mount. Defaults to false. */
+  /** Whether the walkthrough starts playing immediately on mount. Defaults to false. Mount-only: the Play/Pause button owns playback state after that. */
   playing?: boolean
-  /** Initial leg duration in milliseconds. Defaults to `legDurationMs('normal')`. Play/speed buttons take over from here. */
+  /** Initial leg duration in milliseconds. Defaults to `legDurationMs('normal')`. The speed buttons take over from here. */
   speedMs?: number
+  /** Called whenever playback starts or stops, whatever the cause — the Play/Pause button, reaching the route's end, a marker selection, or an external `activeStopId` snap — so a parent (e.g. Task 12's slideshow) can mirror the map's playback state without polling it. */
+  onPlayingChange?: (playing: boolean) => void
 }
-
-/** Solid "traveled" line color — distinct from the dashed full-route line so progress reads at a glance. */
-const TRAVELED_LINE_COLOR = '#1f7a5c'
-/** Dashed full-route line color, matching MapView's existing route line. */
-const FULL_ROUTE_LINE_COLOR = '#5ba3ff'
 
 /** Zoom level used when panning to a stop that has no map yet (first render before any user zoom interaction). */
 const DEFAULT_ZOOM = 13
@@ -53,21 +55,21 @@ const DEFAULT_ZOOM = 13
  * this is the actual element Leaflet inserts into the map pane, so it is
  * what a screen reader traversing the live map encounters, unlike a
  * same-named list rendered elsewhere on the page that has no spatial or
- * interactive relationship to the pin itself.
+ * interactive relationship to the pin itself. Its `trip-one-recap-marker`
+ * class carries the visual circle styling (chronicle.css); the outer
+ * `L.divIcon` wrapper Leaflet creates only needs its own class for
+ * identification, not for styling.
  *
  * @param order - the stop's 1-based order
  * @param name - the stop's display text
  */
 function buildStopIcon(order: number, name: string): L.DivIcon {
   const el = document.createElement('div')
+  el.className = 'trip-one-recap-marker'
   el.setAttribute('role', 'img')
   el.setAttribute('aria-label', `Stop ${order}: ${name}`)
-  el.style.cssText =
-    'display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;' +
-    `background:${TRAVELED_LINE_COLOR};color:#fff;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.4);` +
-    'font-family:ui-monospace,monospace;font-size:12px;font-weight:700;'
   el.textContent = String(order)
-  return L.divIcon({ className: 'trip-one-recap-marker', html: el, iconSize: [26, 26], iconAnchor: [13, 13] })
+  return L.divIcon({ className: 'trip-one-recap-marker-icon', html: el, iconSize: [26, 26], iconAnchor: [13, 13] })
 }
 
 /** Builds the base Leaflet map on `el`, reusing MapView's CARTO tile setup and the `zoomAnimation:false` crash fix. */
@@ -90,6 +92,18 @@ function plottedStops(route: RecapStop[]): PlottedStop[] {
   return route.filter((stop): stop is PlottedStop => stop.lat !== null && stop.lng !== null)
 }
 
+/**
+ * A stable signature over the plotted stops' identity, order and position.
+ * The map-rebuild effect keys on this string rather than the `route` array's
+ * own identity so a parent re-render that passes a content-equal but
+ * freshly-allocated array (a common React pattern) does not tear the map
+ * down and reset playback — only an actual change to which stops are
+ * plotted, their order, or their coordinates does.
+ */
+function routeSignatureOf(stops: PlottedStop[]): string {
+  return stops.map((stop) => `${stop.stopId}:${stop.lat}:${stop.lng}`).join('|')
+}
+
 /** Whether the user's OS/browser prefers reduced motion, re-checked on each call (not cached) since it can change mid-session. */
 function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
@@ -105,22 +119,23 @@ function prefersReducedMotion(): boolean {
  * Renders nothing map-wise (no crash) for a route with 0 or 1 plotted stops
  * — there are no legs to animate, so only the marker (if any) is drawn.
  */
-export function RecapMap({ route, activeStopId, onStopSelect, playing = false, speedMs }: Props) {
+export function RecapMap({ route, activeStopId, onStopSelect, playing = false, speedMs, onPlayingChange }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const fullRoutePolylineRef = useRef<L.Polyline | null>(null)
   const traveledPolylineRef = useRef<L.Polyline | null>(null)
   const markersRef = useRef<Map<string, L.Marker>>(new Map())
   const rafIdRef = useRef<number | null>(null)
+  const timerIdRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** Whether the map-rebuild effect has already run once — distinguishes the initial mount (seed state as given) from a later real rebuild (reset playback, clamp position). */
+  const hasBuiltOnceRef = useRef(false)
 
   const stops = plottedStops(route)
   const stopsRef = useRef(stops)
   stopsRef.current = stops
+  const routeSignature = routeSignatureOf(stops)
 
-  // The last stop index the traveled line has fully reached. Independent of
-  // the `activeStopId` prop so playback can advance frame by frame without
-  // waiting on a parent to feed the prop back in; an externally-changed
-  // `activeStopId` snaps this to match (see the effect below).
+  // The last stop index the traveled line has fully reached.
   const initialIndex = Math.max(
     0,
     stops.findIndex((stop) => stop.stopId === activeStopId),
@@ -129,7 +144,10 @@ export function RecapMap({ route, activeStopId, onStopSelect, playing = false, s
   const currentIndexRef = useRef(currentIndex)
   currentIndexRef.current = currentIndex
 
-  const [isPlaying, setIsPlaying] = useState(playing)
+  // Seeded from `playing`, but only when there's actually a leg to animate —
+  // otherwise the Play/Pause button would render disabled and showing
+  // "Pause" for a route with nothing playing and no way to toggle it back.
+  const [isPlaying, setIsPlaying] = useState(playing && stops.length > 1)
   const isPlayingRef = useRef(isPlaying)
   isPlayingRef.current = isPlaying
 
@@ -139,40 +157,84 @@ export function RecapMap({ route, activeStopId, onStopSelect, playing = false, s
 
   const onStopSelectRef = useRef(onStopSelect)
   onStopSelectRef.current = onStopSelect
+  const onPlayingChangeRef = useRef(onPlayingChange)
+  onPlayingChangeRef.current = onPlayingChange
 
   /** Redraws the traveled polyline up through `throughIndex` (fully reached stops), with no in-progress leg. */
   function drawTraveledThrough(throughIndex: number) {
-    const points = stops.slice(0, throughIndex + 1).map((stop): L.LatLngTuple => [stop.lat, stop.lng])
+    const points = stopsRef.current.slice(0, throughIndex + 1).map((stop): L.LatLngTuple => [stop.lat, stop.lng])
     traveledPolylineRef.current?.setLatLngs(points)
   }
 
-  /** Cancels any in-flight animation frame. */
+  /** Cancels any in-flight animation frame or reduced-motion timer. */
   function stopAnimating() {
     if (rafIdRef.current !== null) {
       cancelAnimationFrame(rafIdRef.current)
       rafIdRef.current = null
     }
+    if (timerIdRef.current !== null) {
+      clearTimeout(timerIdRef.current)
+      timerIdRef.current = null
+    }
   }
 
-  /** Animates one leg (fromIndex -> fromIndex + 1), then advances and, if still playing, starts the next leg. */
-  function animateLeg(fromIndex: number) {
+  /** Sets `isPlaying` and reports the change via `onPlayingChange` — but only when it's an actual transition, so callers can call this unconditionally. */
+  function setPlaying(next: boolean) {
+    if (isPlayingRef.current === next) return
+    isPlayingRef.current = next
+    setIsPlaying(next)
+    onPlayingChangeRef.current?.(next)
+  }
+
+  /**
+   * Animates one leg (fromIndex -> fromIndex + 1). `chain` controls whether
+   * reaching the end automatically starts the next leg when playback is
+   * running: true for the continuous Play loop, false for a single
+   * externally-requested hop (an `activeStopId` change to exactly the next
+   * stop), which must animate only that one leg and never touch `isPlaying`.
+   */
+  function animateLeg(fromIndex: number, chain: boolean) {
     const currentStops = stopsRef.current
     if (fromIndex >= currentStops.length - 1) {
-      setIsPlaying(false)
+      if (chain) setPlaying(false)
       return
     }
     const a = currentStops[fromIndex]
     const b = currentStops[fromIndex + 1]
-    const legPoints = interpolateLeg(a, b, SUBSEGMENTS_PER_LEG)
     const beforeLeg = currentStops.slice(0, fromIndex + 1).map((stop): L.LatLngTuple => [stop.lat, stop.lng])
-    const reducedMotion = prefersReducedMotion()
     const duration = speedRef.current
-    let startTime: number | null = null
 
+    const completeLeg = () => {
+      const nextIndex = fromIndex + 1
+      setCurrentIndex(nextIndex)
+      currentIndexRef.current = nextIndex
+      mapRef.current?.setView([b.lat, b.lng], mapRef.current.getZoom(), { animate: false })
+      onStopSelectRef.current(b.stopId)
+      if (chain && isPlayingRef.current) {
+        animateLeg(nextIndex, true)
+      }
+    }
+
+    if (prefersReducedMotion()) {
+      // Draw the whole leg immediately — no growing sub-segments — then
+      // advance one stop per `duration` ms on a plain timer instead of an
+      // rAF-driven easing loop. That is the "no animation" a
+      // prefers-reduced-motion user asked for, while keeping the same
+      // per-stop pacing an accompanying slideshow (Task 12) can rely on.
+      traveledPolylineRef.current?.setLatLngs([...beforeLeg, [b.lat, b.lng]])
+      timerIdRef.current = setTimeout(() => {
+        timerIdRef.current = null
+        completeLeg()
+      }, duration)
+      return
+    }
+
+    const legPoints = interpolateLeg(a, b, SUBSEGMENTS_PER_LEG)
+    let startTime: number | null = null
     const frame = (now: number) => {
       if (startTime === null) startTime = now
-      const rawT = reducedMotion ? 1 : duration > 0 ? Math.min(1, (now - startTime) / duration) : 1
-      const eased = reducedMotion ? 1 : easeInOutCubic(rawT)
+      const rawT = duration > 0 ? Math.min(1, (now - startTime) / duration) : 1
+      const eased = easeInOutCubic(rawT)
       const revealCount = Math.max(1, Math.round(eased * SUBSEGMENTS_PER_LEG))
       const legTuples = legPoints.slice(0, revealCount + 1).map((point): L.LatLngTuple => [point.lat, point.lng])
       traveledPolylineRef.current?.setLatLngs([...beforeLeg, ...legTuples])
@@ -183,56 +245,93 @@ export function RecapMap({ route, activeStopId, onStopSelect, playing = false, s
       }
 
       rafIdRef.current = null
-      const nextIndex = fromIndex + 1
-      setCurrentIndex(nextIndex)
-      mapRef.current?.setView([b.lat, b.lng], mapRef.current.getZoom(), { animate: false })
-      onStopSelectRef.current(b.stopId)
-      if (isPlayingRef.current) {
-        animateLeg(nextIndex)
-      }
+      completeLeg()
     }
 
     rafIdRef.current = requestAnimationFrame(frame)
   }
 
-  // Build the map once. Markers, the dashed full route and the initial
-  // traveled line are (re)built whenever the plotted stops change.
+  /** Starts continuous playback from `fromIndex`. */
+  function startPlayback(fromIndex: number) {
+    setCurrentIndex(fromIndex)
+    currentIndexRef.current = fromIndex
+    setPlaying(true)
+    drawTraveledThrough(fromIndex)
+    animateLeg(fromIndex, true)
+  }
+
+  /**
+   * Selects a stop directly — a marker click or its Enter/Space keyboard
+   * equivalent: stops any animation, redraws the traveled line straight up
+   * to it (so a click backward or sideways doesn't leave a stale line drawn
+   * past the new position), pans, and reports the new stop plus (if
+   * playback was running) that it stopped.
+   */
+  function selectStop(index: number, target: PlottedStop) {
+    stopAnimating()
+    setPlaying(false)
+    setCurrentIndex(index)
+    currentIndexRef.current = index
+    drawTraveledThrough(index)
+    mapRef.current?.setView([target.lat, target.lng], mapRef.current.getZoom(), { animate: false })
+    onStopSelectRef.current(target.stopId)
+  }
+
+  // Build (or rebuild) the map, markers and lines whenever the plotted
+  // route's actual content changes (see routeSignatureOf) — not on every
+  // render, and not just because the parent passed a new array reference.
   useEffect(() => {
     if (!containerRef.current) return
+    stopAnimating()
     const map = createBaseMap(containerRef.current)
     mapRef.current = map
     markersRef.current = new Map()
 
     const currentStops = stopsRef.current
     for (const [index, s] of currentStops.entries()) {
-      const marker = L.marker([s.lat, s.lng], { icon: buildStopIcon(s.order, s.text) })
-        .addTo(map)
-        .on('click', () => {
-          stopAnimating()
-          setIsPlaying(false)
-          setCurrentIndex(index)
-          map.setView([s.lat, s.lng], map.getZoom(), { animate: false })
-          onStopSelectRef.current(s.stopId)
-        })
+      const marker = L.marker([s.lat, s.lng], { icon: buildStopIcon(s.order, s.text) }).addTo(map)
+      marker.on('click', () => selectStop(index, s))
+      // Leaflet's interactive layers (markers included) dispatch a real
+      // 'keypress' event from their focused icon element, so Enter/Space
+      // reach the marker the same way a mouse click does — this is what
+      // makes markers actually operable from the keyboard, not just
+      // focusable.
+      marker.on('keypress', (e: L.LeafletKeyboardEvent) => {
+        const key = e.originalEvent?.key
+        if (key === 'Enter' || key === ' ') selectStop(index, s)
+      })
       markersRef.current.set(s.stopId, marker)
     }
 
     if (currentStops.length > 1) {
       fullRoutePolylineRef.current = L.polyline(
         currentStops.map((s): L.LatLngTuple => [s.lat, s.lng]),
-        { color: FULL_ROUTE_LINE_COLOR, weight: 3, dashArray: '8, 10', opacity: 0.7 },
+        { className: 'trip-one-recap-route', weight: 3, dashArray: '8, 10', opacity: 0.85 },
       ).addTo(map)
-      traveledPolylineRef.current = L.polyline([], { color: TRAVELED_LINE_COLOR, weight: 4, opacity: 0.95 }).addTo(map)
+      traveledPolylineRef.current = L.polyline([], { className: 'trip-one-recap-traveled', weight: 4, opacity: 0.95 }).addTo(
+        map,
+      )
     } else {
       fullRoutePolylineRef.current = null
       traveledPolylineRef.current = null
     }
 
+    const isRealRebuild = hasBuiltOnceRef.current
+    hasBuiltOnceRef.current = true
+
     if (currentStops.length > 0) {
-      const startIndex = Math.min(currentIndexRef.current, currentStops.length - 1)
+      const startIndex = Math.min(Math.max(currentIndexRef.current, 0), currentStops.length - 1)
+      if (isRealRebuild) {
+        // The trip's stops actually changed under us (not the initial
+        // mount). Playback can't safely continue mid-air across a rebuilt
+        // route, so it's stopped and the position is clamped into range
+        // rather than assumed to still point at anything meaningful.
+        setCurrentIndex(startIndex)
+        currentIndexRef.current = startIndex
+        setPlaying(false)
+      }
       drawTraveledThrough(startIndex)
-      const startStop = currentStops[startIndex]
-      map.setView([startStop.lat, startStop.lng], DEFAULT_ZOOM, { animate: false })
+      map.setView([currentStops[startIndex].lat, currentStops[startIndex].lng], DEFAULT_ZOOM, { animate: false })
     }
 
     return () => {
@@ -242,42 +341,60 @@ export function RecapMap({ route, activeStopId, onStopSelect, playing = false, s
       fullRoutePolylineRef.current = null
       traveledPolylineRef.current = null
     }
-    // Deliberately keyed on `route` only: playback/index state is excluded
-    // so play/pause never tears the map down, and helper functions read the
-    // latest values via refs rather than needing to be listed here.
-  }, [route])
+  }, [routeSignature])
+
+  // Start playback on mount if requested. Deliberately mount-only: `playing`
+  // is documented as an initial value, not a live control — the Play/Pause
+  // button owns playback state from here on.
+  useEffect(() => {
+    if (playing && stopsRef.current.length > 1) {
+      startPlayback(currentIndexRef.current)
+    }
+    // Mount-only by design; see the comment above.
+  }, [])
 
   // React to an externally-changed activeStopId (e.g. a slideshow elsewhere
-  // on the page): snap the traveled line and pan to it, pausing playback.
+  // on the page). See the Props JSDoc for the full contract.
   useEffect(() => {
     if (activeStopId === null) return
-    const targetIndex = stops.findIndex((stop) => stop.stopId === activeStopId)
-    if (targetIndex === -1 || targetIndex === currentIndexRef.current) return
+    const currentStops = stopsRef.current
+    const targetIndex = currentStops.findIndex((stop) => stop.stopId === activeStopId)
+    if (targetIndex === -1) return // not on the plotted route: ignored, by design
+    if (targetIndex === currentIndexRef.current) return // already there
+
+    if (targetIndex === currentIndexRef.current + 1) {
+      const isAnimating = rafIdRef.current !== null || timerIdRef.current !== null
+      // Already animating toward exactly this leg (e.g. this component's own
+      // playback, whose progress an external mirror is echoing back) — avoid
+      // starting a second, overlapping animation of the same leg.
+      if (!isAnimating) animateLeg(currentIndexRef.current, false)
+      return
+    }
+
+    // Any other target (backward, or skipping more than one stop): snap
+    // straight there and stop whatever was animating.
     stopAnimating()
-    setIsPlaying(false)
     setCurrentIndex(targetIndex)
-    const target = stops[targetIndex]
+    currentIndexRef.current = targetIndex
     drawTraveledThrough(targetIndex)
+    const target = currentStops[targetIndex]
     mapRef.current?.setView([target.lat, target.lng], mapRef.current.getZoom(), { animate: false })
-    // Deliberately keyed on `activeStopId` only: `stops` is derived fresh
-    // from `route` every render, and a `route` change is handled entirely
-    // by the map-rebuild effect above.
+    setPlaying(false)
+    // Deliberately keyed on `activeStopId` only: `stopsRef`/`currentIndexRef`
+    // are always read fresh, and a `route` content change is handled
+    // entirely by the map-rebuild effect above.
   }, [activeStopId])
 
   /** Toggles playback. Starting from the last stop restarts from the first. */
   function togglePlaying() {
     if (isPlaying) {
       stopAnimating()
-      setIsPlaying(false)
+      setPlaying(false)
       return
     }
     if (stops.length < 2) return
     const startIndex = currentIndexRef.current >= stops.length - 1 ? 0 : currentIndexRef.current
-    setCurrentIndex(startIndex)
-    setIsPlaying(true)
-    isPlayingRef.current = true
-    drawTraveledThrough(startIndex)
-    animateLeg(startIndex)
+    startPlayback(startIndex)
   }
 
   /** Changes the leg duration for subsequent legs; the leg in progress keeps its original duration. */
@@ -287,7 +404,7 @@ export function RecapMap({ route, activeStopId, onStopSelect, playing = false, s
 
   return (
     <div className="chronicle-recap-map">
-      <div ref={containerRef} aria-label="Trip walkthrough map" style={{ height: '360px', width: '100%' }} />
+      <div ref={containerRef} role="region" aria-label="Trip walkthrough map" className="chronicle-recap-map-canvas" />
       <div className="chronicle-recap-map-controls">
         <button
           type="button"

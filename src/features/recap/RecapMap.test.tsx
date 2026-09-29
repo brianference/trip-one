@@ -124,13 +124,12 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.useRealTimers()
 })
 
 describe('RecapMap', () => {
   it('renders without throwing for an empty route', () => {
-    expect(() =>
-      render(<RecapMap route={[]} activeStopId={null} onStopSelect={vi.fn()} />),
-    ).not.toThrow()
+    expect(() => render(<RecapMap route={[]} activeStopId={null} onStopSelect={vi.fn()} />)).not.toThrow()
     expect(vi.mocked(L).marker).not.toHaveBeenCalled()
     expect(vi.mocked(L).polyline).not.toHaveBeenCalled()
   })
@@ -142,6 +141,11 @@ describe('RecapMap', () => {
     expect(vi.mocked(L).marker).toHaveBeenCalledTimes(1)
     // A single stop has no leg, so no traveled/full-route polyline is drawn.
     expect(vi.mocked(L).polyline).not.toHaveBeenCalled()
+  })
+
+  it('pins zoomAnimation:false on the underlying Leaflet map (guards a real production crash)', () => {
+    render(<RecapMap route={threeStops} activeStopId={null} onStopSelect={vi.fn()} />)
+    expect(vi.mocked(L).map).toHaveBeenCalledWith(expect.anything(), { zoomAnimation: false })
   })
 
   it('builds one numbered marker per stop with an accessible "Stop N: {name}" name', () => {
@@ -202,6 +206,60 @@ describe('RecapMap', () => {
     expect(onStopSelect).toHaveBeenCalledWith('b')
   })
 
+  it('clicking a marker redraws the traveled line up through that stop (no stale line left behind)', () => {
+    render(<RecapMap route={threeStops} activeStopId={null} onStopSelect={vi.fn()} />)
+    const markerMock = vi.mocked(L).marker
+    const thirdMarkerInstance = markerMock.mock.results[2].value as { on: ReturnType<typeof vi.fn> }
+    const clickHandler = thirdMarkerInstance.on.mock.calls.find((call) => call[0] === 'click')?.[1]
+    act(() => {
+      clickHandler()
+    })
+    const polylineMock = vi.mocked(L).polyline
+    const traveledInstance = polylineMock.mock.results[1].value as { setLatLngs: ReturnType<typeof vi.fn> }
+    expect(traveledInstance.setLatLngs).toHaveBeenLastCalledWith([
+      [35.66, 139.7],
+      [35.7, 139.77],
+      [35.72, 139.8],
+    ])
+  })
+
+  it('pressing Enter on a marker selects it, the same as a click', () => {
+    const onStopSelect = vi.fn()
+    render(<RecapMap route={threeStops} activeStopId={null} onStopSelect={onStopSelect} />)
+    const markerMock = vi.mocked(L).marker
+    const secondMarkerInstance = markerMock.mock.results[1].value as { on: ReturnType<typeof vi.fn> }
+    const keyHandler = secondMarkerInstance.on.mock.calls.find((call) => call[0] === 'keypress')?.[1]
+    expect(keyHandler).toBeTypeOf('function')
+    act(() => {
+      keyHandler({ originalEvent: { key: 'Enter' } })
+    })
+    expect(onStopSelect).toHaveBeenCalledWith('b')
+  })
+
+  it('pressing Space on a marker selects it, the same as a click', () => {
+    const onStopSelect = vi.fn()
+    render(<RecapMap route={threeStops} activeStopId={null} onStopSelect={onStopSelect} />)
+    const markerMock = vi.mocked(L).marker
+    const thirdMarkerInstance = markerMock.mock.results[2].value as { on: ReturnType<typeof vi.fn> }
+    const keyHandler = thirdMarkerInstance.on.mock.calls.find((call) => call[0] === 'keypress')?.[1]
+    act(() => {
+      keyHandler({ originalEvent: { key: ' ' } })
+    })
+    expect(onStopSelect).toHaveBeenCalledWith('c')
+  })
+
+  it('ignores an unrelated keypress on a marker', () => {
+    const onStopSelect = vi.fn()
+    render(<RecapMap route={threeStops} activeStopId={null} onStopSelect={onStopSelect} />)
+    const markerMock = vi.mocked(L).marker
+    const secondMarkerInstance = markerMock.mock.results[1].value as { on: ReturnType<typeof vi.fn> }
+    const keyHandler = secondMarkerInstance.on.mock.calls.find((call) => call[0] === 'keypress')?.[1]
+    act(() => {
+      keyHandler({ originalEvent: { key: 'a' } })
+    })
+    expect(onStopSelect).not.toHaveBeenCalled()
+  })
+
   it('renders real Play/Pause and speed buttons', () => {
     render(<RecapMap route={threeStops} activeStopId={null} onStopSelect={vi.fn()} />)
     expect(screen.getByRole('button', { name: /play/i })).toBeInstanceOf(HTMLButtonElement)
@@ -210,7 +268,7 @@ describe('RecapMap', () => {
     expect(screen.getByRole('button', { name: /fast/i })).toBeInstanceOf(HTMLButtonElement)
   })
 
-  it('pans to the active stop with setView({ animate: false }) when activeStopId is set externally', () => {
+  it('pans to the active stop on initial render with setView({ animate: false })', () => {
     render(<RecapMap route={threeStops} activeStopId="b" onStopSelect={vi.fn()} />)
     const mapInstance = vi.mocked(L).map.mock.results[0].value as { setView: ReturnType<typeof vi.fn> }
     expect(mapInstance.setView).toHaveBeenCalledWith([35.7, 139.77], expect.any(Number), { animate: false })
@@ -255,21 +313,211 @@ describe('RecapMap', () => {
     expect(raf.cafSpy).toHaveBeenCalled()
   })
 
-  it('draws the full traveled line at once and steps stop to stop with no animation under prefers-reduced-motion', () => {
+  it('under prefers-reduced-motion, draws each leg fully at once and advances one stop per speed interval on a timer, not all at once', () => {
     stubMatchMedia(true)
-    const raf = stubRaf()
+    vi.useFakeTimers()
     const onStopSelect = vi.fn()
     render(<RecapMap route={threeStops} activeStopId={null} onStopSelect={onStopSelect} />)
 
     fireEvent.click(screen.getByRole('button', { name: /play/i }))
-    // A single queued frame completes the whole leg immediately (no easing steps).
-    raf.flush(0)
-    expect(onStopSelect).toHaveBeenCalledWith('b')
 
     const polylineMock = vi.mocked(L).polyline
     const traveledInstance = polylineMock.mock.results[1].value as { setLatLngs: ReturnType<typeof vi.fn> }
-    const lastCall = traveledInstance.setLatLngs.mock.calls.at(-1)?.[0] as [number, number][]
-    // Full leg drawn straight to the endpoint, not a partial sub-segment.
-    expect(lastCall.at(-1)).toEqual([35.7, 139.77])
+    // The first leg is drawn straight to its endpoint immediately — no growing sub-segments.
+    const firstDraw = traveledInstance.setLatLngs.mock.calls.at(-1)?.[0] as [number, number][]
+    expect(firstDraw.at(-1)).toEqual([35.7, 139.77])
+    expect(onStopSelect).not.toHaveBeenCalled()
+
+    // Advancing less than the interval must not yet advance to the next stop.
+    act(() => {
+      vi.advanceTimersByTime(2499)
+    })
+    expect(onStopSelect).not.toHaveBeenCalled()
+
+    // Reaching the (mocked, normal-speed 2500ms) interval advances exactly one stop, not all of them at once.
+    act(() => {
+      vi.advanceTimersByTime(1)
+    })
+    expect(onStopSelect).toHaveBeenCalledTimes(1)
+    expect(onStopSelect).toHaveBeenLastCalledWith('b')
+
+    // The second leg is likewise drawn immediately, then waits its own interval.
+    const secondDraw = traveledInstance.setLatLngs.mock.calls.at(-1)?.[0] as [number, number][]
+    expect(secondDraw.at(-1)).toEqual([35.72, 139.8])
+    expect(onStopSelect).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      vi.advanceTimersByTime(2500)
+    })
+    expect(onStopSelect).toHaveBeenCalledTimes(2)
+    expect(onStopSelect).toHaveBeenLastCalledWith('c')
+  })
+
+  it('starts playback automatically on mount when playing is true and there is more than one stop', () => {
+    const raf = stubRaf()
+    render(<RecapMap route={threeStops} activeStopId={null} onStopSelect={vi.fn()} playing />)
+    expect(raf.rafSpy).toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: /pause/i })).toBeInstanceOf(HTMLButtonElement)
+  })
+
+  it('does not autostart when playing is true but there is only one stop (no legs to animate)', () => {
+    const raf = stubRaf()
+    render(<RecapMap route={[threeStops[0]]} activeStopId={null} onStopSelect={vi.fn()} playing />)
+    expect(raf.rafSpy).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: /play/i })).toBeInstanceOf(HTMLButtonElement)
+  })
+
+  it('an external activeStopId hop to exactly the next stop animates that single leg without touching isPlaying', () => {
+    const raf = stubRaf()
+    const onStopSelect = vi.fn()
+    const onPlayingChange = vi.fn()
+    const { rerender } = render(
+      <RecapMap route={threeStops} activeStopId={null} onStopSelect={onStopSelect} onPlayingChange={onPlayingChange} />,
+    )
+
+    rerender(
+      <RecapMap route={threeStops} activeStopId="b" onStopSelect={onStopSelect} onPlayingChange={onPlayingChange} />,
+    )
+
+    // Single leg animates via the same rAF mechanism Play uses, but isPlaying never flips.
+    expect(raf.rafSpy).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('button', { name: /play/i })).toBeInstanceOf(HTMLButtonElement)
+    expect(onPlayingChange).not.toHaveBeenCalled()
+
+    raf.flush(0)
+    raf.flush(2500)
+    expect(onStopSelect).toHaveBeenCalledWith('b')
+    // It must not chain into animating further legs beyond the single requested hop.
+    expect(raf.pendingCount()).toBe(0)
+  })
+
+  it('an external activeStopId matching the leg already animating during playback does not start a duplicate animation', () => {
+    const raf = stubRaf()
+    const onPlayingChange = vi.fn()
+    const { rerender } = render(
+      <RecapMap route={threeStops} activeStopId={null} onStopSelect={vi.fn()} onPlayingChange={onPlayingChange} />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /play/i }))
+    expect(raf.rafSpy).toHaveBeenCalledTimes(1)
+    expect(onPlayingChange).toHaveBeenCalledWith(true)
+
+    rerender(
+      <RecapMap route={threeStops} activeStopId="b" onStopSelect={vi.fn()} onPlayingChange={onPlayingChange} />,
+    )
+
+    // Still just the one animation from Play — the external hop matched the
+    // leg already in flight and did not start a second one.
+    expect(raf.rafSpy).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('button', { name: /pause/i })).toBeInstanceOf(HTMLButtonElement)
+    expect(onPlayingChange).not.toHaveBeenCalledWith(false)
+  })
+
+  it('an external activeStopId jump to a non-adjacent stop snaps, stops any animation, and reports playback stopped', () => {
+    const raf = stubRaf()
+    const onPlayingChange = vi.fn()
+    const { rerender } = render(
+      <RecapMap route={threeStops} activeStopId={null} onStopSelect={vi.fn()} onPlayingChange={onPlayingChange} />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /play/i })) // currentIndex still 0, animating leg 0
+
+    rerender(
+      <RecapMap route={threeStops} activeStopId="c" onStopSelect={vi.fn()} onPlayingChange={onPlayingChange} />,
+    )
+
+    expect(raf.cafSpy).toHaveBeenCalled() // the in-flight leg-0 animation was cancelled
+    expect(screen.getByRole('button', { name: /play/i })).toBeInstanceOf(HTMLButtonElement) // no longer playing
+    expect(onPlayingChange).toHaveBeenCalledWith(false)
+
+    const polylineMock = vi.mocked(L).polyline
+    const traveledInstance = polylineMock.mock.results[1].value as { setLatLngs: ReturnType<typeof vi.fn> }
+    expect(traveledInstance.setLatLngs).toHaveBeenLastCalledWith([
+      [35.66, 139.7],
+      [35.7, 139.77],
+      [35.72, 139.8],
+    ])
+
+    const mapInstance = vi.mocked(L).map.mock.results[0].value as { setView: ReturnType<typeof vi.fn> }
+    expect(mapInstance.setView).toHaveBeenLastCalledWith([35.72, 139.8], expect.any(Number), { animate: false })
+  })
+
+  it('ignores an external activeStopId that is not on the plotted route', () => {
+    const onStopSelect = vi.fn()
+    const onPlayingChange = vi.fn()
+    const { rerender } = render(
+      <RecapMap route={threeStops} activeStopId={null} onStopSelect={onStopSelect} onPlayingChange={onPlayingChange} />,
+    )
+
+    const mapInstance = vi.mocked(L).map.mock.results[0].value as { setView: ReturnType<typeof vi.fn> }
+    mapInstance.setView.mockClear()
+
+    rerender(
+      <RecapMap
+        route={threeStops}
+        activeStopId="not-a-real-stop"
+        onStopSelect={onStopSelect}
+        onPlayingChange={onPlayingChange}
+      />,
+    )
+
+    expect(mapInstance.setView).not.toHaveBeenCalled()
+    expect(onStopSelect).not.toHaveBeenCalled()
+    expect(onPlayingChange).not.toHaveBeenCalled()
+  })
+
+  it('a content-equal new route array does not rebuild the map', () => {
+    const { rerender } = render(<RecapMap route={threeStops} activeStopId={null} onStopSelect={vi.fn()} />)
+    expect(vi.mocked(L).map).toHaveBeenCalledTimes(1)
+    const mapInstance = vi.mocked(L).map.mock.results[0].value as { remove: ReturnType<typeof vi.fn> }
+
+    const equalButNewRoute: RecapStop[] = threeStops.map((s) => ({ ...s }))
+    rerender(<RecapMap route={equalButNewRoute} activeStopId={null} onStopSelect={vi.fn()} />)
+
+    expect(vi.mocked(L).map).toHaveBeenCalledTimes(1)
+    expect(mapInstance.remove).not.toHaveBeenCalled()
+  })
+
+  it('a real route content change rebuilds the map, stops playback, and reports it via onPlayingChange', () => {
+    const onPlayingChange = vi.fn()
+    const { rerender } = render(
+      <RecapMap route={threeStops} activeStopId={null} onStopSelect={vi.fn()} onPlayingChange={onPlayingChange} />,
+    )
+    const firstMapInstance = vi.mocked(L).map.mock.results[0].value as { remove: ReturnType<typeof vi.fn> }
+
+    fireEvent.click(screen.getByRole('button', { name: /play/i }))
+    expect(onPlayingChange).toHaveBeenLastCalledWith(true)
+
+    const editedStops: RecapStop[] = [
+      stop({ stopId: 'a', order: 1, text: 'Shibuya Crossing (moved)', lat: 35.6, lng: 139.6 }),
+      threeStops[1],
+      threeStops[2],
+    ]
+    rerender(<RecapMap route={editedStops} activeStopId={null} onStopSelect={vi.fn()} onPlayingChange={onPlayingChange} />)
+
+    expect(vi.mocked(L).map).toHaveBeenCalledTimes(2)
+    expect(firstMapInstance.remove).toHaveBeenCalled()
+    expect(onPlayingChange).toHaveBeenLastCalledWith(false)
+    expect(screen.getByRole('button', { name: /play/i })).toBeInstanceOf(HTMLButtonElement)
+  })
+
+  it('clamps the current index into range when a route rebuild shrinks the stop list', () => {
+    const onStopSelect = vi.fn()
+    const { rerender } = render(<RecapMap route={threeStops} activeStopId={null} onStopSelect={onStopSelect} />)
+
+    const markerMock = vi.mocked(L).marker
+    const thirdMarkerInstance = markerMock.mock.results[2].value as { on: ReturnType<typeof vi.fn> }
+    const clickHandler = thirdMarkerInstance.on.mock.calls.find((call) => call[0] === 'click')?.[1]
+    act(() => {
+      clickHandler() // selects 'c' — currentIndex becomes 2
+    })
+
+    const twoStops: RecapStop[] = [threeStops[0], threeStops[1]]
+    rerender(<RecapMap route={twoStops} activeStopId={null} onStopSelect={onStopSelect} />)
+
+    // Index 2 no longer exists in a 2-stop route; it's clamped to the last
+    // valid index (1 = 'b'), not left pointing past the end.
+    const secondMapInstance = vi.mocked(L).map.mock.results[1].value as { setView: ReturnType<typeof vi.fn> }
+    expect(secondMapInstance.setView).toHaveBeenCalledWith([35.7, 139.77], expect.any(Number), { animate: false })
   })
 })

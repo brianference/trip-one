@@ -197,11 +197,65 @@
 }
 
 /* ---------- Recap walkthrough map (Task 11/12) ---------- */
+.chronicle-recap-map {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chronicle-space-md);
+}
+
+.chronicle-recap-map-canvas {
+  height: 360px;
+  width: 100%;
+  border-radius: var(--chronicle-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--chronicle-border-hairline);
+}
+
+@media (max-width: 480px) {
+  .chronicle-recap-map-canvas {
+    height: 260px;
+  }
+}
+
+/*
+ * The route/traveled lines and the stop markers sit ON the Leaflet basemap
+ * (CARTO Voyager raster tiles), which stays light-toned in both app themes —
+ * there is no dark tile layer to match. Using the theme-SWAPPED
+ * `--accent-text`/`--chronicle-gold` aliases here (which resolve to a pale
+ * pine in dark mode, tuned for a dark PAGE surface) would make these hard to
+ * read against a map that stays light regardless of theme. So this
+ * deliberately uses the theme-INVARIANT palette tokens from theme.css
+ * (--color-primary, --color-pine-500, --color-on-primary) instead of the
+ * swapped Chronicle aliases the controls below use.
+ */
+.trip-one-recap-route {
+  stroke: var(--color-pine-500);
+}
+
+.trip-one-recap-traveled {
+  stroke: var(--color-primary);
+}
+
+.trip-one-recap-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border: 2px solid var(--color-on-primary);
+  box-shadow: var(--chronicle-shadow-card);
+  font-family: var(--chronicle-font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .chronicle-recap-map-controls {
   display: flex;
   gap: var(--chronicle-space-sm);
   flex-wrap: wrap;
-  margin-top: var(--chronicle-space-md);
 }
 
 .chronicle-recap-map-btn {
