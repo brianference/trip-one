@@ -64,12 +64,12 @@ describe('GET /api/trips/:id/photos/:photoId', () => {
     expect(calls.some((c) => c.sql.includes('trip_photos'))).toBe(false)
   })
 
-  it('rate-limits reads with 429 under the photos-read key', async () => {
+  it('never touches request_log (no D1 rows written per photo), even for a busy IP', async () => {
     const row = photoRow()
-    const { env, calls } = photoEnv({ photos: [row], r2: bucketWith(row.r2_key, PNG_BYTES), recentRequests: 3000 })
+    const { env, calls } = photoEnv({ photos: [row], r2: bucketWith(row.r2_key, PNG_BYTES), recentRequests: 1_000_000 })
     const res = await call(onRequestGet, env, TRIP_ID, PHOTO_ID)
-    expect(res.status).toBe(429)
-    expect(calls.find((c) => c.sql.includes('FROM request_log'))?.args).toContain('photos-read')
+    expect(res.status).toBe(200)
+    expect(calls.some((c) => c.sql.includes('request_log'))).toBe(false)
   })
 
   it('answers 500 when R2 is unreachable', async () => {

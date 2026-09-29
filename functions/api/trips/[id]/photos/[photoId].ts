@@ -5,8 +5,6 @@ import { photoBytesResponse } from '../../../../lib/photoResponse'
 import { logger } from '../../../../../src/lib/logger'
 import { z } from 'zod'
 
-/** Per-IP hourly cap on photo reads (listing and fetching bytes). */
-const READS_PER_HOUR = 3000
 /** Per-IP hourly cap on photo deletes. */
 const DELETES_PER_HOUR = 120
 
@@ -40,24 +38,25 @@ function json(body: unknown, status: number) {
  * exist. The response type is the one recorded in D1 at upload time (the
  * sniffed type), never R2 metadata or anything the uploader declared.
  *
- * @param context - Request context with `env`, `request` and `params`
- * @returns 200 with the image bytes, or `{ error }` with 404, 429 or 500
+ * Not rate-limited through D1 on purpose: isRateLimited writes a request_log
+ * row per call (a COUNT plus an INSERT), a Plan page fetches every photo, and
+ * D1 Workers Free stops answering queries past 100,000 rows written a day
+ * (developers.cloudflare.com/d1/platform/pricing/), which would take the whole
+ * app down. The bytes are gated instead by two uuids (trip and photo), and the
+ * browser caches them for a day.
+ *
+ * @param context - Request context with `env` and `params`
+ * @returns 200 with the image bytes, or `{ error }` with 404 or 500
  */
 export async function onRequestGet({
   env,
-  request,
   params,
 }: {
   env: Env
-  request: Request
   params: PhotoParams
 }): Promise<Response> {
   const parsed = paramsSchema.safeParse(params)
   if (!parsed.success) return json({ error: NOT_FOUND_MESSAGE }, 404)
-
-  if (await isRateLimited(env, request, 'photos-read', READS_PER_HOUR)) {
-    return json({ error: RATE_LIMIT_MESSAGE }, 429)
-  }
 
   try {
     const row = await getPhotoForTrip(env, parsed.data.id, parsed.data.photoId)

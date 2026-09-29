@@ -30,9 +30,10 @@ function filledBucket() {
   return r2
 }
 
-/** GETs a photo through a recap token. */
+/** GETs a photo through a recap token, with a real request as Pages passes one (the handler must not need it). */
 function get(env: RecapEnv, token: string, photoId: string) {
-  return onRequestGet({ env, request: new Request('https://x'), params: { token, photoId } })
+  const context = { env, request: new Request('https://x', { headers: { 'CF-Connecting-IP': '203.0.113.7' } }), params: { token, photoId } }
+  return onRequestGet(context)
 }
 
 /** Status, every header and the body text, for byte-for-byte comparison of two responses. */
@@ -91,17 +92,12 @@ describe('GET /api/recap/:token/photos/:photoId', () => {
     expect((await get(env, ACTIVE_TOKEN, PHOTO_ID)).status).toBe(404)
   })
 
-  it('rate-limits with 429 under its own recap-photo-read key at 3000 per hour', async () => {
+  it('never touches request_log (no D1 rows written per photo), even for a busy IP', async () => {
     const state = defaultRecapState()
-    state.recentRequests = 2999
+    state.recentRequests = 1_000_000
     const { env, calls } = recapEnv(state, { r2: filledBucket() })
     expect((await get(env, ACTIVE_TOKEN, PHOTO_ID)).status).toBe(200)
-    const args = calls.find((c) => c.sql.includes('FROM request_log'))?.args
-    expect(args).toContain('recap-photo-read')
-    expect(args).not.toContain('recap-read')
-
-    state.recentRequests = 3000
-    expect((await get(env, ACTIVE_TOKEN, PHOTO_ID)).status).toBe(429)
+    expect(calls.some((c) => c.sql.includes('request_log'))).toBe(false)
   })
 
   it('answers 500 without either trip id when R2 is unreachable', async () => {

@@ -1,8 +1,7 @@
 import type { Env } from '../../../../lib/db'
 import { getActiveRecapLinkByToken, getPhotoForTrip } from '../../../../lib/db'
-import { isRateLimited } from '../../../../lib/rateLimitGuard'
 import { photoBytesResponse } from '../../../../lib/photoResponse'
-import { recapTokenSchema, RECAP_PHOTO_READS_PER_HOUR, RECAP_NOT_FOUND_MESSAGE } from '../../../../lib/recapAccess'
+import { recapTokenSchema, RECAP_NOT_FOUND_MESSAGE } from '../../../../lib/recapAccess'
 import { logger } from '../../../../../src/lib/logger'
 import { z } from 'zod'
 
@@ -13,8 +12,6 @@ import { z } from 'zod'
  */
 const RECAP_PHOTO_CACHE_CONTROL = 'private, max-age=3600'
 
-const RATE_LIMIT_MESSAGE =
-  'You’ve made a lot of requests in a short time. Please wait a few minutes and try again.'
 const SERVER_ERROR_MESSAGE = 'Something went wrong on our end. Please try again in a moment.'
 
 /** A well-formed token and a uuid photo id; anything else is answered 404 without a lookup. */
@@ -36,24 +33,25 @@ function json(body: unknown, status: number) {
  * the trip the ACTIVE token points at, so a photo from another trip, a
  * missing photo, and an unknown or revoked token all answer the same 404.
  *
- * @param context - Request context with `env`, `request` and `params`
- * @returns 200 with the image bytes, or `{ error }` with 404, 429 or 500
+ * Not rate-limited through D1 on purpose: isRateLimited writes a request_log
+ * row per call (a COUNT plus an INSERT), one recap view fetches every photo,
+ * and D1 Workers Free stops answering queries past 100,000 rows written a day
+ * (developers.cloudflare.com/d1/platform/pricing/), which would take the whole
+ * app down. The bytes are gated instead by the unguessable 256-bit recap
+ * token plus a uuid photo id, and the browser caches them for an hour.
+ *
+ * @param context - Request context with `env` and `params`
+ * @returns 200 with the image bytes, or `{ error }` with 404 or 500
  */
 export async function onRequestGet({
   env,
-  request,
   params,
 }: {
   env: Env
-  request: Request
   params: { token: string; photoId: string }
 }): Promise<Response> {
   const parsed = paramsSchema.safeParse(params)
   if (!parsed.success) return json({ error: RECAP_NOT_FOUND_MESSAGE }, 404)
-
-  if (await isRateLimited(env, request, 'recap-photo-read', RECAP_PHOTO_READS_PER_HOUR)) {
-    return json({ error: RATE_LIMIT_MESSAGE }, 429)
-  }
 
   try {
     const link = await getActiveRecapLinkByToken(env, parsed.data.token)
