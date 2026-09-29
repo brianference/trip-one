@@ -65,12 +65,15 @@ export function RecapPublicPage() {
     }
   }, [token])
 
-  const heading = state.kind === 'ready' ? (state.payload.title ?? `${state.payload.displayName} trip`) : 'Trip recap'
+  // "{trip} recap" once loaded; plain "Trip recap" while loading or when the
+  // link is inactive (appending "recap" to that fallback read "Trip recap recap").
+  const pageTitle =
+    state.kind === 'ready' ? `${state.payload.title ?? `${state.payload.displayName} trip`} recap` : 'Trip recap'
 
   return (
     <main id="main" className="chronicle-page chronicle-recap-public">
       {/* noindex: a share link is meant for the people it was sent to, not search results. */}
-      <Seo title={`${heading} recap`} description="A trip recap shared from Trip One." noindex />
+      <Seo title={pageTitle} description="A trip recap shared from Trip One." noindex />
       <div className="chronicle-book">
         {state.kind === 'loading' && <TripSkeleton />}
         {state.kind === 'failed' && (

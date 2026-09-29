@@ -56,8 +56,14 @@ interface Props {
   pauseRequest?: number
 }
 
-/** Zoom level used when panning to a stop that has no map yet (first render before any user zoom interaction). */
+/** Zoom level for a route with a single plotted stop, where there is no extent to fit. */
 const DEFAULT_ZOOM = 13
+
+/**
+ * Pixel padding kept around the whole route when the map first fits it, so
+ * the outermost numbered markers (26 px) are never clipped by the map edge.
+ */
+const ROUTE_FIT_PADDING_PX = 32
 
 /**
  * Builds a numbered marker icon. The number is the stop's 1-based trip
@@ -380,7 +386,16 @@ export function RecapMap({
         setPlaying(false)
       }
       drawTraveledThrough(startIndex)
-      map.setView([currentStops[startIndex].lat, currentStops[startIndex].lng], DEFAULT_ZOOM, { animate: false })
+      if (currentStops.length > 1) {
+        // Open on the whole trip: every marker in view. Later moves (a leg
+        // completing, a marker select, an external snap or hop) only pan at
+        // whatever zoom is current, so this overview persists unless the
+        // viewer zooms in themselves.
+        const bounds = L.latLngBounds(currentStops.map((s): L.LatLngTuple => [s.lat, s.lng]))
+        map.fitBounds(bounds, { animate: false, padding: [ROUTE_FIT_PADDING_PX, ROUTE_FIT_PADDING_PX] })
+      } else {
+        map.setView([currentStops[startIndex].lat, currentStops[startIndex].lng], DEFAULT_ZOOM, { animate: false })
+      }
     }
 
     return () => {

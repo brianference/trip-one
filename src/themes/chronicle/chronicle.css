@@ -143,6 +143,12 @@
   color: var(--color-on-primary);
 }
 
+/* Share recap while its link is being created (aria-disabled keeps focus). */
+.chronicle-share-btn[aria-disabled='true'] {
+  opacity: 0.65;
+  cursor: progress;
+}
+
 .chronicle-save-hint {
   margin: 4px 0 var(--chronicle-space-md);
   font-family: var(--chronicle-font-body);

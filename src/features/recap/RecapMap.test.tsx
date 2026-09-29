@@ -29,13 +29,16 @@ vi.mock('leaflet', () => {
     const mapMock: {
       remove: ReturnType<typeof vi.fn>
       setView: ReturnType<typeof vi.fn>
+      fitBounds: ReturnType<typeof vi.fn>
       getZoom: ReturnType<typeof vi.fn>
     } = {
       remove: vi.fn(),
       setView: vi.fn(),
+      fitBounds: vi.fn(),
       getZoom: vi.fn(() => 12),
     }
     mapMock.setView = vi.fn(() => mapMock)
+    mapMock.fitBounds = vi.fn(() => mapMock)
     return mapMock
   }
 
@@ -46,6 +49,7 @@ vi.mock('leaflet', () => {
       divIcon: vi.fn((opts: { html?: string | HTMLElement }) => ({ __mockDivIcon: true, html: opts?.html })),
       marker: vi.fn(createMarkerMock),
       polyline: vi.fn(createPolylineMock),
+      latLngBounds: vi.fn((points: [number, number][]) => ({ __mockBounds: true, points })),
     },
   }
 })
@@ -268,10 +272,60 @@ describe('RecapMap', () => {
     expect(screen.getByRole('button', { name: /fast/i })).toBeInstanceOf(HTMLButtonElement)
   })
 
-  it('pans to the active stop on initial render with setView({ animate: false })', () => {
+  it('opens on the whole route: fitBounds over every stop, animate:false, with padding, and no fixed-zoom setView', () => {
     render(<RecapMap route={threeStops} activeStopId="b" onStopSelect={vi.fn()} />)
-    const mapInstance = vi.mocked(L).map.mock.results[0].value as { setView: ReturnType<typeof vi.fn> }
-    expect(mapInstance.setView).toHaveBeenCalledWith([35.7, 139.77], expect.any(Number), { animate: false })
+    const mapInstance = vi.mocked(L).map.mock.results[0].value as {
+      setView: ReturnType<typeof vi.fn>
+      fitBounds: ReturnType<typeof vi.fn>
+    }
+    expect(vi.mocked(L).latLngBounds).toHaveBeenCalledWith([
+      [35.66, 139.7],
+      [35.7, 139.77],
+      [35.72, 139.8],
+    ])
+    expect(mapInstance.fitBounds).toHaveBeenCalledTimes(1)
+    const [bounds, options] = mapInstance.fitBounds.mock.calls[0]
+    expect(bounds).toEqual(vi.mocked(L).latLngBounds.mock.results[0].value)
+    expect(options).toEqual({ animate: false, padding: [32, 32] })
+    // Only the base map's placeholder [0,0] view; the route never gets a fixed zoom.
+    expect(mapInstance.setView).not.toHaveBeenCalledWith(expect.anything(), 13, expect.anything())
+  })
+
+  it('a single-stop route is centered with setView (no extent to fit)', () => {
+    render(<RecapMap route={[threeStops[1]]} activeStopId={null} onStopSelect={vi.fn()} />)
+    const mapInstance = vi.mocked(L).map.mock.results[0].value as {
+      setView: ReturnType<typeof vi.fn>
+      fitBounds: ReturnType<typeof vi.fn>
+    }
+    expect(mapInstance.fitBounds).not.toHaveBeenCalled()
+    expect(mapInstance.setView).toHaveBeenLastCalledWith([35.7, 139.77], 13, { animate: false })
+  })
+
+  it('later moves pan at the current zoom (a marker select, an external snap, a completed leg), never re-zooming', () => {
+    const raf = stubRaf()
+    const { rerender } = render(<RecapMap route={threeStops} activeStopId={null} onStopSelect={vi.fn()} />)
+    const mapInstance = vi.mocked(L).map.mock.results[0].value as {
+      setView: ReturnType<typeof vi.fn>
+      getZoom: ReturnType<typeof vi.fn>
+    }
+    mapInstance.getZoom.mockReturnValue(11) // the fitted zoom, or wherever the viewer left it
+    mapInstance.setView.mockClear()
+
+    // Marker select.
+    const markerInstance = vi.mocked(L).marker.mock.results[2].value as { on: ReturnType<typeof vi.fn> }
+    act(() => markerInstance.on.mock.calls.find((call) => call[0] === 'click')?.[1]())
+    // External snap back to the first stop.
+    rerender(<RecapMap route={threeStops} activeStopId="a" onStopSelect={vi.fn()} />)
+    // A completed leg from Play.
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }))
+    raf.flush(0)
+    raf.flush(10_000)
+
+    expect(mapInstance.setView.mock.calls.length).toBeGreaterThanOrEqual(3)
+    for (const [, zoom, options] of mapInstance.setView.mock.calls) {
+      expect(zoom).toBe(11)
+      expect(options).toEqual({ animate: false })
+    }
   })
 
   it('animates the traveled line leg by leg via requestAnimationFrame when Play is pressed', () => {
@@ -602,10 +656,20 @@ describe('RecapMap', () => {
     const twoStops: RecapStop[] = [threeStops[0], threeStops[1]]
     rerender(<RecapMap route={twoStops} activeStopId={null} onStopSelect={onStopSelect} />)
 
+    // The rebuilt map re-fits the (smaller) route.
+    const secondMapInstance = vi.mocked(L).map.mock.results[1].value as {
+      setView: ReturnType<typeof vi.fn>
+      fitBounds: ReturnType<typeof vi.fn>
+    }
+    expect(secondMapInstance.fitBounds).toHaveBeenCalledTimes(1)
+
     // Index 2 no longer exists in a 2-stop route; it's clamped to the last
-    // valid index (1 = 'b'), not left pointing past the end.
-    const secondMapInstance = vi.mocked(L).map.mock.results[1].value as { setView: ReturnType<typeof vi.fn> }
-    expect(secondMapInstance.setView).toHaveBeenCalledWith([35.7, 139.77], expect.any(Number), { animate: false })
+    // valid index (1 = 'b'), not left pointing past the end. Proof: an
+    // external activeStopId of 'b' is then "already there" and moves nothing,
+    // where an unclamped index 2 would treat it as a backward snap.
+    secondMapInstance.setView.mockClear()
+    rerender(<RecapMap route={twoStops} activeStopId="b" onStopSelect={onStopSelect} />)
+    expect(secondMapInstance.setView).not.toHaveBeenCalled()
   })
   it('a changed pauseRequest stops playback in place without moving, and reports it; the mount value never pauses', () => {
     const raf = stubRaf()

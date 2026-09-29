@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { ShareRecap } from './ShareRecap'
+import { ShareRecap, recapUrlFor, NonRecapUrlError } from './ShareRecap'
 import { logger } from '../../lib/logger'
 
 /** Synthetic unit-test values (never rendered in the product). */
@@ -130,6 +130,60 @@ describe('ShareRecap', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent("Demo trips can't be shared as a recap.")
     expect(share).not.toHaveBeenCalled()
+    expect(logSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('two quick presses send one POST and open one share sheet; the button is aria-disabled (not disabled) meanwhile', async () => {
+    let resolveFetch: (value: unknown) => void = () => undefined
+    const fetchMock = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolveFetch = resolve
+        }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const share = vi.fn().mockResolvedValue(undefined)
+    setNavigator('share', share)
+
+    render(<ShareRecap tripId={TRIP_ID} tripName="Tokyo, Japan" />)
+    const button = screen.getByRole('button', { name: 'Share recap' })
+    fireEvent.click(button)
+    fireEvent.click(button)
+
+    await waitFor(() => expect(button).toHaveAttribute('aria-disabled', 'true'))
+    expect(button).not.toBeDisabled()
+    resolveFetch({ ok: true, status: 200, json: async () => ({ token: TOKEN }) })
+    await waitFor(() => expect(share).toHaveBeenCalledTimes(1))
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(button).toHaveAttribute('aria-disabled', 'false'))
+
+    // Once finished, a new press works again.
+    stubFetch(200, { token: TOKEN })
+    fireEvent.click(button)
+    await waitFor(() => expect(share).toHaveBeenCalledTimes(2))
+  })
+
+  it('recapUrlFor only ever returns a /recap/ URL, and refuses a token that resolves anywhere else', () => {
+    expect(recapUrlFor(TOKEN)).toBe(`${window.location.origin}/recap/${TOKEN}`)
+    expect(() => recapUrlFor('..')).toThrow(NonRecapUrlError) // resolves to "/"
+    expect(() => recapUrlFor('')).toThrow(NonRecapUrlError) // bare "/recap/"
+  })
+
+  it('a token that would resolve outside /recap/ is never shared or copied', async () => {
+    stubFetch(200, { token: '..' })
+    const share = vi.fn().mockResolvedValue(undefined)
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    setNavigator('share', share)
+    setNavigator('clipboard', { writeText })
+    const logSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined)
+
+    render(<ShareRecap tripId={TRIP_ID} tripName="Tokyo, Japan" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Share recap' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('We couldn’t create a recap link.')
+    expect(share).not.toHaveBeenCalled()
+    expect(writeText).not.toHaveBeenCalled()
+    expect(screen.queryByRole('textbox')).toBeNull()
     expect(logSpy).toHaveBeenCalledTimes(1)
   })
 })

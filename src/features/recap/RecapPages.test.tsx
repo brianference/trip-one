@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import type { RecapStop } from './buildRecap'
 import type { RecapPayload } from './types'
@@ -89,6 +89,7 @@ describe('RecapPublicPage', () => {
       expect(img.getAttribute('src')).toBe(`/api/recap/${TOKEN}/photos/p1`)
     }
     expect(container.innerHTML).not.toContain('/trip/')
+    await waitFor(() => expect(document.title).toBe('Autumn in Oslo recap — Trip One'))
     // The public view has no Share button and no owner-only hint.
     expect(screen.queryByRole('button', { name: 'Share recap' })).toBeNull()
     expect(screen.getByRole('link', { name: 'Plan your next trip with us' })).toHaveAttribute('href', '/')
@@ -97,8 +98,11 @@ describe('RecapPublicPage', () => {
   it('shows the inactive-link message on 404, still with the next-trip link', async () => {
     stubFetch({ [`/api/recap/${TOKEN}`]: { status: 404, body: { error: 'This recap link isn’t active anymore.' } } })
     renderPublic()
+    // While loading, the title is the plain fallback, never "Trip recap recap".
+    expect(document.title).toBe('Trip recap — Trip One')
     expect(await screen.findByRole('alert')).toHaveTextContent(RECAP_INACTIVE_MESSAGE)
     expect(RECAP_INACTIVE_MESSAGE).toBe('This recap link isn’t active anymore.')
+    expect(document.title).toBe('Trip recap — Trip One')
     expect(screen.getByRole('link', { name: 'Plan your next trip with us' })).toHaveAttribute('href', '/')
   })
 

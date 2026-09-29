@@ -1,11 +1,11 @@
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { logger } from '../../lib/logger'
 
 /** Shown when the create request fails with no usable server message (e.g. offline). */
 const FALLBACK_ERROR_MESSAGE = 'We couldn’t create a recap link. Please try again in a moment.'
 
-/** Path segment of the trip's own URL, which grants edit access and must never be shared from here. */
-const TRIP_PATH_SEGMENT = '/trip/'
+/** Every URL this component shares lives under this path; the trip's own (editable) `/trip/` URL never does. */
+const RECAP_PATH_PREFIX = '/recap/'
 
 /** What the component is showing after a press. */
 type ShareState =
@@ -32,15 +32,29 @@ async function fetchRecapToken(tripId: string): Promise<string> {
 }
 
 /**
- * The public recap URL for a token. Refuses to return anything that looks
- * like a trip URL: the trip URL is an edit capability, and handing it out
- * from a "share recap" button would give every viewer edit rights.
+ * The public recap URL for a token. Refuses anything whose resolved path is
+ * not under `/recap/`: the trip URL is an edit capability, and handing it
+ * out from a "share recap" button would give every viewer edit rights. The
+ * check runs on the parsed URL, so a token that resolved elsewhere (e.g. a
+ * `..` segment) is caught, not just a literal `/trip/` substring.
  * @param token - The recap token
+ * @throws {NonRecapUrlError} If the resolved path is not a recap path
  */
-function recapUrlFor(token: string): string {
-  const url = `${window.location.origin}/recap/${encodeURIComponent(token)}`
-  if (url.includes(TRIP_PATH_SEGMENT)) throw new Error('refusing to share a trip URL as a recap')
-  return url
+export function recapUrlFor(token: string): string {
+  const url = new URL(RECAP_PATH_PREFIX + encodeURIComponent(token), window.location.origin)
+  if (!url.pathname.startsWith(RECAP_PATH_PREFIX) || url.pathname.length === RECAP_PATH_PREFIX.length) {
+    throw new NonRecapUrlError(url.pathname)
+  }
+  return url.href
+}
+
+/** Thrown by {@link recapUrlFor} when a token would resolve outside `/recap/`. */
+export class NonRecapUrlError extends Error {
+  /** @param pathname - The path the token resolved to */
+  constructor(pathname: string) {
+    super(`refusing to share a non-recap URL (resolved path ${pathname})`)
+    this.name = 'NonRecapUrlError'
+  }
 }
 
 /**
@@ -62,16 +76,32 @@ function isShareCancelled(err: unknown): boolean {
 export function ShareRecap({ tripId, tripName }: { tripId: string; tripName: string }) {
   const [state, setState] = useState<ShareState>({ kind: 'idle' })
   const inputId = useId()
+  // A ref, not state: two clicks in the same tick both see the old state,
+  // and each would send its own POST and open its own share sheet.
+  const workingRef = useRef(false)
 
-  /** Runs the create-then-share flow for one press. */
+  /** Runs the create-then-share flow for one press; a press while one is running is ignored. */
   async function share() {
+    if (workingRef.current) return
+    workingRef.current = true
+    try {
+      await runShare()
+    } finally {
+      workingRef.current = false
+    }
+  }
+
+  /** The create-then-share flow itself. */
+  async function runShare() {
     setState({ kind: 'working' })
     let url: string
     try {
       url = recapUrlFor(await fetchRecapToken(tripId))
     } catch (err) {
       logger.error('recap link create failed', err)
-      setState({ kind: 'error', message: err instanceof Error ? err.message : FALLBACK_ERROR_MESSAGE })
+      // A non-recap URL is our own defect, not something the traveler can act on.
+      const message = err instanceof Error && !(err instanceof NonRecapUrlError) ? err.message : FALLBACK_ERROR_MESSAGE
+      setState({ kind: 'error', message })
       return
     }
 
@@ -104,6 +134,9 @@ export function ShareRecap({ tripId, tripName }: { tripId: string; tripName: str
         type="button"
         className="chronicle-share-btn"
         onClick={share}
+        // aria-disabled, not disabled: the button keeps focus while the
+        // link is being created, and share() ignores presses meanwhile.
+        aria-disabled={state.kind === 'working'}
         aria-busy={state.kind === 'working' || undefined}
       >
         Share recap
