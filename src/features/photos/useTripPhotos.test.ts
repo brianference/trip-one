@@ -80,4 +80,33 @@ describe('useTripPhotos', () => {
     expect(deleteSpy).toHaveBeenCalledWith('trip-1', 'p1')
     expect(result.current.byStop.get('stop-1')?.map((p) => p.id)).toEqual(['p2'])
   })
+
+  it('clears a stale error and the previous trip\'s photos when tripId changes to one that loads successfully', async () => {
+    const listSpy = vi.spyOn(photosApi, 'listTripPhotos')
+    listSpy.mockRejectedValueOnce(new Error("We couldn't find that trip."))
+    listSpy.mockResolvedValueOnce([{ id: 'pB', stopId: 'stop-b', width: 800, height: 600, createdAt: 'tb' }])
+
+    const { result, rerender } = renderHook(({ tripId }) => useTripPhotos(tripId), {
+      initialProps: { tripId: 'trip-A' },
+    })
+
+    await waitFor(() => expect(result.current.error).toBe("We couldn't find that trip."))
+
+    rerender({ tripId: 'trip-B' })
+
+    // Reset happens synchronously at the top of the load effect, before
+    // trip-B's fetch has even resolved — the stale error and any previous
+    // trip's photos must not survive even momentarily under the new tripId.
+    expect(result.current.error).toBeNull()
+    expect(result.current.byStop.size).toBe(0)
+
+    await waitFor(() => expect(result.current.byStop.has('stop-b')).toBe(true))
+    expect(result.current.error).toBeNull()
+    expect(result.current.byStop.size).toBe(1)
+    expect(result.current.byStop.get('stop-b')).toEqual([
+      { id: 'pB', stopId: 'stop-b', width: 800, height: 600, createdAt: 'tb' },
+    ])
+    // trip-A's stop must never show up under trip-B.
+    expect(result.current.byStop.has('stop-a')).toBe(false)
+  })
 })

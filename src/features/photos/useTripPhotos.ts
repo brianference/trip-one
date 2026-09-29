@@ -41,6 +41,10 @@ export function useTripPhotos(tripId: string): UseTripPhotosResult {
 
   useEffect(() => {
     let cancelled = false
+    // Reset before fetching so a stale error or a previous trip's photos
+    // never linger under a new tripId while (or after) this load settles.
+    setError(null)
+    setByStop(new Map())
     listTripPhotos(tripId)
       .then((photos) => {
         if (!cancelled) setByStop(groupByStop(photos))
