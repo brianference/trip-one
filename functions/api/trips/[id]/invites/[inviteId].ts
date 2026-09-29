@@ -18,9 +18,9 @@ import { logger } from '../../../../../src/lib/logger'
  * first revocation time. An invite on another trip answers 404, like an
  * unknown one.
  *
- * An ACCEPTED invite is not revoked: its member already holds the trip link
- * (the edit capability), so revoking could not withdraw access and would only
- * hide them from the owner. The invite and the membership stay, and the
+ * An ACCEPTED invite is not revoked: its person has already joined, and
+ * revoking the invite would not remove the membership, so it would only hide
+ * them from the owner. The invite and the membership stay, and the
  * response says `alreadyJoined: true`.
  *
  * @param context - Request context with `env`, `request`, `params.id` and `params.inviteId`

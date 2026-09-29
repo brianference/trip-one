@@ -206,12 +206,15 @@ export function signInCodeHtml(code: string): string {
  * Invitation to add photos to a trip. The invitee may not have an account yet
  * (a sign-in code creates one), so neither the body nor the footer claims one.
  * The link is the trip's read-only recap, never the trip itself.
- * @param invite - `tripName` (untrusted, escaped) and the absolute `recapUrl`
+ *
+ * The copy is fixed: nothing the trip's author wrote (such as the trip title)
+ * goes into the message, so an invite cannot be used to put arbitrary text in
+ * front of an arbitrary inbox. The recipient sees the trip on the recap page.
+ * @param invite - The absolute `recapUrl`
  */
-export function tripInviteHtml(invite: { tripName: string; recapUrl: string }): string {
-  const name = escapeHtml(invite.tripName)
+export function tripInviteHtml(invite: { recapUrl: string }): string {
   return wrap(
-    `<p>You're invited to add your photos to <strong>${name}</strong>.</p>
+    `<p>You're invited to add your photos to a trip on Trip One.</p>
      ${button(escapeHtml(invite.recapUrl), 'Add your photos')}
      <p style="color:${MUTED_COLOR};font-size:13px">Open the link and sign in with this email address. You can then add photos to any stop on the trip.</p>`,
     "You received this because someone planning this trip invited this address to add photos. If you weren't expecting it, ignore this email and nothing will happen.",

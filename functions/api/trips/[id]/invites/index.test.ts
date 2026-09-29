@@ -166,7 +166,10 @@ describe('POST /api/trips/:id/invites', () => {
     expect(sent).toHaveLength(1)
     expect(sent[0].to).toBe(SAM)
     expect(sent[0].subject).toBe("You're invited to add photos on Trip One")
-    expect(sent[0].html).toContain('Dublin weekend')
+    // Fixed copy: the trip's title is not in the email.
+    expect(sent[0].html).not.toContain('Dublin weekend')
+    expect(sent[0].text).not.toContain('Dublin weekend')
+    expect(sent[0].html).toContain("You're invited to add your photos to a trip on Trip One.")
     // The link is the existing active recap, never the trip itself.
     expect(sent[0].html).toContain(`https://trip-one.pages.dev/recap/${ACTIVE_TOKEN}?invite=1`)
     expect(sent[0].text).toContain(`https://trip-one.pages.dev/recap/${ACTIVE_TOKEN}?invite=1`)
@@ -189,15 +192,18 @@ describe('POST /api/trips/:id/invites', () => {
     expect(sent[1].html).toContain(`/recap/${active[0].token}?invite=1`)
   })
 
-  it('keeps an attacker-chosen trip name out of the subject and escaped in the body', async () => {
+  it('keeps an attacker-chosen trip title out of the email entirely (subject and body)', async () => {
     const sent = stubMail()
     const s = store()
     s.trips[TRIP_ID].title = '<img src=x onerror=alert(1)> WIN A PRIZE & "claim"\r\nBcc: attacker@example.com'
     await invitePost(s, SAM)
 
     expect(sent[0].subject).toBe(INVITE_SUBJECT)
-    expect(sent[0].html).not.toContain('<img src=x')
-    expect(sent[0].html).toContain('&lt;img src=x onerror=alert(1)&gt; WIN A PRIZE &amp; &quot;claim&quot; Bcc: attacker@example.com')
+    for (const part of [sent[0].html, sent[0].text, sent[0].subject]) {
+      expect(part).not.toContain('img src=x')
+      expect(part).not.toContain('WIN A PRIZE')
+      expect(part).not.toContain('attacker@example.com')
+    }
   })
 
   it('strips the trip id from a title that contains the trip link', async () => {
@@ -210,12 +216,14 @@ describe('POST /api/trips/:id/invites', () => {
     }
   })
 
-  it('names an untitled trip after its place in the body', async () => {
+  it('sends the same body whatever the trip is called, with no place name either', async () => {
     const sent = stubMail()
     const s = store()
-    s.trips[TRIP_ID].title = null
     await invitePost(s, SAM)
-    expect(sent[0].html).toContain('<strong>Dublin, Ireland</strong>')
+    s.trips[TRIP_ID].title = null
+    await invitePost(s, 'jo@example.com')
+    expect(sent[1].html).not.toContain('Dublin')
+    expect(sent[1].html).toBe(sent[0].html)
   })
 
   describe('no re-send within 24 hours', () => {

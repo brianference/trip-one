@@ -1150,9 +1150,9 @@ export async function listActiveTripInvites(env: Env, tripId: string): Promise<T
 
 /**
  * Revokes one PENDING invite, scoped to its trip. An accepted invite is never
- * revoked (`accepted_at IS NULL` in the same statement): its member already
- * holds the trip link, so revoking could not withdraw access and would only
- * hide them from the owner. Revoking an already-revoked invite keeps its
+ * revoked (`accepted_at IS NULL` in the same statement): its person has
+ * already joined, and revoking the invite would not remove the membership, so
+ * it would only hide them from the owner. Revoking an already-revoked invite keeps its
  * first revocation time and still counts as done.
  * @returns True when the trip has a pending invite with that id
  */
