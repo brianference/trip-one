@@ -3,6 +3,39 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v18.0.0 — Explore photos are back, and the About page uses the screen
+
+### Fixed — every Explore card showed a colour block instead of a photo
+
+The eight destination cards on /explore load their photos from Wikimedia
+Commons. Commons changed how it serves thumbnails: a request now redirects
+through commons.wikimedia.org to a new host, thumb.wikimedia.org. The site's
+Content Security Policy allowed commons and upload.wikimedia.org but not the
+new host, so the browser blocked all eight images and each card fell back to
+its gradient. The console showed eight CSP violations.
+
+thumb.wikimedia.org is now in `img-src`. A new test reads `public/_headers` and
+fails if any hop of the redirect chain is missing; it was checked against a
+copy of the file with the host removed, and it failed as it should.
+
+The grey country line under each card name ("Ireland", "Wyoming") also failed
+the axe color-contrast check in light mode. It is darker now.
+
+### Fixed — the About page text filled under a third of a desktop screen
+
+The About page sat inside two width caps, so on a 1920px screen the text ran
+561px wide, 29% of the screen, and sat off-centre under a wider header. It now
+spans the same width as the header. Each topic is a section with the heading
+in a left column and the text beside it, capped at a readable line length. On
+phones it stacks. The wording did not change.
+
+### Verified on production
+
+The served `assets/index-5P6DAG6m.js` matches the local build. At 375, 768,
+1280 and 1920px, in light and dark, all eight Explore photos load, neither page
+scrolls sideways, and the console has no errors. axe reports no violations on
+/about or /explore in either theme.
+
 ## v17.0.0 — Email that actually sends, and unwatermarked maps
 
 ### Added — transactional email
