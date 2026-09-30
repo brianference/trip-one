@@ -3,6 +3,65 @@
 All notable changes to Trip One. Versions follow the app's release tags; each
 tag has a matching GitHub Release. Live at https://trip-one.pages.dev.
 
+## v20.1.0 — People you invite add photos from the recap, and never get your trip link
+
+### Changed — joining a trip keeps you on the recap
+
+Before, the last step of "Were you on this trip?" sent you to the trip itself,
+which handed you the link that can edit it. Now joining returns only a yes.
+Step 3 says "You're on this trip" and "Add your photos", closes the sheet, and
+turns the recap into contributor mode. The trip's ID never reaches a person who
+joined.
+
+### Added — photo-only contributors
+
+Someone who joined sees an "Add photos" button on the recap. It asks which stop
+the photo is for, shrinks the photo in the browser, and uploads it. They can
+remove the photos they added and no one else's. They can't change the
+itinerary, invite people, or delete the owner's photos. The owner's own photos
+and the trip link work as before.
+
+My Trips has a new "Trips you've joined" list that opens each recap.
+
+### Changed — email confirmation asks you to sign in first
+
+Opening a confirmation link without that account's own session no longer
+confirms anything or uses up the link. The page asks you to sign in and come
+back. It also has "This wasn't me", with a confirmation step, which locks the
+unverified account.
+
+### Fixed
+
+- The join sheet ignores a second tap while a code is being sent or checked,
+  clears its "verified" state when the server answers 401, and survives a failed
+  sign-out. `?join=1` only joins automatically when your email is verified.
+  Code boxes are at least 44px wide at 320px, and after a resend the sheet says
+  "Still nothing? Check spam, or try again in an hour."
+- Invite send and remove errors are announced as alerts.
+- The stop picker has one radio group per day, and its helpers are documented.
+- On the recap, a photo change that saved but could not refresh the page says
+  so instead of announcing success. A failed upload or removal re-checks that
+  you are still a member. A second removal pressed mid-flight says it is waiting.
+
+### Security
+
+- The recap's rate-limit log is now purged in batches of 1000 rows, and the
+  count that backs each rate limit has its own index. This keeps the daily D1
+  write budget predictable as traffic grows.
+- Joining and revoking an invite can no longer race into a member who is
+  invisible to the owner. Revoking an accepted invite removes the member.
+- A contributor's photo delete is checked against the uploader in the database
+  statement itself, and a failed delete answers an error instead of success.
+
+### Known issues
+
+- The owner's trip recap page logs one console error: a request for the Google
+  Fonts stylesheet (linked in index.html) is blocked by the connect-src policy.
+  The cause is older than this release and has not been diagnosed further.
+- Purging the rate-limit log reads the whole retention window once fewer than
+  1000 old rows remain. That is cheap at today's traffic (under 1,000 rows) and
+  worth revisiting at around 30,000 requests a day.
+
 ## v20.0.0 — Add photos where you'll see it, and invite the people who were there
 
 ### Changed — photo controls follow the approved design
