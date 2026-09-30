@@ -13,13 +13,41 @@ const FILE_FIELD = 'file'
 /**
  * The server's own `error` text from a failed response, or `fallback` when the
  * body is not JSON (a platform 413 or 502 page, for example) or has no `error`.
+ * Shared with the recap photo client (`recap/recapPhotosApi.ts`).
  * @param res - A response that is not ok
  * @param fallback - The message to use when the body carries none
  * @returns The message to throw
  */
-async function errorMessageFrom(res: Response, fallback: string): Promise<string> {
+export async function errorMessageFrom(res: Response, fallback: string): Promise<string> {
   const body: { error?: unknown } = await res.json().catch(() => ({}))
   return typeof body.error === 'string' ? body.error : fallback
+}
+
+/**
+ * POSTs an already-resized photo for one stop as the multipart form both
+ * upload routes read (`file`, `stop_id`, `width`, `height`): the owner's trip
+ * route and the contributor's recap-token route. Callers resize and
+ * re-encode with `resizeImage` first, so the server never sees the original.
+ * @param url - The upload endpoint
+ * @param stopId - The stop's id as that endpoint names it
+ * @param photo - The resized JPEG blob and the pixel dimensions it was resized to
+ * @returns The response body, typed by the caller
+ * @throws If the upload is rejected; the thrown message is the server's own `error` text
+ */
+export async function postStopPhoto<T>(
+  url: string,
+  stopId: string,
+  photo: { blob: Blob; width: number; height: number },
+): Promise<T> {
+  const form = new FormData()
+  form.append(FILE_FIELD, photo.blob)
+  form.append('stop_id', stopId)
+  form.append('width', String(photo.width))
+  form.append('height', String(photo.height))
+
+  const res = await fetch(url, { method: 'POST', body: form, credentials: 'same-origin' })
+  if (!res.ok) throw new Error(await errorMessageFrom(res, 'failed to upload photo'))
+  return (await res.json()) as T
 }
 
 /**
@@ -37,15 +65,7 @@ export async function uploadStopPhoto(
   stopId: string,
   photo: { blob: Blob; width: number; height: number },
 ): Promise<TripPhoto> {
-  const form = new FormData()
-  form.append(FILE_FIELD, photo.blob)
-  form.append('stop_id', stopId)
-  form.append('width', String(photo.width))
-  form.append('height', String(photo.height))
-
-  const res = await fetch(`/api/trips/${tripId}/photos`, { method: 'POST', body: form })
-  if (!res.ok) throw new Error(await errorMessageFrom(res, 'failed to upload photo'))
-  return (await res.json()) as TripPhoto
+  return postStopPhoto<TripPhoto>(`/api/trips/${tripId}/photos`, stopId, photo)
 }
 
 /**

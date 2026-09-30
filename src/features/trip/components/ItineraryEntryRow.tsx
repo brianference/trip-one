@@ -3,7 +3,7 @@ import type { ItineraryItem } from '../../../lib/validation/schemas'
 import { roleFor, slotLabel, directionsUrl } from '../../../lib/itinerary/badges'
 import { StopPhotoButton } from '../../photos/StopPhotoButton'
 import { StopPhotoStrip } from '../../photos/StopPhotoStrip'
-import type { TripPhoto } from '../../photos/photosApi'
+import { tripPhotoUrl, type TripPhoto } from '../../photos/photosApi'
 
 const DOT_COLOR: Record<string, string> = { fixed: '#a5d088', travel: '#ffd700', option: '#5ba3ff' }
 
@@ -140,7 +140,7 @@ export function ItineraryEntryRow({
           )}
           {stopPhotos.length > 0 && (
             <StopPhotoStrip
-              tripId={tripId}
+              photoUrl={(photoId) => tripPhotoUrl(tripId, photoId)}
               stopName={item.text}
               photos={stopPhotos}
               onRemove={onRemovePhoto}

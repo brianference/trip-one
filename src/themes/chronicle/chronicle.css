@@ -517,6 +517,14 @@
   color: var(--chronicle-danger);
 }
 
+/* The recap's title sits at the top beside the owner's tall action column
+   (Share recap over the invite card), not centred against it: centred, the
+   title floated halfway down a 400px column at 1280 with Share recap alone
+   above it. */
+.chronicle-recap > .chronicle-overview-header {
+  align-items: flex-start;
+}
+
 /* Owner recap header actions: Share recap + Invite people, stacked. Beside
    the heading (tablet and up) the column sits flush right, same as
    .chronicle-recap-share alone; on a phone the header wraps and it lines up
@@ -688,15 +696,6 @@
 .chronicle-invite-badge--joined {
   color: var(--accent-text);
   border-color: color-mix(in srgb, var(--chronicle-teal) 40%, transparent);
-}
-
-.chronicle-invite-joined-note {
-  margin: var(--chronicle-space-xs) 0 0;
-  font-family: var(--chronicle-font-body);
-  font-size: 12px;
-  /* text-secondary, not tertiary: tertiary measured 4.1:1 on this card's
-     surface via axe-core, just under the 4.5:1 AA minimum. */
-  color: var(--chronicle-text-secondary);
 }
 
 .chronicle-invite-remove-btn {
@@ -1116,6 +1115,14 @@
   cursor: default;
 }
 
+.chronicle-join-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--chronicle-text-secondary);
+}
+
 .chronicle-join-error {
   margin: -4px 0 12px;
   font-size: 13px;
@@ -1127,13 +1134,17 @@
 .chronicle-join-code-row {
   display: flex;
   justify-content: center;
-  gap: 8px;
+  /* Six 44px boxes always fit: at a 320px viewport the sheet's content box
+     is 284px, which leaves 20px for the five gaps (4px each). Wider screens
+     get the design's 8px. */
+  gap: clamp(2px, calc((100vw - 300px) / 5), 8px);
   margin: 18px 0 16px;
 }
 
 .chronicle-join-code-box {
-  flex: 0 1 44px;
-  min-width: 36px;
+  /* Never narrower than the 44px touch-target minimum. */
+  flex: 0 0 44px;
+  min-width: 44px;
   height: 54px;
   box-sizing: border-box;
   padding: 0;

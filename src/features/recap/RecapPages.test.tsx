@@ -43,9 +43,16 @@ const publicPayload: RecapPayload = {
   photos: [{ id: 'p1', stopId: STOP_B, width: 1600, height: 1200, createdAt: '2026-09-02T10:00:00Z' }],
 }
 
-/** Stubs fetch with one JSON response per URL suffix; the session check answers "signed out" unless overridden. */
+/**
+ * Stubs fetch with one JSON response per URL suffix; the session check answers
+ * "signed out" and the recap membership check "not a member" unless overridden.
+ */
 function stubFetch(routes: Record<string, { status: number; body: unknown }>) {
-  const withSession = { '/api/auth/me': { status: 200, body: { user: null } }, ...routes }
+  const withSession = {
+    '/api/auth/me': { status: 200, body: { user: null } },
+    [`/api/recap/${TOKEN}/me`]: { status: 200, body: { member: false } },
+    ...routes,
+  }
   const fetchMock = vi.fn().mockImplementation(async (url: string) => {
     const match = Object.entries(withSession).find(([suffix]) => url.endsWith(suffix))
     if (!match) throw new Error(`unexpected fetch ${url}`)

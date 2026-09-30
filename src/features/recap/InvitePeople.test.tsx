@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { InvitePeople } from './InvitePeople'
+import { InvitePeople, REMOVE_ACCESS_CONFIRM } from './InvitePeople'
 import { logger } from '../../lib/logger'
 
 /** Synthetic unit-test values (never rendered in the product). */
@@ -116,7 +116,9 @@ describe('InvitePeople', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), { target: { value: 'a@example.com' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send invite' }))
 
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(message))
+    // A failure is an alert, not a polite status.
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(message))
+    expect(screen.getByRole('status')).toHaveTextContent('')
     expect(logSpy).toHaveBeenCalledTimes(1)
     // A failed send keeps the typed email so it isn't lost.
     expect(screen.getByRole('textbox', { name: 'Email' })).toHaveValue('a@example.com')
@@ -135,7 +137,25 @@ describe('InvitePeople', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), { target: { value: 'a@example.com' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send invite' }))
 
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(message))
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(message))
+  })
+
+  it("shows a failed remove's server text in an alert and keeps the confirm open to retry", async () => {
+    const message = "We couldn't find that invite. It may have been removed."
+    const invites = [{ id: 'i1', email: 'a@example.com', createdAt: 1, acceptedAt: null }]
+    stubFetch({
+      [`GET /api/trips/${TRIP_ID}/invites`]: { status: 200, body: { invites } },
+      [`DELETE /api/trips/${TRIP_ID}/invites/i1`]: { status: 404, body: { error: message } },
+    })
+    vi.spyOn(logger, 'error').mockImplementation(() => undefined)
+    render(<InvitePeople tripId={TRIP_ID} />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove invite to a@example.com' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(message))
+    expect(screen.getByText('a@example.com')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
   })
 
   it('removes a pending invite after an inline confirm (no window.confirm)', async () => {
@@ -171,17 +191,34 @@ describe('InvitePeople', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1) // only the initial GET
   })
 
-  it('a joined invite has no Remove control and shows the trip-link note', async () => {
-    const invites = [{ id: 'i1', email: 'joined@example.com', createdAt: 1, acceptedAt: 2 }]
-    stubFetch({ [`GET /api/trips/${TRIP_ID}/invites`]: { status: 200, body: { invites } } })
+  it('a joined person shows "Joined" with a Remove control; confirming removes their access and drops the row', async () => {
+    const invites = [
+      { id: 'i1', email: 'joined@example.com', createdAt: 1, acceptedAt: 2 },
+      { id: 'i2', email: 'b@example.com', createdAt: 3, acceptedAt: null },
+    ]
+    const fetchMock = stubFetch({
+      [`GET /api/trips/${TRIP_ID}/invites`]: { status: 200, body: { invites } },
+      [`DELETE /api/trips/${TRIP_ID}/invites/i1`]: { status: 200, body: { ok: true, removedMember: true } },
+    })
     render(<InvitePeople tripId={TRIP_ID} />)
 
     expect(await screen.findByText('joined@example.com')).toBeInTheDocument()
-    expect(screen.getByText('Joined — can’t be removed')).toBeInTheDocument()
+    expect(screen.getByText('Joined')).toBeInTheDocument()
+    expect(screen.queryByText(/can’t be removed/)).toBeNull()
+    expect(screen.queryByText(/keep access/)).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove access for joined@example.com' }))
+    expect(screen.getByText(REMOVE_ACCESS_CONFIRM)).toBeInTheDocument()
+    expect(REMOVE_ACCESS_CONFIRM).toBe('Remove access? They won’t be able to add photos anymore.')
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus()
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+
+    await waitFor(() => expect(screen.queryByText('joined@example.com')).toBeNull())
+    expect(screen.getByRole('status')).toHaveTextContent('Access removed.')
+    expect(screen.getByRole('button', { name: 'Remove invite to b@example.com' })).toHaveFocus()
     expect(
-      screen.getByText('They keep access to this trip through the link they used to join.'),
-    ).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Remove invite to joined@example.com' })).toBeNull()
+      fetchMock.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === 'DELETE'),
+    ).toHaveLength(1)
   })
 
   describe('focus management', () => {
@@ -257,23 +294,20 @@ describe('InvitePeople', () => {
       expect(screen.getByRole('button', { name: 'Remove invite to a@example.com' })).toHaveFocus()
     })
 
-    it('an alreadyJoined response keeps the row, drops the Remove control, and focuses the Joined label', async () => {
+    it('a pending invite that was accepted meanwhile (removedMember) is still dropped, and says access was removed', async () => {
       const invites = [{ id: 'i1', email: 'a@example.com', createdAt: 1, acceptedAt: null }]
       stubFetch({
         [`GET /api/trips/${TRIP_ID}/invites`]: { status: 200, body: { invites } },
-        [`DELETE /api/trips/${TRIP_ID}/invites/i1`]: { status: 200, body: { ok: true, alreadyJoined: true } },
+        [`DELETE /api/trips/${TRIP_ID}/invites/i1`]: { status: 200, body: { ok: true, removedMember: true } },
       })
       render(<InvitePeople tripId={TRIP_ID} />)
 
       fireEvent.click(await screen.findByRole('button', { name: 'Remove invite to a@example.com' }))
       fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
 
-      const badge = await screen.findByText('Joined — can’t be removed')
-      expect(badge).toHaveFocus()
-      expect(screen.queryByRole('button', { name: 'Remove invite to a@example.com' })).toBeNull()
-      expect(screen.getByRole('status')).toHaveTextContent(
-        'That person already joined, so they were kept on the list instead of removed.',
-      )
+      await waitFor(() => expect(screen.queryByText('a@example.com')).toBeNull())
+      expect(screen.getByRole('status')).toHaveTextContent('Access removed.')
+      expect(screen.getByRole('textbox', { name: 'Email' })).toHaveFocus()
     })
   })
 })

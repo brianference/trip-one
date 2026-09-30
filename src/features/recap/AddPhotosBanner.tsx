@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { joinRecapTrip } from './joinApi'
 import { CameraIcon, JoinTripSheet, type JoinStep } from './JoinTripSheet'
@@ -14,6 +14,13 @@ interface Props {
   token: string
   /** "the Anaheim, California trip": how the copy names this trip. */
   tripPhrase: string
+  /**
+   * Called once the viewer has joined and the recap should switch to
+   * contributor mode. `addPhotosNow` is true when they asked to add photos
+   * (the banner button, or step 3's "Add your photos"), false when they just
+   * closed the sheet after joining.
+   */
+  onJoined: (addPhotosNow: boolean) => void
 }
 
 /**
@@ -21,31 +28,34 @@ interface Props {
  * the public recap's header.
  *
  * "Add photos" joins straight away for a viewer signed in with a verified
- * email and opens the trip's plan page; anyone else gets {@link JoinTripSheet}
- * to prove an email first. `?invite=1` (the invite email's link) presses the
- * button on arrival, and `?join=1` (the return from the password login)
- * resumes the join once the session is known. Both run once and are then
- * removed from the URL, so a reload does not repeat them.
+ * email and hands the recap over to contributor mode (`onJoined`); anyone
+ * else gets {@link JoinTripSheet} to prove an email first. `?invite=1` (the
+ * invite email's link) presses the button on arrival, and `?join=1` (the
+ * return from the password login) resumes the join once the session is
+ * known. Both run once and are then removed from the URL, so a reload does
+ * not repeat them. Neither joins an unverified account: the server would
+ * refuse it, so step 1 opens with the account's email filled in instead.
  */
-export function AddPhotosBanner({ token, tripPhrase }: Props) {
+export function AddPhotosBanner({ token, tripPhrase, onJoined }: Props) {
   const { user, loading } = useAuth()
-  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [sheetStep, setSheetStep] = useState<JoinStep | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [fromInvite] = useState(() => searchParams.get(INVITE_PARAM) === '1')
   const autoRunRef = useRef(false)
+  // Set when the sheet's join succeeded, so closing it still switches modes.
+  const joinedInSheetRef = useRef(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const headingId = useId()
 
-  /** Joins as the signed-in user; the trip page on success, else the sheet or an error. */
+  /** Joins as the signed-in user; contributor mode on success, else the sheet or an error. */
   async function joinNow(): Promise<void> {
     setBusy(true)
     setError(null)
     try {
       const result = await joinRecapTrip(token)
-      if (result.kind === 'joined') navigate(`/trip/${result.tripId}/plan`)
+      if (result.kind === 'joined') onJoined(true)
       else if (result.kind === 'not-invited') setSheetStep('not-invited')
       else if (result.kind === 'signed-out') setSheetStep('email')
       else setError(result.message)
@@ -61,6 +71,12 @@ export function AddPhotosBanner({ token, tripPhrase }: Props) {
     else setSheetStep('email')
   }
 
+  /** Closes the sheet; after a successful join the recap becomes a contributor's. */
+  function closeSheet(): void {
+    setSheetStep(null)
+    if (joinedInSheetRef.current) onJoined(false)
+  }
+
   // ?join=1 and ?invite=1 act once, after the session check settles.
   useEffect(() => {
     if (loading || autoRunRef.current) return
@@ -72,8 +88,7 @@ export function AddPhotosBanner({ token, tripPhrase }: Props) {
     next.delete(JOIN_PARAM)
     next.delete(INVITE_PARAM)
     setSearchParams(next, { replace: true })
-    if (wantsJoin && user) void joinNow()
-    else if (user?.emailVerified) void joinNow()
+    if (user?.emailVerified) void joinNow()
     else setSheetStep('email')
     // Keyed on the session settling only; the ref makes it one-shot.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -112,7 +127,14 @@ export function AddPhotosBanner({ token, tripPhrase }: Props) {
           fromInvite={fromInvite}
           initialStep={sheetStep}
           initialEmail={user?.email ?? ''}
-          onClose={() => setSheetStep(null)}
+          onClose={closeSheet}
+          onJoined={() => {
+            joinedInSheetRef.current = true
+          }}
+          onAddPhotos={() => {
+            setSheetStep(null)
+            onJoined(true)
+          }}
           triggerRef={buttonRef}
         />
       )}

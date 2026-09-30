@@ -1,9 +1,21 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type RefObject } from 'react'
-import type { ItineraryItem } from '../../lib/validation/schemas'
+import { useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type RefObject } from 'react'
 import { dayHeading } from '../../lib/itinerary/tripDates'
 
-/** An itinerary stop with its stable id confirmed present (see `groupStopsByDay`). */
-type EligibleStop = ItineraryItem & { id: string }
+/**
+ * What the sheet needs to know about a stop. An `ItineraryItem` (the owner's
+ * plan page) fits as is; the public recap maps its stops to this shape.
+ */
+export interface StopChoice {
+  /** The id a photo upload names the stop by; stops without one are not listed. */
+  id?: string
+  /** 1-indexed day; a stop without one is listed under day 1. */
+  day?: number
+  /** The stop's display name. */
+  text: string
+}
+
+/** A stop with its id confirmed present (see `groupStopsByDay`). */
+type EligibleStop = StopChoice & { id: string }
 
 /** One day's eligible stops, in the sheet's display order. */
 interface DayGroup {
@@ -21,7 +33,7 @@ const FOCUSABLE_SELECTOR = 'button, [href], input, select, textarea, [tabindex]:
  * no id yet and is left out rather than offered as an upload target it
  * can't actually be attached to. Days with no eligible stops are omitted.
  */
-function groupStopsByDay(itinerary: ItineraryItem[], selectedDay: number): DayGroup[] {
+function groupStopsByDay(itinerary: StopChoice[], selectedDay: number): DayGroup[] {
   const byDay = new Map<number, EligibleStop[]>()
   for (const item of itinerary) {
     if (!item.id) continue
@@ -37,7 +49,8 @@ function groupStopsByDay(itinerary: ItineraryItem[], selectedDay: number): DayGr
 
 /**
  * The "Which stop is this photo for?" sheet opened from the trip header's
- * "Add photos" button (see `TripHeaderActions`). Lists every itinerary stop
+ * "Add photos" button (see `TripHeaderActions`) and from the public recap's
+ * contributor "Add photos" button (see `ContributorBanner`). Lists every stop
  * that has a stable id as a native radio group, grouped under "Day N"
  * headings with the currently selected day first, and defaults to that
  * day's first stop. Picking a file uploads it to the selected stop and
@@ -57,8 +70,8 @@ export function ChooseStopSheet({
   onChoosePhoto,
   triggerRef,
 }: {
-  /** The trip's full itinerary; only stops with a stable id are listed. */
-  itinerary: ItineraryItem[]
+  /** The trip's stops; only stops with an id are listed. */
+  itinerary: StopChoice[]
   /** The trip's start date, so each day heading can show a real date when known. */
   startDate: string | null
   /** The day currently open on the plan page — its stops are listed, and defaulted to, first. */
@@ -74,13 +87,22 @@ export function ChooseStopSheet({
   const [stopId, setStopId] = useState<string | null>(dayGroups[0]?.stops[0]?.id ?? null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // One radio name per day group: each day is its own role="radiogroup", and
+  // a shared name would make arrow keys run across every day as one group.
+  const radioNamePrefix = useId()
 
   useEffect(() => {
+    /** Every enabled focusable element inside the sheet, in DOM order. */
     function focusableElements(): HTMLElement[] {
       const dialog = dialogRef.current
       if (!dialog) return []
       return Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((el) => !el.hasAttribute('disabled'))
     }
+    /**
+     * Escape closes the sheet; Tab and Shift+Tab wrap between its first and
+     * last focusable elements so focus never leaves the dialog.
+     * @param event - The document-level keydown
+     */
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         event.preventDefault()
@@ -115,10 +137,16 @@ export function ChooseStopSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  /** Opens the hidden file input's picker for the selected stop. */
   function openPicker(): void {
     fileInputRef.current?.click()
   }
 
+  /**
+   * Hands the picked file and the selected stop to `onChoosePhoto`, then
+   * clears the input so picking the same file again still fires a change.
+   * @param event - The file input's change event
+   */
   function handleFileChange(event: ChangeEvent<HTMLInputElement>): void {
     const file = event.target.files?.[0]
     event.target.value = ''
@@ -173,7 +201,7 @@ export function ChooseStopSheet({
                     >
                       <input
                         type="radio"
-                        name="choose-stop-sheet"
+                        name={`${radioNamePrefix}-day-${group.day}`}
                         value={stop.id}
                         checked={stopId === stop.id}
                         onChange={() => setStopId(stop.id)}

@@ -16,6 +16,24 @@ interface SavedTrip {
   created_at: string
 }
 
+/**
+ * A trip the user joined from its recap (as a photo contributor). The API
+ * names it by its recap token only: members never get the trip id.
+ */
+interface JoinedTrip {
+  recapToken: string
+  title: string | null
+  displayName: string
+}
+
+/**
+ * "Autumn in Oslo" or "Oslo, Norway trip": how a joined trip is named.
+ * @param trip - A joined trip from GET /api/my-trips
+ */
+function joinedTripName(trip: JoinedTrip): string {
+  return trip.title ?? `${trip.displayName} trip`
+}
+
 /** Turns a slug back into something readable when the join found no location row. */
 function readableName(trip: SavedTrip): string {
   if (trip.title) return trip.title
@@ -33,6 +51,7 @@ export function MyTripsPage() {
   const navigate = useNavigate()
 
   const [trips, setTrips] = useState<SavedTrip[]>([])
+  const [joined, setJoined] = useState<JoinedTrip[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<SavedTrip | null>(null)
@@ -50,8 +69,9 @@ export function MyTripsPage() {
     try {
       const res = await fetch('/api/my-trips', { credentials: 'same-origin' })
       if (!res.ok) throw new Error('Could not load your trips.')
-      const body = (await res.json()) as { trips: SavedTrip[] }
+      const body = (await res.json()) as { trips?: SavedTrip[]; joined?: JoinedTrip[] }
       setTrips(body.trips ?? [])
+      setJoined(body.joined ?? [])
     } catch {
       setError('We could not load your trips. Please try again.')
     } finally {
@@ -161,6 +181,8 @@ export function MyTripsPage() {
             ))}
           </ul>
         )}
+
+        {!loading && joined.length > 0 && <JoinedTrips trips={joined} />}
       </PageShell>
 
       <ConfirmDialog
@@ -180,6 +202,38 @@ export function MyTripsPage() {
         onCancel={() => setPendingDelete(null)}
       />
     </>
+  )
+}
+
+/**
+ * "Trips you've joined": trips the user was invited to and joined from their
+ * recap. Each links to the recap, where they add and remove their own
+ * photos; there is no trip link to give them.
+ * @param trips - The joined trips, most recently joined first
+ */
+function JoinedTrips({ trips }: { trips: JoinedTrip[] }) {
+  return (
+    <section aria-labelledby="joined-trips-heading" className="mt-10">
+      <h2 id="joined-trips-heading" className="font-[family-name:var(--font-display)] text-xl font-semibold">
+        Trips you’ve joined
+      </h2>
+      <p className="mt-1 text-sm opacity-75">Open a recap to add or remove your photos.</p>
+      <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {trips.map((trip) => (
+          <li key={trip.recapToken}>
+            <Link
+              to={`/recap/${encodeURIComponent(trip.recapToken)}`}
+              className="flex min-h-[44px] flex-col justify-center rounded-[var(--radius-card)] border border-[var(--hairline)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-lifted)]"
+            >
+              <span className="font-[family-name:var(--font-display)] text-base font-semibold leading-snug">
+                {joinedTripName(trip)}
+              </span>
+              <span className="mt-0.5 text-sm opacity-75">Trip recap</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 
