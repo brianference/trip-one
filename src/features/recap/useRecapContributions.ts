@@ -96,8 +96,12 @@ export function useRecapContributions(
       setError(null)
       try {
         await deleteRecapPhoto(token, photoId)
-        if (await refresh()) setStatus('Photo removed')
-        else setError(REFRESH_FAILED_MESSAGE)
+        if (await refresh()) {
+          setError(null)
+          setStatus('Photo removed')
+        } else {
+          setError(REFRESH_FAILED_MESSAGE)
+        }
       } catch (err) {
         logger.error('recap photo delete failed', err)
         setError(messageOf(err, REMOVE_FAILED_MESSAGE))

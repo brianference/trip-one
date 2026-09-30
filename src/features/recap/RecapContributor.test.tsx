@@ -290,4 +290,20 @@ describe('RecapPublicPage contributor mode', () => {
     expect(within(banner).queryByRole('button', { name: 'Add photos' })).toBeNull()
     expect(within(banner).getByText('This recap has no stops to add photos to yet.')).toBeInTheDocument()
   })
+
+  it('a failed membership re-check leaves a real member in contributor mode', async () => {
+    vi.spyOn(resizeModule, 'resizeImage').mockResolvedValue({ blob: new Blob(['jpeg']), width: 800, height: 600 })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { api } = stubApi({ upload: { status: 500, body: { error: 'Storage is down.' } } })
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'Add photos' }))
+    // The re-check itself fails: that must not demote the member.
+    api.membership = { status: 500, body: { error: 'down' } }
+    const dialog = screen.getByRole('dialog', { name: 'Which stop is this photo for?' })
+    const file = new File(['bytes'], 'og.png', { type: 'image/png' })
+    fireEvent.change(dialog.querySelector('input[type="file"]') as HTMLInputElement, { target: { files: [file] } })
+    expect(await screen.findByRole('alert')).toHaveTextContent('Storage is down.')
+    await waitFor(() => expect(screen.getByRole('region', { name: 'You’re on this trip' })).toBeInTheDocument())
+    expect(screen.queryByRole('region', { name: 'Were you on this trip?' })).toBeNull()
+  })
 })
