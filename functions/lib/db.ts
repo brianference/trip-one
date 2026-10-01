@@ -333,6 +333,38 @@ export async function insertRequestLog(env: Env, ipHash: string, endpoint: strin
     .run()
 }
 
+/**
+ * Most request_log rows one purge deletes. D1 counts each deleted row, plus
+ * one per index on the table, as a row written, and Workers Free allows
+ * 100,000 rows written a day (developers.cloudflare.com/d1/platform/pricing/),
+ * so one purge must never spend a large share of that. The purge runs on about
+ * one in every REQUEST_LOG_PURGE_ONE_IN allowed requests, so a backlog drains
+ * over a few later purges.
+ */
+export const REQUEST_LOG_PURGE_BATCH = 1000
+
+/**
+ * Deletes the oldest request_log rows created before `beforeIso`, at most
+ * {@link REQUEST_LOG_PURGE_BATCH} of them per call.
+ *
+ * The subquery walks the primary key from the start and stops after the batch,
+ * and old rows are (almost) a prefix of the table in id order, so it reads
+ * little more than the rows it deletes. No index on created_at is needed, so
+ * inserts (every rate-limited request) do not pay for one more index write.
+ *
+ * @param env - D1 env
+ * @param beforeIso - ISO-8601 cutoff; rows created before it are deleted
+ * @returns How many rows were deleted (at most REQUEST_LOG_PURGE_BATCH)
+ */
+export async function purgeRequestLogBefore(env: Env, beforeIso: string): Promise<number> {
+  const res = await env.DB.prepare(
+    'DELETE FROM request_log WHERE id IN (SELECT id FROM request_log WHERE created_at < ? ORDER BY id LIMIT ?)',
+  )
+    .bind(beforeIso, REQUEST_LOG_PURGE_BATCH)
+    .run()
+  return res.meta?.changes ?? 0
+}
+
 // --- trips ---
 
 export async function createTrip(
@@ -570,11 +602,22 @@ export async function getEmailVerification(env: Env, tokenHash: string): Promise
   return row ?? null
 }
 
-/** Marks a confirmation token used. One-time by construction. */
-export async function markEmailVerificationUsed(env: Env, tokenHash: string, usedAt: number): Promise<void> {
-  await env.DB.prepare('UPDATE email_verifications SET used_at = ? WHERE token_hash = ?')
-    .bind(usedAt, tokenHash)
+/**
+ * Consumes a confirmation token: marks it used, but only while it is unused
+ * and unexpired, in one statement. Of two concurrent redemptions only the
+ * first changes the row, so a link can never be spent twice.
+ * @param env - D1 env
+ * @param tokenHash - sha256 of the token from the link
+ * @param nowMs - Current time; the token must expire at or after it
+ * @returns True when this caller consumed the token
+ */
+export async function consumeEmailVerification(env: Env, tokenHash: string, nowMs: number): Promise<boolean> {
+  const res = await env.DB.prepare(
+    'UPDATE email_verifications SET used_at = ? WHERE token_hash = ? AND used_at IS NULL AND expires_at >= ?',
+  )
+    .bind(nowMs, tokenHash, nowMs)
     .run()
+  return (res.meta?.changes ?? 0) > 0
 }
 
 /** Drops outstanding reset tokens for a user so only the latest link works. */
@@ -692,6 +735,12 @@ export interface PhotoRow {
   height: number
   bytes: number
   created_at: string
+  /**
+   * The signed-in contributor who added the photo through the recap, or null
+   * for a photo added by whoever holds the trip link. Optional so rows read
+   * from a fake that predates the column still type-check.
+   */
+  uploader_user_id?: string | null
 }
 
 /** Every photo on a trip, oldest first. */
@@ -713,10 +762,21 @@ export async function countPhotosForStop(env: Env, tripId: string, stopId: strin
 /** Records an uploaded photo whose bytes are already in R2. */
 export async function insertPhoto(env: Env, row: PhotoRow): Promise<void> {
   await env.DB.prepare(
-    `INSERT INTO trip_photos (id, trip_id, stop_id, r2_key, content_type, width, height, bytes, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO trip_photos (id, trip_id, stop_id, r2_key, content_type, width, height, bytes, created_at, uploader_user_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
-    .bind(row.id, row.trip_id, row.stop_id, row.r2_key, row.content_type, row.width, row.height, row.bytes, row.created_at)
+    .bind(
+      row.id,
+      row.trip_id,
+      row.stop_id,
+      row.r2_key,
+      row.content_type,
+      row.width,
+      row.height,
+      row.bytes,
+      row.created_at,
+      row.uploader_user_id ?? null,
+    )
     .run()
 }
 
@@ -735,6 +795,24 @@ export async function getPhotoForTrip(env: Env, tripId: string, photoId: string)
 /** Deletes one photo row, scoped to its trip. */
 export async function deletePhotoRow(env: Env, tripId: string, photoId: string): Promise<void> {
   await env.DB.prepare('DELETE FROM trip_photos WHERE id = ? AND trip_id = ?').bind(photoId, tripId).run()
+}
+
+/**
+ * Deletes one photo row, but only when it is on this trip AND was uploaded by
+ * this user. The uploader is part of the WHERE clause, so a contributor can
+ * never remove someone else's photo even if a check upstream were skipped.
+ * @returns True when a row was deleted
+ */
+export async function deletePhotoRowUploadedBy(
+  env: Env,
+  tripId: string,
+  photoId: string,
+  userId: string,
+): Promise<boolean> {
+  const res = await env.DB.prepare('DELETE FROM trip_photos WHERE id = ? AND trip_id = ? AND uploader_user_id = ?')
+    .bind(photoId, tripId, userId)
+    .run()
+  return (res.meta?.changes ?? 0) > 0
 }
 
 /** Deletes every photo row on a trip (the caller removes the R2 objects first). */
@@ -851,16 +929,31 @@ export async function expireActiveEmailCodes(env: Env, email: string, nowMs: num
     .run()
 }
 
-/** Inserts a hashed sign-in code. */
-export async function insertEmailCode(
+/**
+ * Inserts a hashed sign-in code, but only while fewer than `maxGlobal` codes
+ * (for any email) were created at or after `globalWindowStartMs`. The count
+ * and the insert are one statement, so a burst of concurrent requests cannot
+ * all slip under the app-wide cap.
+ *
+ * Fails closed: the answer is true only when D1 reports a changed row, so a
+ * result with no change count reads as "not inserted" and no email is sent.
+ *
+ * @returns True when the code was stored (and may be emailed)
+ */
+export async function insertEmailCodeUnderGlobalCap(
   env: Env,
   row: { id: string; email: string; code_hash: string; expires_at: number; created_at: number },
-): Promise<void> {
-  await env.DB.prepare(
-    'INSERT INTO email_codes (id, email, code_hash, expires_at, attempts, used_at, created_at) VALUES (?, ?, ?, ?, 0, NULL, ?)',
+  globalWindowStartMs: number,
+  maxGlobal: number,
+): Promise<boolean> {
+  const res = await env.DB.prepare(
+    `INSERT INTO email_codes (id, email, code_hash, expires_at, attempts, used_at, created_at)
+     SELECT ?, ?, ?, ?, 0, NULL, ?
+     WHERE (SELECT COUNT(*) FROM email_codes WHERE created_at >= ?) < ?`,
   )
-    .bind(row.id, row.email, row.code_hash, row.expires_at, row.created_at)
+    .bind(row.id, row.email, row.code_hash, row.expires_at, row.created_at, globalWindowStartMs, maxGlobal)
     .run()
+  return (res.meta?.changes ?? 0) > 0
 }
 
 /** The newest unused, unexpired code for this email, or null. `id` breaks created_at ties so the pick is deterministic. */
@@ -923,6 +1016,10 @@ const TRIP_INVITE_COLUMNS = 'id, trip_id, email, created_at, accepted_user_id, a
  * unique (trip_id, email) index makes this one statement, so two concurrent
  * invites for the same address cannot both insert. The caller reads the row
  * back with {@link getTripInviteByEmail}.
+ *
+ * Bringing back a REVOKED invite also clears its acceptance: a person removed
+ * from the trip is pending again until they join again, rather than being
+ * listed as joined while having no membership. A live invite is left as is.
  */
 export async function upsertTripInvite(
   env: Env,
@@ -931,7 +1028,10 @@ export async function upsertTripInvite(
   await env.DB.prepare(
     `INSERT INTO trip_invites (id, trip_id, email, created_at, accepted_user_id, accepted_at, revoked_at, last_sent_at)
      VALUES (?, ?, ?, ?, NULL, NULL, NULL, NULL)
-     ON CONFLICT (trip_id, email) DO UPDATE SET revoked_at = NULL`,
+     ON CONFLICT (trip_id, email) DO UPDATE SET
+       accepted_user_id = CASE WHEN revoked_at IS NULL THEN accepted_user_id ELSE NULL END,
+       accepted_at = CASE WHEN revoked_at IS NULL THEN accepted_at ELSE NULL END,
+       revoked_at = NULL`,
   )
     .bind(row.id, row.trip_id, normalizeEmail(row.email), row.created_at)
     .run()
@@ -1061,11 +1161,11 @@ export async function listActiveTripInvites(env: Env, tripId: string): Promise<T
 }
 
 /**
- * Revokes one PENDING invite, scoped to its trip. An accepted invite is never
- * revoked (`accepted_at IS NULL` in the same statement): its member already
- * holds the trip link, so revoking could not withdraw access and would only
- * hide them from the owner. Revoking an already-revoked invite keeps its
- * first revocation time and still counts as done.
+ * Revokes one PENDING invite, scoped to its trip (`accepted_at IS NULL` in the
+ * same statement; an accepted invite goes through
+ * {@link revokeAcceptedTripInvite}, which also removes the membership).
+ * Revoking an already-revoked invite keeps its first revocation time and
+ * still counts as done.
  * @returns True when the trip has a pending invite with that id
  */
 export async function revokeTripInvite(env: Env, tripId: string, inviteId: string, revokedAt: number): Promise<boolean> {
@@ -1077,23 +1177,132 @@ export async function revokeTripInvite(env: Env, tripId: string, inviteId: strin
   return (res.meta?.changes ?? 0) > 0
 }
 
-/** Records the first acceptance of an invite; later calls change nothing. */
-export async function markTripInviteAccepted(env: Env, inviteId: string, userId: string, acceptedAt: number): Promise<void> {
-  await env.DB.prepare(
-    'UPDATE trip_invites SET accepted_user_id = ?, accepted_at = ? WHERE id = ? AND accepted_at IS NULL',
+/**
+ * Revokes an ACCEPTED invite, scoped to its trip, keeping the first revocation
+ * time. The caller then removes the membership with {@link removeTripMember};
+ * revoking first means a failure between the two leaves no live invite the
+ * person could use to join again, and a retry finishes the job.
+ * @returns True when the trip has an accepted invite with that id
+ */
+export async function revokeAcceptedTripInvite(
+  env: Env,
+  tripId: string,
+  inviteId: string,
+  revokedAt: number,
+): Promise<boolean> {
+  const res = await env.DB.prepare(
+    'UPDATE trip_invites SET revoked_at = COALESCE(revoked_at, ?) WHERE id = ? AND trip_id = ? AND accepted_at IS NOT NULL',
   )
-    .bind(userId, acceptedAt, inviteId)
+    .bind(revokedAt, inviteId, tripId)
     .run()
+  return (res.meta?.changes ?? 0) > 0
 }
 
-/** Adds a user to a trip as a contributor. Idempotent: an existing membership is left as it is. */
-export async function addTripMember(env: Env, row: { trip_id: string; user_id: string; created_at: number }): Promise<void> {
-  await env.DB.prepare(
-    `INSERT INTO trip_members (trip_id, user_id, role, created_at) VALUES (?, ?, 'contributor', ?)
-     ON CONFLICT (trip_id, user_id) DO NOTHING`,
+/**
+ * Removes one person's membership of one trip. Contributors never hold the
+ * trip link, so this fully withdraws their access; their uploaded photos stay.
+ * Idempotent.
+ */
+export async function removeTripMember(env: Env, tripId: string, userId: string): Promise<void> {
+  await env.DB.prepare('DELETE FROM trip_members WHERE trip_id = ? AND user_id = ?').bind(tripId, userId).run()
+}
+
+/**
+ * Claims an invite's acceptance for `userId`, in one statement that also
+ * checks the invite is still live (`revoked_at IS NULL`), so an invite revoked
+ * after the caller read it can never be accepted. The first acceptance time
+ * and user are kept: joining again matches (the same user) and changes
+ * nothing, while an invite already accepted by another account does not match.
+ * @param env - D1 env
+ * @param inviteId - The invite
+ * @param userId - The joining user
+ * @param acceptedAt - Epoch ms, used only if the invite was not yet accepted
+ * @returns True when the invite is live and now accepted by this user
+ */
+export async function markTripInviteAccepted(env: Env, inviteId: string, userId: string, acceptedAt: number): Promise<boolean> {
+  const res = await env.DB.prepare(
+    `UPDATE trip_invites
+     SET accepted_user_id = CASE WHEN accepted_at IS NULL THEN ? ELSE accepted_user_id END,
+         accepted_at = COALESCE(accepted_at, ?)
+     WHERE id = ? AND revoked_at IS NULL AND (accepted_at IS NULL OR accepted_user_id = ?)`,
   )
-    .bind(row.trip_id, row.user_id, row.created_at)
+    .bind(userId, acceptedAt, inviteId, userId)
     .run()
+  return (res.meta?.changes ?? 0) > 0
+}
+
+/**
+ * Adds a user to a trip as a contributor, ONLY while `inviteId` is a live
+ * invite to that trip accepted by that user; the check and the insert are one
+ * statement, so an invite revoked at any point before it leaves no member.
+ * An existing membership is kept as it is (the no-op update still reports
+ * the row, so a repeat join also answers true).
+ * @param env - D1 env
+ * @param row - The membership, and the accepted invite that grants it
+ * @returns True when the user is a member through that live invite
+ */
+export async function addTripMemberForInvite(
+  env: Env,
+  row: { trip_id: string; user_id: string; created_at: number; invite_id: string },
+): Promise<boolean> {
+  const res = await env.DB.prepare(
+    `INSERT INTO trip_members (trip_id, user_id, role, created_at)
+     SELECT ?, ?, 'contributor', ?
+     WHERE EXISTS (
+       SELECT 1 FROM trip_invites
+       WHERE id = ? AND trip_id = ? AND accepted_user_id = ? AND revoked_at IS NULL
+     )
+     ON CONFLICT (trip_id, user_id) DO UPDATE SET role = trip_members.role`,
+  )
+    .bind(row.trip_id, row.user_id, row.created_at, row.invite_id, row.trip_id, row.user_id)
+    .run()
+  return (res.meta?.changes ?? 0) > 0
+}
+
+/** True when the user is a member (contributor) of the trip. */
+export async function isTripMember(env: Env, tripId: string, userId: string): Promise<boolean> {
+  const row = await env.DB.prepare('SELECT 1 AS ok FROM trip_members WHERE trip_id = ? AND user_id = ?')
+    .bind(tripId, userId)
+    .first<{ ok: number }>()
+  return row != null
+}
+
+/**
+ * A trip the user joined, as the data layer returns it. It carries the trip id
+ * only so the caller can scrub it out of the title; it is never sent.
+ */
+export interface JoinedTripRow {
+  trip_id: string
+  recap_token: string
+  title: string | null
+  location_slug: string
+  location_name: string | null
+}
+
+/**
+ * The trips a user is a member of that still have an active recap link, most
+ * recently joined first, each with its oldest active recap token (the one
+ * every other caller sees). A trip whose links are all revoked is left out:
+ * the member has no way in, so listing it would be a dead link.
+ * @param env - D1 env
+ * @param userId - The member
+ */
+export async function listJoinedTrips(env: Env, userId: string): Promise<JoinedTripRow[]> {
+  const res = await env.DB.prepare(
+    `SELECT trip_id, recap_token, title, location_slug, location_name FROM (
+       SELECT m.trip_id AS trip_id, m.created_at AS joined_at, t.title AS title, t.location_slug AS location_slug,
+              l.display_name AS location_name,
+              (SELECT r.token FROM trip_recap_links r WHERE r.trip_id = m.trip_id AND r.revoked_at IS NULL
+               ORDER BY r.created_at ASC, r.token ASC LIMIT 1) AS recap_token
+       FROM trip_members m
+       JOIN trips t ON t.id = m.trip_id
+       LEFT JOIN locations l ON l.slug = t.location_slug
+       WHERE m.user_id = ?
+     ) WHERE recap_token IS NOT NULL ORDER BY joined_at DESC, trip_id ASC`,
+  )
+    .bind(userId)
+    .all<JoinedTripRow>()
+  return res.results ?? []
 }
 
 /** Deletes every invite for a trip. */

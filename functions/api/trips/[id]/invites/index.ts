@@ -1,7 +1,6 @@
 import type { Env, TripInviteRow } from '../../../../lib/db'
 import {
   countLiveTripInvites,
-  getLocationBySlug,
   getTrip,
   getTripInviteByEmail,
   listActiveTripInvites,
@@ -15,7 +14,6 @@ import {
   claimInviteSend,
   releaseInviteSend,
   guardInviteRequest,
-  inviteTripName,
   json,
   toPublicInvite,
   INVITE_SUBJECT,
@@ -59,15 +57,16 @@ export async function onRequestGet({ env, request, params }: InviteContext): Pro
  * Invites an email address to add photos to the trip: creates the invite (or
  * un-revokes an earlier one for the same address), makes sure the trip has an
  * active recap link, and emails the invitee that recap link with `?invite=1`.
- * The invitee is never sent the trip link; they get the trip id only by
- * joining (POST /api/recap/:token/join) signed in as this address.
+ * The invitee is never sent the trip link, and joining
+ * (POST /api/recap/:token/join) does not reveal it either: members add and
+ * remove their own photos through recap-token endpoints.
  *
  * The endpoint must not become a mail relay, so the email goes out only when
  * {@link claimInviteSend} allows it: never twice within 24 hours for one
  * invite, at most 20 per trip, 3 per recipient and 300 app-wide per 24 hours.
  * When a cap stops the send, the invite is still saved and the response says
- * `emailSent: false` with a `reason`. The subject is fixed text; the trip name
- * (chosen by whoever holds the link) appears only, escaped, in the body.
+ * `emailSent: false` with a `reason`. The subject and body are fixed text:
+ * nothing the trip's author wrote (such as its title) goes into the email.
  * A trip may hold at most 50 live invites (409 past that).
  *
  * The response never depends on whether the address has an account: no user
@@ -88,7 +87,6 @@ export async function onRequestPost({ env, request, params }: InviteContext): Pr
   const email = normalizeEmail(parsed.data.email)
 
   let invite: TripInviteRow
-  let tripName: string
   let recapUrl: string
   try {
     const trip = await getTrip(env, tripId)
@@ -111,8 +109,6 @@ export async function onRequestPost({ env, request, params }: InviteContext): Pr
     // failure here can never stamp last_sent_at for an email that never left.
     // The recap link is also what the invitee opens and what join needs.
     const token = await ensureActiveRecapLink(env, tripId)
-    const location = await getLocationBySlug(env, trip.location_slug)
-    tripName = inviteTripName(trip, location?.display_name ?? null)
     recapUrl = `${siteOrigin(env)}/recap/${token}?invite=1`
   } catch (err) {
     logger.error('invite create failed', err)
@@ -132,7 +128,7 @@ export async function onRequestPost({ env, request, params }: InviteContext): Pr
   }
 
   // sendEmail never throws; it reports failure in its result.
-  const result = await sendEmail(env, email, INVITE_SUBJECT, tripInviteHtml({ tripName, recapUrl }))
+  const result = await sendEmail(env, email, INVITE_SUBJECT, tripInviteHtml({ recapUrl }))
   if (!result.sent) {
     if (!result.stubbed) {
       logger.warn('invite email not sent', { inviteId: invite.id })

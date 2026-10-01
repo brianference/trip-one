@@ -1,9 +1,7 @@
 import { z } from 'zod'
-import type { Env, TripInviteRow, TripRow } from './db'
+import type { Env, TripInviteRow } from './db'
 import { claimTripInviteSend, getTripInviteById, releaseTripInviteSend } from './db'
 import { isRateLimited } from './rateLimitGuard'
-import { stripTripId } from './recapAccess'
-import { cleanDisplayName } from '../../src/lib/location/displayName'
 import { DEMO_TRIP_ID_SET } from '../../src/lib/api/demoIds'
 
 /**
@@ -40,10 +38,6 @@ export type InviteNotSentReason = 'daily_limit' | 'recently_sent' | 'send_failed
 export const LIVE_INVITE_LIMIT_MESSAGE = `This trip already has ${MAX_LIVE_INVITES_PER_TRIP} open invites. Remove one to invite someone new.`
 export const INVITES_UNAVAILABLE_MESSAGE =
   'Invites are paused for the moment. Please try again later.'
-/** Longest trip name put in an invite's subject and body; a title can be longer. */
-export const MAX_INVITE_TRIP_NAME_LENGTH = 100
-/** Used when a trip has neither a title nor a place name. */
-const FALLBACK_TRIP_NAME = 'A trip'
 
 export const RATE_LIMIT_MESSAGE =
   'You’ve made a lot of requests in a short time. Please wait a few minutes and try again.'
@@ -109,32 +103,8 @@ export function toPublicInvite(row: TripInviteRow): PublicInvite {
 }
 
 /**
- * The trip's name as an invitee sees it: the title, else the place, as one
- * line with the trip id removed (the invitee must not learn the id from the
- * email before joining) and capped at {@link MAX_INVITE_TRIP_NAME_LENGTH}.
- * Control characters, including CR and LF, become spaces so the name cannot
- * break the subject header. Not HTML-escaped: the template does that.
- * @param trip - The trip row
- * @param rawDisplayName - The location's stored display name, if any
- */
-export function inviteTripName(trip: TripRow, rawDisplayName: string | null): string {
-  const oneLine = (text: string) =>
-    stripTripId(text, trip.id)
-      .replace(/[\u0000-\u001f\u007f]+/g, ' ')
-      .replace(/\s{2,}/g, ' ')
-      .trim()
-  const title = typeof trip.title === 'string' ? oneLine(trip.title) : ''
-  const place = rawDisplayName ? oneLine(cleanDisplayName(rawDisplayName)) : ''
-  const name = title || place || FALLBACK_TRIP_NAME
-  // By code point, so a cut never splits an emoji's surrogate pair.
-  const chars = Array.from(name)
-  return chars.length > MAX_INVITE_TRIP_NAME_LENGTH ? chars.slice(0, MAX_INVITE_TRIP_NAME_LENGTH).join('').trimEnd() : name
-}
-
-/**
- * The invite email's subject line. Fixed text: the trip name is chosen by
- * whoever holds the trip link, so it goes only in the (escaped) body, never in
- * the subject where it would lead the message in the recipient's inbox.
+ * The invite email's subject line. Fixed text, like the body: nothing the
+ * trip's author wrote goes into an invite email.
  */
 export const INVITE_SUBJECT = "You're invited to add photos on Trip One"
 

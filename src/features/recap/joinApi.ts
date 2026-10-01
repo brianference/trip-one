@@ -1,6 +1,7 @@
 /** What `POST /api/recap/:token/join` came back with, in the terms the UI acts on. */
 export type JoinResult =
-  | { kind: 'joined'; tripId: string }
+  /** 200 `{ joined: true }`: the viewer is now a photo contributor. No trip id is ever returned. */
+  | { kind: 'joined' }
   /** 401: nobody is signed in. */
   | { kind: 'signed-out' }
   /** 403: the signed-in email is unverified or not invited to this trip. */
@@ -15,9 +16,9 @@ const HTTP_UNAUTHORIZED = 401
 const HTTP_FORBIDDEN = 403
 
 /**
- * Asks to join the trip behind a recap link. The response body carries the
- * trip id only on a 200; every other status is mapped without reading it into
- * anything that could leak it.
+ * Asks to join the trip behind a recap link. A 200 answers `{ joined: true }`
+ * and never names the trip: members add and remove their own photos through
+ * the recap-token routes, never the trip link.
  * @param token - The recap token from the URL
  * @returns The join outcome
  */
@@ -31,8 +32,8 @@ export async function joinRecapTrip(token: string): Promise<JoinResult> {
   } catch {
     return { kind: 'failed', message: 'Could not reach the server. Check your connection and try again.' }
   }
-  const body = (await res.json().catch(() => ({}))) as { tripId?: unknown; error?: unknown }
-  if (res.ok && typeof body.tripId === 'string' && body.tripId !== '') return { kind: 'joined', tripId: body.tripId }
+  const body = (await res.json().catch(() => ({}))) as { joined?: unknown; error?: unknown }
+  if (res.ok && body.joined === true) return { kind: 'joined' }
   if (res.status === HTTP_UNAUTHORIZED) return { kind: 'signed-out' }
   if (res.status === HTTP_FORBIDDEN) return { kind: 'not-invited' }
   return { kind: 'failed', message: typeof body.error === 'string' && body.error !== '' ? body.error : JOIN_FAILED_MESSAGE }

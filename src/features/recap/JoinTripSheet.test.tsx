@@ -3,11 +3,10 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, type AuthUser } from '../auth/AuthContext'
 import { AddPhotosBanner } from './AddPhotosBanner'
-import { CODE_LENGTH, RESEND_COOLDOWN_SECONDS } from './JoinTripSheet'
+import { CODE_LENGTH, RESEND_COOLDOWN_SECONDS, RESEND_HINT } from './JoinTripSheet'
 
 /** Synthetic unit-test values (never rendered in the product). */
 const TOKEN = 'tok_abcdefghijklmnopqrstuvwxyz012345'
-const TRIP_ID = '11111111-2222-4333-8444-555555555555'
 const EMAIL = 'bea@example.com'
 const MASKED = 'b•••@example.com'
 const TRIP_PHRASE = 'the Anaheim, California trip'
@@ -23,20 +22,25 @@ interface Reply {
 
 /**
  * Stubs fetch. `me` answers the session check; `join` is a queue of join
- * responses (the last one repeats); verify defaults to success.
+ * responses (the last one repeats); verify defaults to success; `logoutFails`
+ * makes the sign-out request reject like a dropped connection.
  */
 function stubApi({
   me = null,
-  join = [{ status: 200, body: { tripId: TRIP_ID } }],
+  join = [{ status: 200, body: { joined: true } }],
   verify = { status: 200, body: { user: verifiedUser } },
-}: { me?: AuthUser | null; join?: Reply[]; verify?: Reply } = {}) {
+  logoutFails = false,
+}: { me?: AuthUser | null; join?: Reply[]; verify?: Reply; logoutFails?: boolean } = {}) {
   const joinQueue = [...join]
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     let reply: Reply
     if (url === '/api/auth/me') reply = { status: 200, body: { user: me } }
     else if (url === '/api/auth/code/request') reply = { status: 200, body: { ok: true } }
     else if (url === '/api/auth/code/verify') reply = verify
-    else if (url === '/api/auth/logout') reply = { status: 200, body: { ok: true } }
+    else if (url === '/api/auth/logout') {
+      if (logoutFails) throw new TypeError('Failed to fetch')
+      reply = { status: 200, body: { ok: true } }
+    }
     else if (url === `/api/recap/${TOKEN}/join`) reply = joinQueue.length > 1 ? (joinQueue.shift() as Reply) : joinQueue[0]
     else throw new Error(`unexpected fetch ${url} ${init?.method ?? 'GET'}`)
     return { ok: reply.status >= 200 && reply.status < 300, status: reply.status, json: async () => reply.body }
@@ -63,20 +67,33 @@ function LocationProbe() {
   )
 }
 
-/** Renders the banner on the public recap route, plus stand-ins for the pages it can send you to. */
+/**
+ * Renders the banner on the public recap route, plus a stand-in for the
+ * login page. Returns the `onJoined` spy along with the render result.
+ */
 function renderBanner(query = '') {
-  return render(
+  const onJoined = vi.fn()
+  const result = render(
     <MemoryRouter initialEntries={[`/recap/${TOKEN}${query}`]}>
       <AuthProvider>
         <Routes>
-          <Route path="/recap/:token" element={<AddPhotosBanner token={TOKEN} tripPhrase={TRIP_PHRASE} />} />
-          <Route path="/trip/:id/plan" element={<h1>Trip plan</h1>} />
+          <Route
+            path="/recap/:token"
+            element={<AddPhotosBanner token={TOKEN} tripPhrase={TRIP_PHRASE} onJoined={onJoined} />}
+          />
           <Route path="/login" element={<h1>Login page</h1>} />
         </Routes>
         <LocationProbe />
       </AuthProvider>
     </MemoryRouter>,
   )
+  return { ...result, onJoined }
+}
+
+/** Fills the code boxes by pasting `code` and presses Verify. */
+function enterCode(code = '482913') {
+  fireEvent.paste(codeBoxes()[0], { clipboardData: { getData: () => code } })
+  fireEvent.click(screen.getByRole('button', { name: 'Verify code' }))
 }
 
 /** Opens the sheet from the banner and waits for step 1. */
@@ -176,21 +193,85 @@ describe('AddPhotosBanner', () => {
     expect(boxes[CODE_LENGTH - 1]).toHaveFocus()
   })
 
-  it('verifies, joins and shows step 3; the trip id appears only after the 200 join', async () => {
+  it('verifies, joins and shows step 3, whose "Add your photos" closes the sheet into contributor mode without navigating', async () => {
     const fetchMock = stubApi()
-    const { container } = renderBanner()
+    const { onJoined } = renderBanner()
     await goToCodeStep()
-    expect(container.ownerDocument.body.innerHTML).not.toContain(TRIP_ID)
-    fireEvent.paste(codeBoxes()[0], { clipboardData: { getData: () => '482913' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Verify code' }))
+    enterCode()
     const heading = await screen.findByRole('heading', { name: 'You’re on this trip' })
     expect(heading).toHaveFocus()
     expect(callsTo(fetchMock, '/api/auth/code/verify')).toEqual([{ email: EMAIL, code: '482913' }])
     expect(callsTo(fetchMock, `/api/recap/${TOKEN}/join`)).toHaveLength(1)
     expect(screen.getByText(`${MASKED} is confirmed on ${TRIP_PHRASE}. The owner added this email, so you can add your own photos now.`)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('link', { name: 'Go to the trip and add photos' }))
-    expect(await screen.findByRole('heading', { name: 'Trip plan' })).toBeInTheDocument()
-    expect(screen.getByTestId('location')).toHaveTextContent(`/trip/${TRIP_ID}/plan`)
+    // Nothing on step 3 leads to the trip itself.
+    expect(screen.queryByRole('link')).toBeNull()
+    expect(document.body.innerHTML).not.toContain('/trip/')
+    expect(onJoined).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Add your photos' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(onJoined).toHaveBeenCalledTimes(1)
+    expect(onJoined).toHaveBeenCalledWith(true)
+    expect(screen.getByTestId('location')).toHaveTextContent(`/recap/${TOKEN}|`)
+  })
+
+  it('closing step 3 without pressing "Add your photos" still switches to contributor mode, without opening the picker', async () => {
+    stubApi()
+    const { onJoined } = renderBanner()
+    await goToCodeStep()
+    enterCode()
+    await screen.findByRole('heading', { name: 'You’re on this trip' })
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(onJoined).toHaveBeenCalledWith(false)
+  })
+
+  it('closing the sheet before joining does not switch modes', async () => {
+    stubApi()
+    const { onJoined } = renderBanner()
+    await goToCodeStep()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(onJoined).not.toHaveBeenCalled()
+  })
+
+  it('a double press of Continue sends one code, and a double Verify spends the code once', async () => {
+    const fetchMock = stubApi()
+    renderBanner()
+    const dialog = await openSheet()
+    fireEvent.change(within(dialog).getByLabelText('Email'), { target: { value: EMAIL } })
+    const continueButton = within(dialog).getByRole('button', { name: 'Continue' })
+    fireEvent.click(continueButton)
+    fireEvent.click(continueButton)
+    await screen.findByRole('dialog', { name: 'Check your email' })
+    expect(callsTo(fetchMock, '/api/auth/code/request')).toHaveLength(1)
+    fireEvent.paste(codeBoxes()[0], { clipboardData: { getData: () => '482913' } })
+    const verifyButton = screen.getByRole('button', { name: 'Verify code' })
+    fireEvent.click(verifyButton)
+    fireEvent.click(verifyButton)
+    await screen.findByRole('heading', { name: 'You’re on this trip' })
+    expect(callsTo(fetchMock, '/api/auth/code/verify')).toHaveLength(1)
+    expect(callsTo(fetchMock, `/api/recap/${TOKEN}/join`)).toHaveLength(1)
+  })
+
+  it('a 401 join after verifying asks for a new code, and the next Verify runs the new code through verify', async () => {
+    const fetchMock = stubApi({
+      join: [
+        { status: 401, body: { error: 'Sign in first' } },
+        { status: 200, body: { joined: true } },
+      ],
+    })
+    renderBanner()
+    await goToCodeStep()
+    enterCode('482913')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your sign-in didn’t stick. Please request a new code.')
+    // The spent code is cleared from the boxes.
+    expect(codeBoxes().map((b) => b.value).join('')).toBe('')
+    enterCode('777111')
+    await screen.findByRole('heading', { name: 'You’re on this trip' })
+    expect(callsTo(fetchMock, '/api/auth/code/verify')).toEqual([
+      { email: EMAIL, code: '482913' },
+      { email: EMAIL, code: '777111' },
+    ])
   })
 
   it('a wrong code shows the server message in an alert and stays on step 2', async () => {
@@ -202,6 +283,22 @@ describe('AddPhotosBanner', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(CODE_FAILED)
     expect(screen.getByRole('dialog', { name: 'Check your email' })).toBeInTheDocument()
     expect(callsTo(fetchMock, `/api/recap/${TOKEN}/join`)).toHaveLength(0)
+  })
+
+  it('shows the spam hint only after a code was re-sent', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    stubApi()
+    renderBanner()
+    await goToCodeStep()
+    expect(screen.queryByText(RESEND_HINT)).toBeNull()
+    for (let second = 0; second < RESEND_COOLDOWN_SECONDS; second++) {
+      await act(async () => {
+        vi.advanceTimersByTime(1000)
+      })
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Didn’t get it? Resend code' }))
+    expect(await screen.findByText(RESEND_HINT)).toBeInTheDocument()
+    expect(RESEND_HINT).toBe('Still nothing? Check spam, or try again in an hour.')
   })
 
   it('Resend is locked for the cooldown, then sends a new code and announces it', async () => {
@@ -233,18 +330,30 @@ describe('AddPhotosBanner', () => {
     const fetchMock = stubApi({ join: [{ status: 403, body: { error: "This email isn't invited to this trip." } }] })
     renderBanner()
     await goToCodeStep()
-    fireEvent.paste(codeBoxes()[0], { clipboardData: { getData: () => '482913' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Verify code' }))
+    enterCode()
     expect(await screen.findByRole('alert')).toHaveTextContent(
       `This email isn't invited to this trip. Ask the trip owner to invite ${EMAIL}.`,
     )
-    expect(document.body.innerHTML).not.toContain(TRIP_ID)
     fireEvent.click(screen.getByRole('button', { name: 'Use a different email' }))
     const dialog = await screen.findByRole('dialog', { name: 'Sign in or create an account' })
     expect(callsTo(fetchMock, '/api/auth/logout')).toHaveLength(1)
     const email = within(dialog).getByLabelText('Email')
     expect(email).toHaveValue('')
     await waitFor(() => expect(email).toHaveFocus())
+  })
+
+  it('"Use a different email" still starts over when the sign-out request fails', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    stubApi({ join: [{ status: 403, body: { error: 'x' } }], logoutFails: true })
+    renderBanner()
+    await goToCodeStep()
+    enterCode()
+    await screen.findByRole('heading', { name: 'Use the invited email' })
+    fireEvent.click(screen.getByRole('button', { name: 'Use a different email' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Sign in or create an account' })
+    expect(within(dialog).getByLabelText('Email')).toHaveValue('')
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('sign-out request failed'))
+    warn.mockRestore()
   })
 
   it('"Sign in with a password instead" goes to /login set to come back with ?join=1', async () => {
@@ -265,15 +374,16 @@ describe('AddPhotosBanner', () => {
     expect(screen.getByRole('button', { name: 'Add photos' })).toHaveFocus()
   })
 
-  it('a viewer signed in with a verified email joins directly, with no sheet', async () => {
+  it('a viewer signed in with a verified email joins directly into contributor mode, with no sheet', async () => {
     const fetchMock = stubApi({ me: verifiedUser })
-    renderBanner()
+    const { onJoined } = renderBanner()
     // Wait for the session to settle before pressing.
     await waitFor(() => expect(callsTo(fetchMock, '/api/auth/me')).toHaveLength(1))
     await act(async () => {})
     fireEvent.click(screen.getByRole('button', { name: 'Add photos' }))
-    expect(await screen.findByRole('heading', { name: 'Trip plan' })).toBeInTheDocument()
-    expect(screen.getByTestId('location')).toHaveTextContent(`/trip/${TRIP_ID}/plan`)
+    await waitFor(() => expect(onJoined).toHaveBeenCalledWith(true))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByTestId('location')).toHaveTextContent(`/recap/${TOKEN}|`)
     expect(callsTo(fetchMock, '/api/auth/code/request')).toHaveLength(0)
   })
 
@@ -287,26 +397,26 @@ describe('AddPhotosBanner', () => {
     expect(screen.getByRole('heading', { name: 'Use the invited email' })).toHaveFocus()
   })
 
-  it('?join=1 resumes the join once the viewer is signed in, exactly once, and clears the flag', async () => {
-    const fetchMock = stubApi({
-      me: { ...verifiedUser, emailVerified: false },
-      join: [{ status: 403, body: { error: 'x' } }],
-    })
-    renderBanner('?join=1')
-    expect(await screen.findByRole('alert')).toHaveTextContent(`Ask the trip owner to invite ${EMAIL}.`)
+  it('?join=1 for an unverified password account opens step 1 prefilled with its email, without joining, and clears the flag', async () => {
+    const fetchMock = stubApi({ me: { ...verifiedUser, emailVerified: false } })
+    const { onJoined } = renderBanner('?join=1')
+    const dialog = await screen.findByRole('dialog', { name: 'Sign in or create an account' })
+    expect(within(dialog).getByLabelText('Email')).toHaveValue(EMAIL)
     expect(screen.getByTestId('location')).toHaveTextContent(`/recap/${TOKEN}|`)
     expect(screen.getByTestId('location')).not.toHaveTextContent('join=1')
-    // Closing and letting the page settle does not run it again.
+    // Closing and letting the page settle does not run anything.
     fireEvent.keyDown(document, { key: 'Escape' })
     await act(async () => {})
-    expect(callsTo(fetchMock, `/api/recap/${TOKEN}/join`)).toHaveLength(1)
+    expect(callsTo(fetchMock, `/api/recap/${TOKEN}/join`)).toHaveLength(0)
+    expect(onJoined).not.toHaveBeenCalled()
   })
 
-  it('?join=1 while signed in with a verified email lands on the trip', async () => {
-    stubApi({ me: verifiedUser })
-    renderBanner('?join=1')
-    expect(await screen.findByRole('heading', { name: 'Trip plan' })).toBeInTheDocument()
-    expect(screen.getByTestId('location')).toHaveTextContent(`/trip/${TRIP_ID}/plan`)
+  it('?join=1 while signed in with a verified email joins once and switches to contributor mode', async () => {
+    const fetchMock = stubApi({ me: verifiedUser })
+    const { onJoined } = renderBanner('?join=1')
+    await waitFor(() => expect(onJoined).toHaveBeenCalledWith(true))
+    expect(callsTo(fetchMock, `/api/recap/${TOKEN}/join`)).toHaveLength(1)
+    expect(screen.getByTestId('location')).toHaveTextContent(`/recap/${TOKEN}|`)
   })
 
   it('?join=1 with nobody signed in does not call join', async () => {

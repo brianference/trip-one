@@ -3,7 +3,6 @@ import { joinRecapTrip, maskEmail, JOIN_FAILED_MESSAGE } from './joinApi'
 
 /** Synthetic unit-test values. */
 const TOKEN = 'tok_abcdefghijklmnopqrstuvwxyz012345'
-const TRIP_ID = '11111111-2222-4333-8444-555555555555'
 
 /** Stubs fetch with one response. */
 function reply(status: number, body: unknown) {
@@ -27,9 +26,11 @@ describe('maskEmail', () => {
 })
 
 describe('joinRecapTrip', () => {
-  it('POSTs to the token join route and returns the trip id on 200', async () => {
-    const fetchMock = reply(200, { tripId: TRIP_ID })
-    expect(await joinRecapTrip(TOKEN)).toEqual({ kind: 'joined', tripId: TRIP_ID })
+  it('POSTs to the token join route and reports a 200 { joined: true } as joined, with no trip id', async () => {
+    const fetchMock = reply(200, { joined: true })
+    const result = await joinRecapTrip(TOKEN)
+    expect(result).toEqual({ kind: 'joined' })
+    expect(Object.keys(result)).toEqual(['kind'])
     expect(fetchMock).toHaveBeenCalledWith(`/api/recap/${TOKEN}/join`, expect.objectContaining({ method: 'POST' }))
   })
 
@@ -44,6 +45,9 @@ describe('joinRecapTrip', () => {
     reply(404, { error: 'This recap link isn’t active anymore.' })
     expect(await joinRecapTrip(TOKEN)).toEqual({ kind: 'failed', message: 'This recap link isn’t active anymore.' })
     reply(200, {})
+    expect(await joinRecapTrip(TOKEN)).toEqual({ kind: 'failed', message: JOIN_FAILED_MESSAGE })
+    // The v20 shape is not a join any more.
+    reply(200, { tripId: '11111111-2222-4333-8444-555555555555' })
     expect(await joinRecapTrip(TOKEN)).toEqual({ kind: 'failed', message: JOIN_FAILED_MESSAGE })
   })
 

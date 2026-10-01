@@ -15,6 +15,14 @@ const SEND_ERROR_FALLBACK = 'We couldn’t send that invite. Please try again in
 /** Shown when a remove fails and the server gave no usable message. */
 const REMOVE_ERROR_FALLBACK = 'We couldn’t remove that invite. Please try again in a moment.'
 
+/** The inline confirm on a pending invite's row. */
+export const REMOVE_INVITE_CONFIRM = 'Remove this invite?'
+/** The inline confirm on a joined person's row: removing it takes their access away. */
+export const REMOVE_ACCESS_CONFIRM = 'Remove access? They won’t be able to add photos anymore.'
+
+/** Where focus should land after the DOM settles from a send/remove/confirm/cancel transition. */
+type PendingFocus = { kind: 'remove'; id: string } | { kind: 'email' } | null
+
 /**
  * The reader-facing reason an invite was saved but not emailed.
  * @param reason - The server's `reason` field
@@ -25,7 +33,11 @@ function notSentReasonText(reason: InviteNotSentReason | undefined): string {
   return 'the email could not be sent'
 }
 
-/** Replaces an invite with the same id, or appends it when it's not already in the list. */
+/**
+ * Replaces an invite with the same id, or appends it when it's not already in the list.
+ * @param invites - The current list
+ * @param invite - The invite the server just returned
+ */
 function upsertInvite(invites: TripInvite[], invite: TripInvite): TripInvite[] {
   const index = invites.findIndex((existing) => existing.id === invite.id)
   if (index === -1) return [...invites, invite]
@@ -35,18 +47,37 @@ function upsertInvite(invites: TripInvite[], invite: TripInvite): TripInvite[] {
 }
 
 /**
+ * Which row should take focus after `removedId` is gone: the row that will
+ * occupy its position, or the previous one when it was last. Every row has a
+ * Remove control, pending or joined. Mirrors `StopPhotoStrip`'s rule.
+ * @param invites - The list as it stood before the removal
+ * @param removedId - The invite being removed
+ * @returns The id to focus, or null when no row will remain
+ */
+function nextFocusId(invites: TripInvite[], removedId: string): string | null {
+  const ids = invites.map((i) => i.id)
+  const index = ids.indexOf(removedId)
+  const remaining = ids.filter((id) => id !== removedId)
+  if (remaining.length === 0) return null
+  return remaining[index] ?? remaining[index - 1]
+}
+
+/**
  * The owner's "Invite people to add photos" panel, shown beside Share recap
  * on the owner's recap page (never on a demo trip, never on the public
- * route). Sends an email invite, lists everyone invited with their status,
- * and lets a pending invite be revoked. An accepted invite can't be removed
- * here — its member's access comes from the trip link they used to join, not
- * from the invite row — so its row shows a note instead of a Remove button.
+ * route). Sends an email invite and lists everyone invited: "Invited" while
+ * pending, "Joined" once they joined from the recap. Every row can be
+ * removed after an inline confirm: a pending invite is withdrawn, and a
+ * joined person loses access (they can no longer add photos; photos they
+ * already added stay). Successes are announced in a polite status line,
+ * failures in an alert.
  */
 export function InvitePeople({ tripId }: { tripId: string }) {
   const emailInputId = useId()
   const [email, setEmail] = useState('')
   const [invites, setInvites] = useState<TripInvite[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
@@ -54,6 +85,29 @@ export function InvitePeople({ tripId }: { tripId: string }) {
   // Refs, not state: a second press in the same tick still sees stale state.
   const sendingRef = useRef(false)
   const removingRef = useRef(false)
+
+  const emailInputRef = useRef<HTMLInputElement>(null)
+  const cancelButtonRef = useRef<HTMLButtonElement>(null)
+  const removeButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+  const pendingFocus = useRef<PendingFocus>(null)
+
+  // Cancel is the only thing that should receive focus the moment the inline
+  // confirm prompt opens for a row — keyed on confirmingId so it fires
+  // exactly once per open, not on every render while it stays open.
+  useEffect(() => {
+    if (confirmingId != null) cancelButtonRef.current?.focus()
+  }, [confirmingId])
+
+  // Runs after every render (no dependency array) so it picks up a focus
+  // request regardless of whether it was queued from a state update or an
+  // event handler, and clears itself immediately so it fires once per request.
+  useEffect(() => {
+    const pending = pendingFocus.current
+    if (!pending) return
+    pendingFocus.current = null
+    if (pending.kind === 'email') emailInputRef.current?.focus()
+    else removeButtonRefs.current.get(pending.id)?.focus()
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -82,6 +136,7 @@ export function InvitePeople({ tripId }: { tripId: string }) {
     sendingRef.current = true
     setSending(true)
     setStatusMessage('')
+    setActionError(null)
     try {
       const result = await sendTripInvite(tripId, trimmed)
       setInvites((prev) => upsertInvite(prev ?? [], result.invite))
@@ -93,36 +148,48 @@ export function InvitePeople({ tripId }: { tripId: string }) {
       )
     } catch (err) {
       logger.error('trip invite send failed', err)
-      setStatusMessage(err instanceof Error ? err.message : SEND_ERROR_FALLBACK)
+      setActionError(err instanceof Error ? err.message : SEND_ERROR_FALLBACK)
     } finally {
       sendingRef.current = false
       setSending(false)
     }
   }
 
-  /** Removes one pending invite after its inline confirm. */
+  /** Opens the inline confirm prompt for one row. */
+  function startConfirm(inviteId: string) {
+    setActionError(null)
+    setConfirmingId(inviteId)
+  }
+
+  /** Closes the prompt without removing anything, returning focus to that row's Remove button. */
+  function cancelConfirm(inviteId: string) {
+    setConfirmingId(null)
+    pendingFocus.current = { kind: 'remove', id: inviteId }
+  }
+
+  /** Removes one row after its inline confirm: withdraws a pending invite, or a joined person's access. */
   async function onRemove(inviteId: string) {
     if (removingRef.current) return
     removingRef.current = true
     setRemovingId(inviteId)
     setStatusMessage('')
+    setActionError(null)
     try {
       const result = await revokeTripInvite(tripId, inviteId)
-      if (result.alreadyJoined) {
-        // Raced with acceptance: the invite stays, now accepted.
-        setInvites((prev) => (prev ?? []).map((i) => (i.id === inviteId ? { ...i, acceptedAt: Date.now() } : i)))
-        setStatusMessage('That person already joined, so they were kept on the list instead of removed.')
-      } else {
-        setInvites((prev) => (prev ?? []).filter((i) => i.id !== inviteId))
-        setStatusMessage('Invite removed.')
-      }
+      const nextId = nextFocusId(invites ?? [], inviteId)
+      pendingFocus.current = nextId ? { kind: 'remove', id: nextId } : { kind: 'email' }
+      setInvites((prev) => (prev ?? []).filter((i) => i.id !== inviteId))
+      setConfirmingId(null)
+      setStatusMessage(result.removedMember ? 'Access removed.' : 'Invite removed.')
     } catch (err) {
       logger.error('trip invite remove failed', err)
-      setStatusMessage(err instanceof Error ? err.message : REMOVE_ERROR_FALLBACK)
+      setActionError(err instanceof Error ? err.message : REMOVE_ERROR_FALLBACK)
+      // Confirm stays open on error (not cleared here): the confirm/cancel
+      // buttons remain mounted, so focus never falls to <body>, and the
+      // press can be retried without reopening the prompt.
     } finally {
       removingRef.current = false
       setRemovingId(null)
-      setConfirmingId(null)
     }
   }
 
@@ -139,6 +206,7 @@ export function InvitePeople({ tripId }: { tripId: string }) {
         </label>
         <div className="chronicle-invite-form-row">
           <input
+            ref={emailInputRef}
             id={emailInputId}
             type="email"
             required
@@ -165,6 +233,12 @@ export function InvitePeople({ tripId }: { tripId: string }) {
         {statusMessage}
       </p>
 
+      {actionError && (
+        <p role="alert" className="chronicle-recap-share-error">
+          {actionError}
+        </p>
+      )}
+
       {loadError && (
         <p role="alert" className="chronicle-recap-share-error">
           {loadError}
@@ -181,19 +255,13 @@ export function InvitePeople({ tripId }: { tripId: string }) {
               <li key={invite.id} className="chronicle-invite-row">
                 <div className="chronicle-invite-row-main">
                   <span className="chronicle-invite-email">{invite.email}</span>
-                  <span
-                    className={`chronicle-invite-badge${joined ? ' chronicle-invite-badge--joined' : ''}`}
-                  >
-                    {joined ? 'Joined — can’t be removed' : 'Invited'}
+                  <span className={`chronicle-invite-badge${joined ? ' chronicle-invite-badge--joined' : ''}`}>
+                    {joined ? 'Joined' : 'Invited'}
                   </span>
                 </div>
-                {joined ? (
-                  <p className="chronicle-invite-joined-note">
-                    They keep access to this trip through the link they used to join.
-                  </p>
-                ) : confirming ? (
+                {confirming ? (
                   <div className="chronicle-invite-row-confirm">
-                    <span>Remove this invite?</span>
+                    <span>{joined ? REMOVE_ACCESS_CONFIRM : REMOVE_INVITE_CONFIRM}</span>
                     <div className="chronicle-invite-row-confirm-btns">
                       <button
                         type="button"
@@ -205,9 +273,10 @@ export function InvitePeople({ tripId }: { tripId: string }) {
                         Remove
                       </button>
                       <button
+                        ref={cancelButtonRef}
                         type="button"
                         className="chronicle-invite-row-confirm-no"
-                        onClick={() => setConfirmingId(null)}
+                        onClick={() => cancelConfirm(invite.id)}
                       >
                         Cancel
                       </button>
@@ -215,10 +284,14 @@ export function InvitePeople({ tripId }: { tripId: string }) {
                   </div>
                 ) : (
                   <button
+                    ref={(el) => {
+                      if (el) removeButtonRefs.current.set(invite.id, el)
+                      else removeButtonRefs.current.delete(invite.id)
+                    }}
                     type="button"
                     className="chronicle-invite-remove-btn"
-                    onClick={() => setConfirmingId(invite.id)}
-                    aria-label={`Remove invite to ${invite.email}`}
+                    onClick={() => startConfirm(invite.id)}
+                    aria-label={joined ? `Remove access for ${invite.email}` : `Remove invite to ${invite.email}`}
                   >
                     Remove
                   </button>

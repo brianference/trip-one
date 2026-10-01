@@ -2,6 +2,7 @@
 node_modules/
 dist/
 .dev.vars
+.dev.vars.*
 .env
 *.local
 tsconfig.tsbuildinfo

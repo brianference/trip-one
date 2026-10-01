@@ -20,7 +20,7 @@ import {
   deleteEmailCodesCreatedBefore,
   expireActiveEmailCodes,
   getActiveEmailCode,
-  insertEmailCode,
+  insertEmailCodeUnderGlobalCap,
   markEmailCodeUsed,
   normalizeEmail,
   takeEmailCodeAttempt,
@@ -49,6 +49,13 @@ export const MAX_CODE_ATTEMPTS = 5
 export const MAX_CODES_PER_EMAIL_PER_HOUR = 5
 /** Codes issued per email per rolling 24 hours. */
 export const MAX_CODES_PER_EMAIL_PER_DAY = 10
+/**
+ * App-wide circuit breaker: at most this many code emails per rolling 24 hours,
+ * across every address. Past it, requests still answer {ok:true} and nothing is
+ * sent, so a flood across many addresses cannot run up the mail bill or the
+ * sender's reputation.
+ */
+export const MAX_CODE_EMAILS_PER_DAY = 500
 /** The rolling window for the hourly cap. */
 const HOUR_MS = 60 * 60 * 1000
 /** The rolling window for the daily cap; also how long code rows are kept. */
@@ -96,8 +103,11 @@ export function constantTimeEqual(a: string, b: string): boolean {
  *
  * Returns null, and stores nothing, when the email has already had
  * {@link MAX_CODES_PER_EMAIL_PER_HOUR} codes this hour or
- * {@link MAX_CODES_PER_EMAIL_PER_DAY} in 24 hours. The caller must answer
- * exactly as it does on success so the cap is not observable.
+ * {@link MAX_CODES_PER_EMAIL_PER_DAY} in 24 hours, or when the app as a whole
+ * has issued {@link MAX_CODE_EMAILS_PER_DAY} in 24 hours. The app-wide check
+ * is part of the insert statement and fails closed: when D1 does not confirm
+ * the insert, the answer is null and nothing is sent. The caller must answer
+ * exactly as it does on success so no cap is observable.
  *
  * @param env - D1 env
  * @param email - Recipient address (normalized here)
@@ -120,14 +130,19 @@ export async function issueEmailCode(env: Env, email: string, nowMs: number = Da
   await expireActiveEmailCodes(env, normalized, nowMs)
 
   const code = generateCode()
-  await insertEmailCode(env, {
-    id: crypto.randomUUID(),
-    email: normalized,
-    code_hash: await hashEmailCode(normalized, code),
-    expires_at: nowMs + CODE_TTL_MS,
-    created_at: nowMs,
-  })
-  return code
+  const stored = await insertEmailCodeUnderGlobalCap(
+    env,
+    {
+      id: crypto.randomUUID(),
+      email: normalized,
+      code_hash: await hashEmailCode(normalized, code),
+      expires_at: nowMs + CODE_TTL_MS,
+      created_at: nowMs,
+    },
+    dayStart,
+    MAX_CODE_EMAILS_PER_DAY,
+  )
+  return stored ? code : null
 }
 
 /**

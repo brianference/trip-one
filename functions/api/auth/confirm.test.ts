@@ -36,7 +36,7 @@ describe('POST /api/auth/confirm', () => {
     expect(body.error).toMatch(/invalid or has expired/i)
   })
 
-  it('marks the user verified and the token used, and returns the email', async () => {
+  it('signed out: writes nothing (token unspent, account unchanged) and answers needsSignIn with the email', async () => {
     const token = 'b'.repeat(32)
     const hash = await sha256hex(token)
     const { env, calls } = fakeD1({
@@ -61,10 +61,11 @@ describe('POST /api/auth/confirm', () => {
     })
     const res = await onRequestPost({ env, request: post({ token }) })
     expect(res.status).toBe(200)
-    // passwordReset is covered by the stateful tests below; this statement-level fake reports no row changes.
-    expect(await res.json()).toMatchObject({ ok: true, email: 'alex@example.com' })
-    expect(calls.some((c) => c.sql.includes('email_verified = 1'))).toBe(true)
-    expect(calls.some((c) => c.sql.includes('used_at') && c.sql.includes('email_verifications'))).toBe(true)
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store')
+    expect(await res.json()).toEqual({ ok: false, needsSignIn: true, email: 'alex@example.com' })
+    // The only write is the rate limiter's own request_log row.
+    const writes = calls.filter((c) => /^\s*(UPDATE|DELETE|INSERT)/i.test(c.sql))
+    expect(writes.every((c) => c.sql.includes('request_log'))).toBe(true)
   })
 
   it('rejects an already-used token', async () => {

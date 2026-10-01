@@ -8,23 +8,19 @@
  *   CLOUDFLARE_API_TOKEN
  *   CLOUDFLARE_D1_DATABASE_ID
  */
-const EXPECTED_TABLES = [
-  'locations',
-  'trips',
-  'place_details',
-  'interest_places',
-  'request_log',
-  'users',
-  'email_verifications',
-  'password_resets',
-  'contact_messages',
-  'fx_rates',
-  'trip_photos',
-  'trip_recap_links',
-  'email_codes',
-  'trip_invites',
-  'trip_members',
-]
+import { readFileSync } from 'node:fs'
+
+/**
+ * The tables, and for the newer tables every column the Functions code reads
+ * or writes. A table can exist while a later `alter table ... add column`
+ * migration was never applied, and then only the statements naming that
+ * column fail, at runtime. The same file is checked against the local
+ * migrations by functions/lib/schemaExpectations.test.ts.
+ * @type {{ tables: string[], columns: Record<string, string[]> }}
+ */
+const EXPECTATIONS = JSON.parse(readFileSync(new URL('./schema-expectations.json', import.meta.url), 'utf8'))
+const EXPECTED_TABLES = EXPECTATIONS.tables
+const EXPECTED_COLUMNS = EXPECTATIONS.columns
 
 /**
  * @returns {{ accountId: string, apiToken: string, databaseId: string }}
@@ -100,6 +96,25 @@ async function main() {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       console.error(`FAIL: ${table} — ${message}`)
+      failed = true
+    }
+  }
+
+  for (const [table, columns] of Object.entries(EXPECTED_COLUMNS)) {
+    try {
+      // Identifier is from our fixed EXPECTED_COLUMNS map, not user input.
+      const infoRows = await d1Query(cfg, `SELECT name FROM pragma_table_info('${table}')`)
+      const actual = new Set(infoRows.map((row) => (typeof row.name === 'string' ? row.name : '')))
+      const missing = columns.filter((column) => !actual.has(column))
+      if (missing.length > 0) {
+        console.error(`FAIL: ${table} — missing column(s): ${missing.join(', ')}`)
+        failed = true
+      } else {
+        console.log(`OK: ${table} has all ${columns.length} expected columns`)
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error(`FAIL: ${table} columns — ${message}`)
       failed = true
     }
   }

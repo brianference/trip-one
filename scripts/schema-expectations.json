@@ -1,0 +1,25 @@
+{
+  "tables": [
+    "locations",
+    "trips",
+    "place_details",
+    "interest_places",
+    "request_log",
+    "users",
+    "email_verifications",
+    "password_resets",
+    "contact_messages",
+    "fx_rates",
+    "trip_photos",
+    "trip_recap_links",
+    "email_codes",
+    "trip_invites",
+    "trip_members"
+  ],
+  "columns": {
+    "trip_photos": ["id", "trip_id", "stop_id", "r2_key", "content_type", "width", "height", "bytes", "created_at", "uploader_user_id"],
+    "trip_invites": ["id", "trip_id", "email", "created_at", "accepted_user_id", "accepted_at", "revoked_at", "last_sent_at"],
+    "trip_members": ["trip_id", "user_id", "role", "created_at"],
+    "email_codes": ["id", "email", "code_hash", "expires_at", "attempts", "used_at", "created_at"]
+  }
+}

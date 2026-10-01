@@ -7,12 +7,12 @@
  * recoverable address.
  */
 import {
+  consumeEmailVerification,
   deleteEmailVerificationsForUser,
   getEmailVerification,
   getUserById,
   insertEmailVerification,
   markEmailVerified,
-  markEmailVerificationUsed,
   secureUnverifiedUser,
   type Env,
 } from '../db'
@@ -22,8 +22,9 @@ import { unusablePasswordHash } from './password'
 import { logger } from '../../../src/lib/logger'
 
 export type ConfirmResult =
-  | { ok: true; email: string; passwordReset: boolean }
+  | { ok: true; email: string }
   | { ok: false; reason: 'invalid' }
+  | { ok: false; reason: 'needs-sign-in'; email: string }
 
 /**
  * Create a confirmation token and email it. Returns the send result so the
@@ -73,43 +74,63 @@ export async function trySendConfirmationEmail(env: Env & MailEnv, userId: strin
 }
 
 /**
- * Redeem a confirmation token. One-time: the row is marked used, not deleted.
- * Invalid, expired, and already-used tokens share one answer so the endpoint
- * is not an oracle for "this token existed".
+ * Redeem a confirmation token, but only for the account's OWN session.
  *
  * Clicking the link proves control of the inbox, not that the clicker chose
  * the account's password: anyone can register someone else's address and
- * re-send the link. So unless the request carries the account's OWN session
- * (the person who registered is the one confirming), an unverified account is
- * secured the same way as a code sign-in: unusable password, every session
- * revoked, verified, in one statement. The owner then sets a password through
- * reset. `passwordReset` reports which path ran.
+ * re-send the link. So confirming requires the session of the account the
+ * token belongs to (the person who registered is the one confirming). Without
+ * it, nothing changes and the token stays unused: the answer is
+ * `needs-sign-in` with the account's email, so the page can ask them to sign
+ * in and come back, or to say "This wasn't me" ({@link denyEmailConfirmation}).
  *
- * @param env - D1 env, plus the optional password pepper
+ * Invalid, expired, and already-used tokens share one answer so the endpoint
+ * is not an oracle for "this token existed". The token is consumed in one
+ * statement guarded on `used_at IS NULL`, so two concurrent clicks cannot both
+ * spend it.
+ *
+ * @param env - D1 env
  * @param token - The plaintext token from the link
  * @param sessionUserId - The signed-in user on this request, or null
  */
-export async function confirmEmail(
-  env: Env & { PASSWORD_PEPPER?: string },
-  token: string,
-  sessionUserId: string | null,
-): Promise<ConfirmResult> {
+export async function confirmEmail(env: Env, token: string, sessionUserId: string | null): Promise<ConfirmResult> {
   const hash = await sha256hex(token)
   const now = Date.now()
   const row = await getEmailVerification(env, hash)
-
   if (!row || row.used_at != null || row.expires_at < now) return { ok: false, reason: 'invalid' }
 
-  await markEmailVerificationUsed(env, hash, now)
-
-  let passwordReset = false
-  if (sessionUserId === row.user_id) {
-    await markEmailVerified(env, row.user_id)
-  } else {
-    // Guarded on email_verified = 0, so an already-verified account is left as it is.
-    passwordReset = await secureUnverifiedUser(env, row.user_id, await unusablePasswordHash(env.PASSWORD_PEPPER))
-  }
-
   const user = await getUserById(env, row.user_id)
-  return { ok: true, email: user?.email ?? '', passwordReset }
+  if (!user) return { ok: false, reason: 'invalid' }
+
+  if (sessionUserId !== row.user_id) return { ok: false, reason: 'needs-sign-in', email: user.email }
+
+  if (!(await consumeEmailVerification(env, hash, now))) return { ok: false, reason: 'invalid' }
+  await markEmailVerified(env, row.user_id)
+  return { ok: true, email: user.email }
+}
+
+/**
+ * "This wasn't me": the inbox owner got a confirmation link for an account
+ * they did not create. Consumes the token (one statement, first caller wins)
+ * and secures the account the way a code sign-in does: unusable password,
+ * every session revoked, email verified, in one statement guarded on
+ * `email_verified = 0`, so an already-verified account is left as it is.
+ * Whoever registered the address without owning it keeps nothing; the real
+ * owner can sign in with an emailed code.
+ *
+ * @param env - D1 env, plus the optional password pepper
+ * @param token - The plaintext token from the link
+ * @returns False for an invalid, expired or already-used token
+ */
+export async function denyEmailConfirmation(
+  env: Env & { PASSWORD_PEPPER?: string },
+  token: string,
+): Promise<boolean> {
+  const hash = await sha256hex(token)
+  const now = Date.now()
+  const row = await getEmailVerification(env, hash)
+  if (!row || row.used_at != null || row.expires_at < now) return false
+  if (!(await consumeEmailVerification(env, hash, now))) return false
+  await secureUnverifiedUser(env, row.user_id, await unusablePasswordHash(env.PASSWORD_PEPPER))
+  return true
 }

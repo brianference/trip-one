@@ -1,4 +1,4 @@
-import { useId, useMemo, useState, type ReactNode } from 'react'
+import { useId, useMemo, useState, type ReactNode, type RefObject } from 'react'
 import type { RecapPayload } from './types'
 import { buildRecap } from './buildRecap'
 import { RecapMap } from './RecapMap'
@@ -6,6 +6,7 @@ import { RecapSlideshow, type SlideshowSlide } from './RecapSlideshow'
 import { dateForDay, dayHeading } from '../../lib/itinerary/tripDates'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 import { ButtonLink } from '../../components/ui/Button'
+import { StopPhotoStrip } from '../photos/StopPhotoStrip'
 
 /** Accessible name (and visible text) of the footer link back to the planner. */
 export const NEXT_TRIP_LINK_TEXT = 'Plan your next trip with us'
@@ -24,6 +25,17 @@ interface Props {
   headerAction?: ReactNode
   /** Rendered directly under the header (the public recap's "Were you on this trip?" banner). */
   belowHeader?: ReactNode
+  /**
+   * Contributor mode on the public recap: each stop's photos show as the
+   * captioned strip, with a remove control (and its inline confirm) on the
+   * photos marked `mine` only.
+   */
+  contributor?: {
+    /** Removes one of the viewer's own photos. */
+    onRemovePhoto: (photoId: string) => void
+    /** Where focus goes once the last removable photo at a stop is gone. */
+    addButtonRef: RefObject<HTMLButtonElement>
+  }
 }
 
 /**
@@ -52,7 +64,7 @@ function formatDateRange(startDate: string | null, lengthDays: number): string |
  * starting playback pauses slideshow autoplay, and starting slideshow
  * autoplay sends the map a pause request.
  */
-export function RecapView({ payload, photoUrl, variant, headerAction, belowHeader }: Props) {
+export function RecapView({ payload, photoUrl, variant, headerAction, belowHeader, contributor }: Props) {
   const reducedMotion = usePrefersReducedMotion()
   const headingId = useId()
   const photosHeadingId = useId()
@@ -146,7 +158,18 @@ export function RecapView({ payload, photoUrl, variant, headerAction, belowHeade
                   </span>
                   <div className="chronicle-recap-stop-body">
                     <span className="chronicle-recap-stop-name">{stop.text}</span>
-                    {stop.photos.length > 0 && (
+                    {stop.photos.length > 0 && contributor && (
+                      <StopPhotoStrip
+                        photoUrl={photoUrl}
+                        stopName={stop.text}
+                        photos={stop.photos}
+                        onRemove={contributor.onRemovePhoto}
+                        addButtonRef={contributor.addButtonRef}
+                        variant="captioned"
+                        canRemove={(photo) => photo.mine === true}
+                      />
+                    )}
+                    {stop.photos.length > 0 && !contributor && (
                       <ul className="chronicle-photo-strip" aria-label={`Photos at ${stop.text}`}>
                         {stop.photos.map((photo) => (
                           <li key={photo.id}>

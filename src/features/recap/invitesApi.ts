@@ -19,8 +19,8 @@ export interface SendInviteResult {
 /** The result of removing one invite. */
 export interface RevokeInviteResult {
   ok: true
-  /** True when the invite had already been accepted, so it was left in place (its member keeps the trip link). */
-  alreadyJoined?: boolean
+  /** True when the invite had been accepted: the person was removed from the trip and can no longer add photos. */
+  removedMember?: boolean
 }
 
 /**
@@ -67,9 +67,9 @@ export async function sendTripInvite(tripId: string, email: string): Promise<Sen
 }
 
 /**
- * Removes one invite. A pending invite is revoked outright; an already
- * accepted one is left in place (`alreadyJoined: true`) since its member's
- * access comes from the trip link they used to join, not the invite row.
+ * Removes one invite. A pending invite is revoked; an accepted one is revoked
+ * AND its member removed from the trip (`removedMember: true`), so they can no
+ * longer add photos. Either way the invite drops out of the list.
  * @param tripId - The trip the invite belongs to
  * @param inviteId - The invite to remove
  * @throws If the request fails; the thrown message is the server's own `error` text

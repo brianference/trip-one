@@ -4,6 +4,7 @@ import { directionsUrl } from '../../../lib/itinerary/badges'
 import type { PlaceQuery } from './usePlaceDetail'
 import { StopPhotoButton } from '../../photos/StopPhotoButton'
 import { StopPhotoStrip } from '../../photos/StopPhotoStrip'
+import { tripPhotoUrl } from '../../photos/photosApi'
 import type { UseTripPhotosResult } from '../../photos/useTripPhotos'
 
 const PRICE = ['Free', '$', '$$', '$$$', '$$$$']
@@ -155,7 +156,7 @@ export function PlaceDetailPanel({
               )}
               {(photos.byStop.get(planStopId)?.length ?? 0) > 0 ? (
                 <StopPhotoStrip
-                  tripId={tripId}
+                  photoUrl={(photoId) => tripPhotoUrl(tripId, photoId)}
                   stopName={title}
                   photos={photos.byStop.get(planStopId) ?? []}
                   onRemove={photos.remove}

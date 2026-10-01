@@ -67,5 +67,6 @@ create table if not exists request_log (
   created_at text not null default (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
-create index if not exists request_log_ip_hash_created_at_idx
-  on request_log (ip_hash, created_at);
+-- request_log's lookup index is request_log_ip_endpoint_created_idx, created
+-- by migrations/0008_contributors.sql (which also drops the older
+-- (ip_hash, created_at) index from databases that still have it).

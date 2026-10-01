@@ -123,6 +123,45 @@ describe('ChooseStopSheet', () => {
     expect(document.activeElement).toBe(last)
   })
 
+  it('gives each day group its own radio name, shared by that day\'s stops only', () => {
+    render(<Harness />)
+    const name = (label: string) => (screen.getByRole('radio', { name: label }) as HTMLInputElement).name
+    expect(name('Trinity College')).toBe(name('Guinness Storehouse'))
+    expect(name('Cliffs of Moher')).not.toBe(name('Trinity College'))
+    expect(name('Trinity College')).not.toBe('')
+  })
+
+  it('leaves out stops without an id (they cannot hold a photo)', () => {
+    const legacyStop: ItineraryItem = { time: '', text: 'Legacy stop', type: 'fixed', day: 1 }
+    render(
+      <ChooseStopSheet
+        itinerary={[...itinerary, legacyStop]}
+        startDate={null}
+        selectedDay={1}
+        triggerRef={{ current: null }}
+        onClose={vi.fn()}
+        onChoosePhoto={vi.fn()}
+      />,
+    )
+    expect(screen.queryByRole('radio', { name: 'Legacy stop' })).toBeNull()
+    expect(screen.getAllByRole('radio')).toHaveLength(3)
+  })
+
+  it('says to add a stop first, with Choose photo disabled, when no stop has an id', () => {
+    render(
+      <ChooseStopSheet
+        itinerary={[{ text: 'Legacy stop', day: 1 }]}
+        startDate={null}
+        selectedDay={1}
+        triggerRef={{ current: null }}
+        onClose={vi.fn()}
+        onChoosePhoto={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('Add a stop to this trip before adding photos.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Choose photo' })).toBeDisabled()
+  })
+
   it('returns focus to the Add photos button that opened it once closed', () => {
     render(<Harness />)
     const trigger = screen.getByRole('button', { name: 'Add photos' })

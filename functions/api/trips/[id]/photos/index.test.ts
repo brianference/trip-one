@@ -108,6 +108,8 @@ describe('POST /api/trips/:id/photos', () => {
       600,
       JPEG_BYTES.byteLength,
       body.createdAt,
+      // Uploaded through the trip link, not by a signed-in contributor.
+      null,
     ])
   })
 

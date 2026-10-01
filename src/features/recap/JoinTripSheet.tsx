@@ -9,8 +9,9 @@ import {
   type RefObject,
 } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { logger } from '../../lib/logger'
 import { joinRecapTrip, maskEmail } from './joinApi'
 
 /** How many digits a sign-in code has (the server's `codeVerifySchema`). */
@@ -29,6 +30,9 @@ const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const EMAIL_INVALID_MESSAGE = 'Enter the email address the trip owner invited.'
 const CODE_INCOMPLETE_MESSAGE = `Enter all ${CODE_LENGTH} digits of the code.`
+
+/** Shown under the resend link once a code has been re-sent at least once. */
+export const RESEND_HINT = 'Still nothing? Check spam, or try again in an hour.'
 
 /** Which screen of the sheet is showing. */
 export type JoinStep = 'email' | 'code' | 'joined' | 'not-invited'
@@ -49,6 +53,10 @@ interface Props {
   initialEmail: string
   /** Called to close the sheet: Escape, a scrim tap or the close button. */
   onClose: () => void
+  /** Called once the join succeeds (step 3 shows); the recap is a contributor's from then on. */
+  onJoined: () => void
+  /** Step 3's "Add your photos": the parent closes the sheet and starts adding photos on the recap. */
+  onAddPhotos: () => void
   /** The banner button that opened the sheet; focus returns there on close. */
   triggerRef: RefObject<HTMLButtonElement>
 }
@@ -215,17 +223,28 @@ function CodeBoxes({
  *    none), or "Sign in with a password instead" (the login page, which
  *    returns here with `?join=1`).
  * 2. Check your email: the six-digit code, with a rate-kept resend.
- * 3. You're on this trip: the join succeeded; the only way on is the trip.
+ * 3. You're on this trip: the join succeeded; "Add your photos" closes the
+ *    sheet and leaves the viewer on the recap as a contributor.
  *
  * A signed-in email that is not invited gets the fixed refusal with a way to
- * sign out and try another address. The trip id is only ever read from a 200
- * join and used for the one link on step 3.
+ * sign out and try another address. Joining never returns or links to the
+ * trip itself: contributors only add and remove their own photos here.
  *
  * An accessible modal dialog: traps Tab focus, closes on Escape or a scrim
  * tap, moves focus to each step's first field (or heading) as the step
  * changes, and returns focus to the banner button on close.
  */
-export function JoinTripSheet({ token, tripPhrase, fromInvite, initialStep, initialEmail, onClose, triggerRef }: Props) {
+export function JoinTripSheet({
+  token,
+  tripPhrase,
+  fromInvite,
+  initialStep,
+  initialEmail,
+  onClose,
+  onJoined,
+  onAddPhotos,
+  triggerRef,
+}: Props) {
   const { requestCode, verifyCode, logout, user } = useAuth()
   const navigate = useNavigate()
   const [step, setStep] = useState<JoinStep>(initialStep)
@@ -236,9 +255,13 @@ export function JoinTripSheet({ token, tripPhrase, fromInvite, initialStep, init
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
   const [cooldown, setCooldown] = useState(0)
-  const [tripId, setTripId] = useState<string | null>(null)
+  /** How many times "Resend code" sent a new code; after the first, the spam hint shows. */
+  const [resends, setResends] = useState(0)
   /** Set once the code verified: a retry after a failed join must not spend the (one-time) code again. */
   const [verified, setVerified] = useState(false)
+  // A ref, not the `busy` state: two presses in the same tick both see the
+  // stale state and would send two codes or spend the code twice.
+  const inFlightRef = useRef(false)
 
   const dialogRef = useRef<HTMLDivElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
@@ -303,45 +326,63 @@ export function JoinTripSheet({ token, tripPhrase, fromInvite, initialStep, init
     return () => clearTimeout(timer)
   }, [cooldown])
 
+  /**
+   * Marks a request as running, unless one already is.
+   * @returns False when another request is still in flight
+   */
+  function startRequest(): boolean {
+    if (inFlightRef.current) return false
+    inFlightRef.current = true
+    setBusy(true)
+    return true
+  }
+
+  /** Marks the running request as finished. */
+  function endRequest(): void {
+    inFlightRef.current = false
+    setBusy(false)
+  }
+
   /** Step 1: send a code to the typed address, then show step 2. */
   async function sendCode(nextMode: EmailMode): Promise<void> {
-    if (busy) return
+    if (inFlightRef.current) return
     setError(null)
     if (!EMAIL_SHAPE.test(email.trim())) {
       setError(EMAIL_INVALID_MESSAGE)
       emailRef.current?.focus()
       return
     }
-    setBusy(true)
+    if (!startRequest()) return
     try {
       await requestCode(email.trim())
       setMode(nextMode)
       setDigits(Array<string>(CODE_LENGTH).fill(''))
       setStatus('')
+      setResends(0)
       setCooldown(RESEND_COOLDOWN_SECONDS)
       setStep('code')
     } catch (err) {
       setError(errorText(err, 'Could not send a code. Please try again.'))
     } finally {
-      setBusy(false)
+      endRequest()
     }
   }
 
   /** Step 2: a fresh code, allowed once the cooldown has run out. */
   async function resend(): Promise<void> {
-    if (busy || cooldown > 0) return
+    if (cooldown > 0 || !startRequest()) return
     setError(null)
-    setBusy(true)
     try {
       await requestCode(email.trim())
       setDigits(Array<string>(CODE_LENGTH).fill(''))
       setCooldown(RESEND_COOLDOWN_SECONDS)
+      setResends((count) => count + 1)
       setStatus(`We sent a new code to ${maskEmail(email)}.`)
       firstCodeRef.current?.focus()
     } catch (err) {
       setError(errorText(err, 'Could not send a code. Please try again.'))
     } finally {
-      setBusy(false)
+      endRequest()
     }
   }
 
@@ -349,11 +390,15 @@ export function JoinTripSheet({ token, tripPhrase, fromInvite, initialStep, init
   async function join(): Promise<void> {
     const result = await joinRecapTrip(token)
     if (result.kind === 'joined') {
-      setTripId(result.tripId)
       setStep('joined')
+      onJoined()
     } else if (result.kind === 'not-invited') {
       setStep('not-invited')
     } else if (result.kind === 'signed-out') {
+      // The session the code created is gone and the code is spent, so the
+      // next Verify must run a fresh code through verify, not skip to join.
+      setVerified(false)
+      setDigits(Array<string>(CODE_LENGTH).fill(''))
       setError('Your sign-in didn’t stick. Please request a new code.')
     } else {
       setError(result.message)
@@ -363,7 +408,7 @@ export function JoinTripSheet({ token, tripPhrase, fromInvite, initialStep, init
   /** Step 2: verify the code (which signs in), then join. */
   async function onVerify(event: FormEvent): Promise<void> {
     event.preventDefault()
-    if (busy) return
+    if (inFlightRef.current) return
     setError(null)
     const code = digits.join('')
     if (!verified && code.length !== CODE_LENGTH) {
@@ -371,14 +416,14 @@ export function JoinTripSheet({ token, tripPhrase, fromInvite, initialStep, init
       firstCodeRef.current?.focus()
       return
     }
-    setBusy(true)
+    if (!startRequest()) return
     if (!verified) {
       try {
         await verifyCode(email.trim(), code)
         setVerified(true)
       } catch (err) {
         setError(errorText(err, "That code didn't work. Check it or request a new one."))
-        setBusy(false)
+        endRequest()
         firstCodeRef.current?.focus()
         return
       }
@@ -386,17 +431,21 @@ export function JoinTripSheet({ token, tripPhrase, fromInvite, initialStep, init
     try {
       await join()
     } finally {
-      setBusy(false)
+      endRequest()
     }
   }
 
   /** The refusal's way out: sign out and start again with another address. */
   async function switchEmail(): Promise<void> {
-    setBusy(true)
+    if (!startRequest()) return
     try {
       await logout()
+    } catch (err) {
+      // logout clears the session locally even when its request fails, so
+      // starting over with another address is still right.
+      logger.warn('sign-out request failed', { error: err instanceof Error ? err.message : String(err) })
     } finally {
-      setBusy(false)
+      endRequest()
       setEmail('')
       setError(null)
       setVerified(false)
@@ -509,10 +558,11 @@ export function JoinTripSheet({ token, tripPhrase, fromInvite, initialStep, init
             <button type="button" className="chronicle-join-link" disabled={busy || cooldown > 0} onClick={() => void resend()}>
               {cooldown > 0 ? `Didn’t get it? Resend code in ${cooldown}s` : 'Didn’t get it? Resend code'}
             </button>
+            {resends > 0 && <p className="chronicle-join-hint">{RESEND_HINT}</p>}
           </form>
         )}
 
-        {step === 'joined' && tripId && (
+        {step === 'joined' && (
           <div>
             <StepDots current={3} />
             <div className="chronicle-join-check" aria-hidden="true">
@@ -527,10 +577,10 @@ export function JoinTripSheet({ token, tripPhrase, fromInvite, initialStep, init
               {maskEmail(accountEmail)} is confirmed on {tripPhrase}. The owner added this email, so you can add your own
               photos now.
             </p>
-            <Link to={`/trip/${tripId}/plan`} className="chronicle-join-photo-btn">
+            <button type="button" className="chronicle-join-photo-btn" onClick={onAddPhotos}>
               <CameraIcon size={15} />
-              Go to the trip and add photos
-            </Link>
+              Add your photos
+            </button>
           </div>
         )}
 

@@ -81,12 +81,12 @@ describe('invitesApi', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/trips/trip-1/invites/i1', { method: 'DELETE' })
   })
 
-  it('reports alreadyJoined for an accepted invite, not revoked', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true, alreadyJoined: true }) }))
+  it('reports removedMember when an accepted invite was revoked and its member removed', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true, removedMember: true }) }))
 
     const result = await revokeTripInvite('trip-1', 'i1')
 
-    expect(result).toEqual({ ok: true, alreadyJoined: true })
+    expect(result).toEqual({ ok: true, removedMember: true })
   })
 
   it('surfaces the server error text on a failed revoke', async () => {

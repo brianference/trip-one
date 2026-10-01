@@ -82,9 +82,9 @@ export function codeStore(extraEnv: Record<string, unknown> = {}): CodeStore {
       verifications.push({ token_hash: tokenHash, user_id: userId, expires_at: expiresAt, used_at: null })
       return 1
     }
-    if (sql === 'UPDATE email_verifications SET used_at = ? WHERE token_hash = ?') {
-      const [usedAt, tokenHash] = args as [number, string]
-      const row = verifications.find((v) => v.token_hash === tokenHash)
+    if (sql === 'UPDATE email_verifications SET used_at = ? WHERE token_hash = ? AND used_at IS NULL AND expires_at >= ?') {
+      const [usedAt, tokenHash, now] = args as [number, string, number]
+      const row = verifications.find((v) => v.token_hash === tokenHash && v.used_at === null && v.expires_at >= now)
       if (row) row.used_at = usedAt
       return row ? 1 : 0
     }
@@ -94,6 +94,16 @@ export function codeStore(extraEnv: Record<string, unknown> = {}): CodeStore {
       if (!row) return 0
       row.password_hash = newHash
       return 1
+    }
+    if (sql.startsWith('DELETE FROM request_log')) {
+      // The rate limiter's occasional purge (purgeRequestLogBefore); the real
+      // SQL is proven against SQLite in rateLimitGuard.test.ts.
+      // Oldest first, at most `limit` rows, as the bounded DELETE does.
+      const [before, limit] = args as [string, number]
+      const doomed = new Set(requestLog.filter((r) => r.createdAt < before).slice(0, limit))
+      const keep = requestLog.filter((r) => !doomed.has(r))
+      requestLog.splice(0, requestLog.length, ...keep)
+      return doomed.size
     }
     if (sql.startsWith('INSERT INTO request_log')) {
       const [ipHash, endpoint, createdAt] = args as [string, string, string]
@@ -114,7 +124,15 @@ export function codeStore(extraEnv: Record<string, unknown> = {}): CodeStore {
       return hit.length
     }
     if (sql.startsWith('INSERT INTO email_codes')) {
-      const [id, email, codeHash, expiresAt, createdAt] = args as [string, string, string, number, number]
+      const [id, email, codeHash, expiresAt, createdAt, globalSince, maxGlobal] = args as [
+        string, string, string, number, number, number, number,
+      ]
+      // Mirrors the app-wide cap in the insert's WHERE clause; the real-SQLite
+      // test in emailCode.test.ts proves the SQL itself does this.
+      if (!sql.includes('WHERE (SELECT COUNT(*) FROM email_codes WHERE created_at >= ?) < ?')) {
+        throw new Error('codeStore: email_codes insert without the app-wide cap')
+      }
+      if (codes.filter((c) => c.created_at >= globalSince).length >= maxGlobal) return 0
       codes.push({ id, email, code_hash: codeHash, expires_at: expiresAt, attempts: 0, used_at: null, created_at: createdAt })
       return 1
     }

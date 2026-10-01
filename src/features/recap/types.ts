@@ -11,5 +11,9 @@ export interface RecapPayload {
   startDate: string | null
   tripLengthDays: number | null
   stops: { stopId: string; day: number; text: string; lat: number | null; lng: number | null; category: string | null }[]
-  photos: { id: string; stopId: string; width: number; height: number; createdAt: string }[]
+  /**
+   * `mine` is present, and true, only on photos the signed-in viewer uploaded
+   * as a member of the trip; they may delete exactly those.
+   */
+  photos: { id: string; stopId: string; width: number; height: number; createdAt: string; mine?: true }[]
 }
